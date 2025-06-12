@@ -6,43 +6,35 @@ import { Calendar } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Pause, Play } from "lucide-react";
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import React from 'react';
 import { getSheetData, addSheetData } from '@/services/sheetService';
-// Replace your useState declarations with:
-const [clients, setClients] = useState<Client[]>([]);
-const [leads, setLeads] = useState<Lead[]>([]);
-// ... other state variables
+import { Trash } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "@/components/ui/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form"
+import { z } from "zod"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useToast } from "@/components/ui/use-toast";
+import InvestmentTracker from '@/components/investment-tracker'
+import { formatCurrency } from "@/lib/utils" // You'll need to create this utility
+import { 
+  db, 
+  getCollectionData, 
+  addDocument, 
+  updateDocument, 
+  deleteDocument 
+} from "@/lib/firebase-config";
 
-// Add useEffect to load data
-useEffect(() => {
-  const loadData = async () => {
-    const clientsData = await getSheetData('Clients');
-    const leadsData = await getSheetData('Leads');
-    // Load other data similarly
-    
-    setClients(clientsData);
-    setLeads(leadsData);
-    // Set other states
-  };
-  
-  loadData();
-}, []);
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmGKxXgdPpt1S_mlg6GplRmjQdT3UVKSpOibKJDWBouF1SvUnMcAkY7i3F4BvGoP5N/exec'
+const SHEET_ID = '1SCfx_gBaxLaXPXiOSctc1FjsvYHl7rA_fABypR4kymI';
+type TabType = 'leads' | 'clients' | 'kyc' | 'sip-reminders' | 'communications' | 'activities'
 
-// Update your add/update functions to use the API
-const handleAddClient = async () => {
-  if (!formData.name || !formData.email || !formData.phone) return;
-  
-  const newClient = {
-    ...formData,
-    id: Date.now().toString()
-  };
-  
-  await addSheetData('Clients', newClient);
-  setClients([...clients, newClient]);
-  setFormData({ name: '', email: '', phone: '' });
-  setIsAdding(false);
-};
 
 import {
   AlertDialog,
@@ -54,6 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+
 import { 
   Card, 
   CardContent, 
@@ -63,12 +56,7 @@ import {
   CardFooter 
 } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { 
   Sun, 
@@ -81,6 +69,8 @@ import {
   Edit, 
   Check, 
   X,
+  search,
+  Save,
   Activity,
   BarChart2,
   TrendingUp,
@@ -88,11 +78,16 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  ArrowRight,
+  Filter, ArrowRight,
+  Download,
   Phone,
   CalendarDays, 
   Bell,
   CheckCircle,
+  Star,
+  Minus,
+  Trash2,
+  lock,
   FileText, CreditCard, FileSignature, ThumbsUp, CalendarCheck, ExternalLink, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -110,6 +105,65 @@ interface ThemeSelectorProps {
   theme: ThemeName
   setTheme: (theme: ThemeName) => void
 }
+
+
+const formSchemas = {
+  leads: z.object({
+    Name: z.string().min(2, "Name must be at least 2 characters"),
+    Email: z.string().email("Invalid email address"),
+    Phone: z.string().min(10, "Phone must be at least 10 digits"),
+    ProductInterest: z.string().optional(),
+    Status: z.string().default("New"),
+    ProgressStatus: z.number().min(0).max(100).default(0)
+  }),
+  clients: z.object({
+    Name: z.string().min(2, "Name must be at least 2 characters"),
+    Email: z.string().email("Invalid email address"),
+    Phone: z.string().min(10, "Phone must be at least 10 digits"),
+    SIPStartDate: z.string().optional(),
+    SIPNextDate: z.string().optional(),
+    HasMutualFund: z.string().default("FALSE"),
+    HasSIP: z.string().default("FALSE"),
+    HasLumpsum: z.string().default("FALSE"),
+    HasHealthInsurance: z.string().default("FALSE"),
+    HasLifeInsurance: z.string().default("FALSE")
+  }),
+  kyc: z.object({
+    LeadID: z.string(),
+    Status: z.enum(["pending", "in-progress", "completed", "failed"]),
+    CompletedDate: z.string().optional()
+  }),
+  'sip-reminders': z.object({
+    ClientID: z.string(),
+    Amount: z.number(),
+    Frequency: z.enum(["Monthly", "Quarterly", "Yearly"]),
+    NextDate: z.string(),
+    Status: z.enum(["active", "paused", "completed"]),
+    LastReminderSent: z.string().optional()
+  }),
+  communications: z.object({
+    ClientID: z.string(),
+    Type: z.enum(["email", "whatsapp", "call", "meeting", "document"]),
+    Date: z.string(),
+    Subject: z.string(),
+    Content: z.string(),
+    Priority: z.enum(["low", "medium", "high"]),
+    Status: z.enum(["pending", "sent", "received", "read", "failed"]),
+    FollowUpDate: z.string().optional(),
+    RelatedProduct: z.string().optional(),
+    AdvisorNotes: z.string().optional()
+  }),
+  activities: z.object({
+    Type: z.enum(["login", "task", "system", "notification"]),
+    Title: z.string(),
+    Description: z.string(),
+    Timestamp: z.string(),
+    User: z.string().optional(),
+    Status: z.enum(["completed", "failed"]).optional()
+  })
+};
+
+
 
 interface ThemeColors {
   bgColor: string;
@@ -553,8 +607,124 @@ const themes: Record<ThemeName, ThemeColors> = {
     buttonHover: 'hover:bg-gray-500',
     buttonText: 'text-white'
   }
-
 };
+
+function InvestmentSummaryCards() {
+  // Sample data - replace with your actual data source
+  const [totals, setTotals] = useState({
+  sipTarget: 180000,
+  lumpsumTarget: 4000000,
+  sipAchieved: 85000,
+  lumpsumAchieved: 85000
+});
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* SIP Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">SIP (Yearly)</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <span>Target:</span>
+            <span className="font-medium">{formatCurrency(totals.sipTarget)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Achieved:</span>
+            <span className="text-primary font-medium">{formatCurrency(totals.sipAchieved)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Progress:</span>
+            <span>{Math.round((totals.sipAchieved / totals.sipTarget) * 100)}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="h-2 rounded-full bg-primary" 
+              style={{ 
+                width: `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Lumpsum Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Lumpsum</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <span>Target:</span>
+            <span className="font-medium">{formatCurrency(totals.lumpsumTarget)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Achieved:</span>
+            <span className="text-primary font-medium">{formatCurrency(totals.lumpsumAchieved)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Progress:</span>
+            <span>{totals.lumpsumTarget > 0 ? Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100) : 0}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="h-2 rounded-full bg-primary" 
+              style={{ 
+                width: totals.lumpsumTarget > 0 ? 
+                  `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%'
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Combined Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Total Investments</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <div className="flex justify-between">
+            <span>Total Target:</span>
+            <span className="font-medium">
+              {formatCurrency(totals.sipTarget + totals.lumpsumTarget)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Total Achieved:</span>
+            <span className="text-primary font-medium">
+              {formatCurrency(totals.sipAchieved + totals.lumpsumAchieved)}
+            </span>
+          </div>
+          <div className="flex justify-between">
+            <span>Overall Progress:</span>
+            <span>
+              {Math.round(
+                ((totals.sipAchieved + totals.lumpsumAchieved) / 
+                (totals.sipTarget + totals.lumpsumTarget)) * 100
+              )}%
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="h-2 rounded-full bg-primary" 
+              style={{ 
+                width: `${Math.min(100, 
+                  ((totals.sipAchieved + totals.lumpsumAchieved) / 
+                  (totals.sipTarget + totals.lumpsumTarget)) * 100
+                )}%` 
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
+
+
 
 function ThemeSelector({ theme, setTheme }: { theme: ThemeName, setTheme: (theme: ThemeName) => void }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -697,8 +867,6 @@ export function LeadProgressBar({ status, onStatusChange, theme = 'light' }: Lea
   ];
 
   const { mutedText } = theme === 'dark' ? themes['dark'] : themes['blue-smoke']; // Or use your default theme
-
-
   const currentIndex = stages.findIndex(stage => stage.id === status);
   const isComplete = status === 'sip-setup';
 
@@ -823,10 +991,13 @@ export function LeadProgressBar({ status, onStatusChange, theme = 'light' }: Lea
     </div>
   );
 }
+
+
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
   const [activeTab, setActiveTab] = useState("dashboard");
+   const [loading, setLoading] = useState(false)
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [emailContent, setEmailContent] = useState('');
   const [whatsappContent, setWhatsappContent] = useState('');
@@ -839,10 +1010,190 @@ const [alertMessage, setAlertMessage] = useState("");
 const [meetingDate, setMeetingDate] = useState<Date | undefined>(new Date())
 const [meetingNotes, setMeetingNotes] = useState("")
 const [currentStatus, setCurrentStatus] = useState('lead-generated');
-
+ const [error, setError] = useState('')
+ const [data, setData] = useState<any[]>([])
 const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: '', phone: '' })
+  const [page, setPage] = useState(1)
+   const [statusFilter, setStatusFilter] = useState<string>('all')
+   const [searchTerm, setSearchTerm] = useState('')
+   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const itemsPerPage = 10
+
+// Replace your fetchData function with:
+const fetchData = async (tab: TabType) => {
+  setLoading(true);
+  setError('');
+  try {
+    const data = await getCollectionData(tab);
+    setData(data);
+    toast({
+      title: "Data loaded successfully",
+      description: `Fetched ${data.length} ${tab} records`,
+    });
+  } catch (err) {
+    console.error(`Error loading ${tab}:`, err);
+    setError(`Failed to load ${tab} data. Please try again.`);
+    toast({
+      title: "Error loading data",
+      description: error,
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Replace createRecord with:
+const createRecord = async (tab: TabType, recordData: any) => {
+  setLoading(true);
+  try {
+    await addDocument(tab, recordData);
+    await fetchData(activeTab);
+    toast({
+      title: "Success",
+      description: "Record created successfully",
+    });
+  } catch (err) {
+    console.error('Error creating record:', err);
+    toast({
+      title: "Error",
+      description: "Failed to create record",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Replace updateRecord with:
+const updateRecord = async (tab: TabType, id: string, recordData: any) => {
+  setLoading(true);
+  try {
+    await updateDocument(tab, id, recordData);
+    await fetchData(activeTab);
+    toast({
+      title: "Success",
+      description: "Record updated successfully",
+    });
+  } catch (err) {
+    console.error('Error updating record:', err);
+    toast({
+      title: "Error",
+      description: "Failed to update record",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+// Replace deleteRecord with:
+const deleteRecord = async (tab: TabType, id: string) => {
+  if (!confirm('Are you sure you want to delete this record?')) return;
+  
+  setLoading(true);
+  try {
+    await deleteDocument(tab, id);
+    await fetchData(activeTab);
+    toast({
+      title: "Success",
+      description: "Record deleted successfully",
+    });
+  } catch (err) {
+    console.error('Error deleting record:', err);
+    toast({
+      title: "Error",
+      description: "Failed to delete record",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+ // Handle form submission
+  const handleSubmit = () => {
+  const formData = form.getValues();
+  const schema = formSchemas[activeTab];
+  
+  try {
+    const validatedData = schema.parse(formData);
+    
+    if (editingId) {
+      updateRecord(activeTab, editingId, validatedData);
+    } else {
+      createRecord(activeTab, validatedData);
+    }
+    
+    setIsDialogOpen(false);
+    setEditingId(null);
+    form.reset();
+  } catch (error) {
+    console.error("Validation error:", error);
+  }
+};
+
+  // Initialize form with empty or existing data
+  const initForm = (record?: any) => {
+    if (record) {
+      setEditingId(record.id);
+      setFormData(record);
+    } else {
+      setEditingId(null);
+      setFormData({});
+    }
+    setIsDialogOpen(true);
+  };
+
+  
+const validateEmail = (email: string) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
+
+
+
+  // Load data when tab changes
+ useEffect(() => {
+  const interval = setInterval(() => {
+    fetchData(activeTab);
+  }, 30000); // Refresh every 30 seconds
+
+  return () => clearInterval(interval);
+}, [activeTab]);
+
+  // Filter data based on search and filters
+  const filteredData = data.filter(item => {
+    const matchesSearch = searchTerm === '' || 
+      Object.values(item).some(val => 
+        String(val).toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    
+    const matchesStatus = statusFilter === 'all' || 
+      (item.Status && item.Status === statusFilter);
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Pagination
+  const paginatedData = filteredData.slice(
+    (page - 1) * itemsPerPage,
+    page * itemsPerPage
+  );
+
+  
+useEffect(() => {
+    fetchData(activeTab)
+  }, [activeTab])
+  
+  
+
+const handleTabChange = (tab: TabType) => {
+    setActiveTab(tab)
+    setPage(1) // Reset pagination on tab change
+  }
 
 const handleScheduleMeeting = () => {
     if (!selectedClientId) {
@@ -850,6 +1201,349 @@ const handleScheduleMeeting = () => {
       return;
     }
 
+
+
+    const renderTable = () => {
+  switch (activeTab) {
+    case 'leads':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Product Interest</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Progress</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Last Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((lead) => (
+              <TableRow key={lead.ID}>
+                <TableCell className="font-medium">{lead.ID}</TableCell>
+                <TableCell>{lead.Name}</TableCell>
+                <TableCell>{lead.Email}</TableCell>
+                <TableCell>{lead.Phone}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {lead.ProductInterest?.split(',').map((item: string, i: number) => (
+                      <span key={i} className="px-2 py-1 bg-gray-100 rounded-md text-xs">
+                        {item.trim()}
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    lead.Status === 'New' ? 'bg-blue-100 text-blue-800' :
+                    lead.Status === 'Contacted' ? 'bg-purple-100 text-purple-800' :
+                    lead.Status === 'Qualified' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {lead.Status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full" 
+                      style={{ width: `${lead.ProgressStatus || 0}%` }}
+                    />
+                  </div>
+                </TableCell>
+                <TableCell>{new Date(lead.CreatedAt).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(lead.LastUpdated).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    case 'clients':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>SIP Start</TableHead>
+              <TableHead>SIP Next</TableHead>
+              <TableHead>Products</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Last Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((client) => (
+              <TableRow key={client.ID}>
+                <TableCell className="font-medium">{client.ID}</TableCell>
+                <TableCell>{client.Name}</TableCell>
+                <TableCell>{client.Email}</TableCell>
+                <TableCell>{client.Phone}</TableCell>
+                <TableCell>
+                  {client.SIPStartDate ? new Date(client.SIPStartDate).toLocaleDateString() : '-'}
+                </TableCell>
+                <TableCell>
+                  {client.SIPNextDate ? (
+                    <span className={new Date(client.SIPNextDate) < new Date() ? 
+                      'text-red-600 font-medium' : ''}>
+                      {new Date(client.SIPNextDate).toLocaleDateString()}
+                    </span>
+                  ) : '-'}
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {[
+                      client.HasMutualFund === 'TRUE' && { label: 'MF', color: 'bg-blue-100 text-blue-800' },
+                      client.HasSIP === 'TRUE' && { label: 'SIP', color: 'bg-green-100 text-green-800' },
+                      client.HasLumpsum === 'TRUE' && { label: 'Lumpsum', color: 'bg-purple-100 text-purple-800' },
+                      client.HasHealthInsurance === 'TRUE' && { label: 'Health', color: 'bg-red-100 text-red-800' },
+                      client.HasLifeInsurance === 'TRUE' && { label: 'Life', color: 'bg-yellow-100 text-yellow-800' }
+                    ].filter(Boolean).map((product: any, i) => (
+                      <span key={i} className={`px-2 py-1 rounded-md text-xs ${product.color}`}>
+                        {product.label}
+                      </span>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell>{new Date(client.CreatedAt).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(client.LastUpdated).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    case 'kyc':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Lead ID</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Completed Date</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Last Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((kyc) => (
+              <TableRow key={kyc.ID}>
+                <TableCell className="font-medium">{kyc.ID}</TableCell>
+                <TableCell>{kyc.LeadID}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    kyc.Status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    kyc.Status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {kyc.Status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  {kyc.CompletedDate ? new Date(kyc.CompletedDate).toLocaleDateString() : '-'}
+                </TableCell>
+                <TableCell>{new Date(kyc.CreatedAt).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(kyc.LastUpdated).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    case 'sip-reminders':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Client ID</TableHead>
+              <TableHead>Amount</TableHead>
+              <TableHead>Frequency</TableHead>
+              <TableHead>Next Date</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Last Reminder</TableHead>
+              <TableHead>Created</TableHead>
+              <TableHead>Last Updated</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((reminder) => (
+              <TableRow key={reminder.ID}>
+                <TableCell className="font-medium">{reminder.ID}</TableCell>
+                <TableCell>{reminder.ClientID}</TableCell>
+                <TableCell>₹{reminder.Amount}</TableCell>
+                <TableCell>
+                  <span className="capitalize">{reminder.Frequency?.toLowerCase()}</span>
+                </TableCell>
+                <TableCell>
+                  {reminder.NextDate ? (
+                    <span className={new Date(reminder.NextDate) < new Date() ? 
+                      'text-red-600 font-medium' : ''}>
+                      {new Date(reminder.NextDate).toLocaleDateString()}
+                    </span>
+                  ) : '-'}
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    reminder.Status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                    reminder.Status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {reminder.Status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  {reminder.LastReminderSent ? new Date(reminder.LastReminderSent).toLocaleDateString() : '-'}
+                </TableCell>
+                <TableCell>{new Date(reminder.CreatedAt).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(reminder.LastUpdated).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    case 'communications':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Client ID</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Subject</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Follow Up</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((comm) => (
+              <TableRow key={comm.ID}>
+                <TableCell className="font-medium">{comm.ID}</TableCell>
+                <TableCell>{comm.ClientID}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    comm.Type === 'Email' ? 'bg-blue-100 text-blue-800' :
+                    comm.Type === 'Call' ? 'bg-green-100 text-green-800' :
+                    comm.Type === 'Meeting' ? 'bg-purple-100 text-purple-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {comm.Type}
+                  </span>
+                </TableCell>
+                <TableCell>{new Date(comm.Date).toLocaleDateString()}</TableCell>
+                <TableCell className="max-w-xs truncate">{comm.Subject}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    comm.Priority === 'High' ? 'bg-red-100 text-red-800' :
+                    comm.Priority === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {comm.Priority}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    comm.Status === 'Follow Up' ? 'bg-yellow-100 text-yellow-800' :
+                    comm.Status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {comm.Status}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  {comm.FollowUpDate ? new Date(comm.FollowUpDate).toLocaleDateString() : '-'}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    case 'activities':
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Title</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Timestamp</TableHead>
+              <TableHead>Created</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((activity) => (
+              <TableRow key={activity.ID}>
+                <TableCell className="font-medium">{activity.ID}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    activity.Type === 'Call' ? 'bg-blue-100 text-blue-800' :
+                    activity.Type === 'Meeting' ? 'bg-purple-100 text-purple-800' :
+                    activity.Type === 'Follow Up' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {activity.Type}
+                  </span>
+                </TableCell>
+                <TableCell className="max-w-xs">{activity.Title}</TableCell>
+                <TableCell>{activity.User}</TableCell>
+                <TableCell>
+                  <span className={`px-2 py-1 rounded-md text-xs ${
+                    activity.Status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    activity.Status === 'Pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {activity.Status}
+                  </span>
+                </TableCell>
+                <TableCell>{new Date(activity.Timestamp).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(activity.CreatedAt).toLocaleDateString()}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+
+    default:
+      return (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {data[0] && Object.keys(data[0]).map((key) => (
+                <TableHead key={key}>{key}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {data.slice((page-1)*itemsPerPage, page*itemsPerPage).map((item, index) => (
+              <TableRow key={index}>
+                {Object.values(item).map((value: any, i) => (
+                  <TableCell key={i}>
+                    {typeof value === 'string' && value.includes('Date') ? 
+                      new Date(value).toLocaleDateString() : 
+                      String(value)}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )
+  }
+}
     const client = clients.find(c => c.id === selectedClientId);
     if (!client) return;
 
@@ -1506,12 +2200,6 @@ const handleThemeChange = (newTheme: ThemeName) => {
     <Users className="mr-2 h-4 w-4 text-green-500" /> Leads
   </TabsTrigger>
   <TabsTrigger 
-    value="kyc" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <Shield className="mr-2 h-4 w-4 text-yellow-500" /> KYC
-  </TabsTrigger>
-  <TabsTrigger 
     value="clients" 
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
   >
@@ -1529,9 +2217,17 @@ const handleThemeChange = (newTheme: ThemeName) => {
   >
     <Mail className="mr-2 h-4 w-4 text-indigo-500" /> Communication
   </TabsTrigger>
+  <TabsTrigger 
+    value="investment-tracker" 
+    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
+  >
+    <BarChart2 className="mr-2 h-4 w-4 text-teal-500" /> Investment Tracker
+  </TabsTrigger>
 </TabsList>
-           
-          
+<TabsContent value="investment-tracker">
+  <InvestmentTracker />
+</TabsContent>
+                    
 
           {/* Dashboard Tab */}
     <TabsContent value="dashboard">
@@ -1698,6 +2394,18 @@ const handleThemeChange = (newTheme: ThemeName) => {
         </CardContent>
       </Card>
     </div>
+
+<div className="lg:col-span-6">
+    <Card className={`${cardBg} ${borderColor}`}>
+      <CardHeader>
+        <CardTitle>Investment Overview</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <InvestmentSummaryCards />
+      </CardContent>
+    </Card>
+  </div>
+    
 
     {/* Recent Activity - Column 3 */}
     <div className="lg:col-span-4">
@@ -2609,13 +3317,14 @@ const handleThemeChange = (newTheme: ThemeName) => {
     </Card>
 
     {/* Schedule Meeting Section - Added this new section */}
+    
    <div>
-      <h3 className="font-medium mb-3">Schedule Meeting</h3>
-      <Card className={`${cardBg} ${borderColor}`}>
-        <CardContent className="pt-6">
-          <div className="space-y-5">
+     <Card className={`${cardBg} ${borderColor}`}>
+      <h3 className="font-medium h-5 mb-1 pl-6">  Schedule Meeting</h3>
+             <CardContent className="pt-1">
+          <div className="space-y-4">
              <div>
-            <Label className="block mb-2">Client</Label>
+           <Label className="block mb-2">Client *</Label>
               
               <Select
                 value={selectedClientId || undefined} // Use undefined instead of empty string
