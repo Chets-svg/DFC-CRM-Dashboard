@@ -2,16 +2,17 @@ import { useState, useEffect } from 'react'
 import { Star, Edit, Save, Lock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
+
 // At the top of your file
 import { 
   db, 
   getCollectionData, 
   addDocument, 
   updateDocument 
-} from "@/lib/firebase-config";
+} from "../firebase/dataService";
 
 
 interface InvestmentRecord {

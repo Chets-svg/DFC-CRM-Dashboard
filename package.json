@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "start": "react-scripts start",
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
@@ -30,6 +31,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^11.9.1",
+    "firebase-admin": "^13.4.0",
     "framer-motion": "^12.16.0",
     "googleapis": "^150.0.1",
     "lucide-react": "^0.513.0",
@@ -47,7 +49,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",
     "@tailwindcss/vite": "^4.1.8",
-    "@types/node": "^22.15.30",
+    "@types/node": "^22.15.31",
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.6",
     "autoprefixer": "^10.4.21",

@@ -1,12 +1,11 @@
 import { Grid, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Pause, Play } from "lucide-react";
 import { motion } from 'framer-motion';
-import { useEffect, useMemo } from 'react';
 import React from 'react';
 import { getSheetData, addSheetData } from '@/services/sheetService';
 import { Trash } from 'lucide-react'
@@ -24,17 +23,15 @@ import { useToast } from "@/components/ui/use-toast";
 import InvestmentTracker from '@/components/investment-tracker'
 import { formatCurrency } from "@/lib/utils" // You'll need to create this utility
 import { 
-  db, 
-  getCollectionData, 
-  addDocument, 
-  updateDocument, 
-  deleteDocument 
-} from "@/lib/firebase-config";
+  getRealtimeData, 
+  addRealtimeData, 
+  updateRealtimeData, 
+  deleteRealtimeData 
+} from '@/firebase/firebase';
 
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmGKxXgdPpt1S_mlg6GplRmjQdT3UVKSpOibKJDWBouF1SvUnMcAkY7i3F4BvGoP5N/exec'
 const SHEET_ID = '1SCfx_gBaxLaXPXiOSctc1FjsvYHl7rA_fABypR4kymI';
 type TabType = 'leads' | 'clients' | 'kyc' | 'sip-reminders' | 'communications' | 'activities'
-
 
 import {
   AlertDialog,
@@ -45,7 +42,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
 
 import { 
   Card, 
@@ -106,7 +102,6 @@ interface ThemeSelectorProps {
   setTheme: (theme: ThemeName) => void
 }
 
-
 const formSchemas = {
   leads: z.object({
     Name: z.string().min(2, "Name must be at least 2 characters"),
@@ -162,8 +157,6 @@ const formSchemas = {
     Status: z.enum(["completed", "failed"]).optional()
   })
 };
-
-
 
 interface ThemeColors {
   bgColor: string;
@@ -607,7 +600,9 @@ const themes: Record<ThemeName, ThemeColors> = {
     buttonHover: 'hover:bg-gray-500',
     buttonText: 'text-white'
   }
+
 };
+
 
 function InvestmentSummaryCards() {
   // Sample data - replace with your actual data source
@@ -776,6 +771,29 @@ function ThemeSelector({ theme, setTheme }: { theme: ThemeName, setTheme: (theme
     </div>
   );
 }
+
+const handleNext = () => {
+  if (currentIndex < stages.length - 1) {
+    const newStatus = stages[currentIndex + 1].id;
+    onStatusChange(newStatus);
+    
+    // When moving to KYC Started, create a KYC record if it doesn't exist
+    if (newStatus === 'kyc-started') {
+      const existingKyc = kycs.find(k => k.leadId === leadId);
+      if (!existingKyc) {
+        setKycs([
+          ...kycs,
+          {
+            id: `kyc-${Date.now()}`,
+            leadId,
+            status: 'in-progress',
+            completedDate: undefined
+          }
+        ]);
+      }
+    }
+  }
+};
 
 const getButtonClasses = (theme: ThemeName, variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
   const themeObj = themes[theme];
@@ -1021,16 +1039,137 @@ const [isAdding, setIsAdding] = useState(false)
    const [isDialogOpen, setIsDialogOpen] = useState(false)
   const itemsPerPage = 10
 
-// Replace your fetchData function with:
+// Initialize Firebase data
+  useEffect(() => {
+    const fetchLeads = () => {
+      const leadsRef = getRealtimeData('leads');
+      onValue(leadsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const loadedLeads = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          }));
+          setLeads(loadedLeads);
+        }
+      });
+    };
+
+    // Update addLead function to use Firebase
+  const addLead = async () => {
+    if (!newLead.name.trim() || !newLead.email.trim() || !newLead.phone.trim() || newLead.productInterest.length === 0) {
+      showAlert('Please fill in all required fields and select at least one product');
+      return;
+    }
+
+    try {
+      const leadData = {
+        ...newLead,
+        status: 'new',
+        progressStatus: newLead.productInterest.some(product => 
+          product.includes('Mutual Funds')
+        ) ? 'lead-generated' : undefined,
+        notes: []
+      };
+
+      // Add to Firebase
+      await addRealtimeData('leads', leadData);
+
+      // Reset form
+      setNewLead({ 
+        name: '', 
+        email: '', 
+        phone: '', 
+        productInterest: [] 
+      });
+
+      showAlert('Lead added successfully');
+    } catch (error) {
+      console.error('Error adding lead:', error);
+      showAlert('Failed to add lead');
+    }
+  };
+
+  // Update updateLeadStatus function
+  const updateLeadStatus = async (id: string, status: string) => {
+    try {
+      await updateRealtimeData(`leads/${id}`, { status });
+      showAlert('Lead status updated');
+    } catch (error) {
+      console.error('Error updating lead status:', error);
+      showAlert('Failed to update lead status');
+    }
+  };
+
+  // Update convertLeadToClient function
+  const convertLeadToClient = async (leadId: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+
+    try {
+      const clientData = {
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        products: {
+          mutualFund: lead.productInterest.some(p => p.includes('Mutual Funds')),
+          sip: lead.productInterest.some(p => p.includes('SIP')),
+          lumpsum: lead.productInterest.some(p => p.includes('Lumpsum')),
+          healthInsurance: lead.productInterest.includes('Health Insurance'),
+          lifeInsurance: lead.productInterest.includes('Life Insurance'),
+        },
+      };
+
+      // Add to clients in Firebase
+      await addRealtimeData('clients', clientData);
+      
+      // Remove from leads in Firebase
+      await deleteRealtimeData(`leads/${leadId}`);
+
+      showAlert(`${lead.name} has been successfully converted to a client`);
+    } catch (error) {
+      console.error('Error converting lead to client:', error);
+      showAlert('Failed to convert lead to client');
+    }
+  };
+
+  
+    const fetchClients = () => {
+      const clientsRef = getRealtimeData('clients');
+      onValue(clientsRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const loadedClients = Object.keys(data).map(key => ({
+            id: key,
+            ...data[key]
+          }));
+          setClients(loadedClients);
+        }
+      });
+    };
+
+    fetchLeads();
+    fetchClients();
+  }, []);
+
+
+ // Update the fetchData function in your CRMDashboard component
 const fetchData = async (tab: TabType) => {
   setLoading(true);
   setError('');
   try {
-    const data = await getCollectionData(tab);
-    setData(data);
+    const response = await fetch(
+      `${SCRIPT_URL}?action=read&sheet=${tab}&sheetId=${SHEET_ID}`
+    );
+    
+    if (!response.ok) throw new Error(`Failed to load ${tab} data`);
+    
+    const result = await response.json();
+    setData(result.data || []);
+    
     toast({
       title: "Data loaded successfully",
-      description: `Fetched ${data.length} ${tab} records`,
+      description: `Fetched ${result.data?.length || 0} ${tab} records`,
     });
   } catch (err) {
     console.error(`Error loading ${tab}:`, err);
@@ -1045,11 +1184,25 @@ const fetchData = async (tab: TabType) => {
   }
 };
 
-// Replace createRecord with:
+ // Update the createRecord function
 const createRecord = async (tab: TabType, recordData: any) => {
   setLoading(true);
   try {
-    await addDocument(tab, recordData);
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'create',
+        sheet: tab,
+        sheetId: SHEET_ID,
+        data: recordData
+      })
+    });
+    
+    if (!response.ok) throw new Error('Failed to create record');
+    
     await fetchData(activeTab);
     toast({
       title: "Success",
@@ -1067,51 +1220,81 @@ const createRecord = async (tab: TabType, recordData: any) => {
   }
 };
 
-// Replace updateRecord with:
-const updateRecord = async (tab: TabType, id: string, recordData: any) => {
-  setLoading(true);
-  try {
-    await updateDocument(tab, id, recordData);
-    await fetchData(activeTab);
-    toast({
-      title: "Success",
-      description: "Record updated successfully",
-    });
-  } catch (err) {
-    console.error('Error updating record:', err);
-    toast({
-      title: "Error",
-      description: "Failed to update record",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+ // Update record in Google Sheets
+  const updateRecord = async (tab: TabType, id: string, recordData: any) => {
+    setLoading(true);
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'update',
+          sheet: tab,
+          sheetId: SHEET_ID,
+          id,
+          data: recordData
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to update record');
+      
+      await fetchData(activeTab);
+      toast({
+        title: "Success",
+        description: "Record updated successfully",
+      });
+    } catch (err) {
+      console.error('Error updating record:', err);
+      toast({
+        title: "Error",
+        description: "Failed to update record",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-// Replace deleteRecord with:
-const deleteRecord = async (tab: TabType, id: string) => {
-  if (!confirm('Are you sure you want to delete this record?')) return;
-  
-  setLoading(true);
-  try {
-    await deleteDocument(tab, id);
-    await fetchData(activeTab);
-    toast({
-      title: "Success",
-      description: "Record deleted successfully",
-    });
-  } catch (err) {
-    console.error('Error deleting record:', err);
-    toast({
-      title: "Error",
-      description: "Failed to delete record",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  // Delete record from Google Sheets
+  const deleteRecord = async (tab: TabType, id: string) => {
+    if (!confirm('Are you sure you want to delete this record?')) return;
+    
+    setLoading(true);
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'delete',
+          sheet: tab,
+          sheetId: SHEET_ID,
+          id
+        })
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete record');
+      
+      await fetchData(activeTab);
+      toast({
+        title: "Success",
+        description: "Record deleted successfully",
+      });
+    } catch (err) {
+      console.error('Error deleting record:', err);
+      toast({
+        title: "Error",
+        description: "Failed to delete record",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
  // Handle form submission
   const handleSubmit = () => {
   const formData = form.getValues();
@@ -1993,6 +2176,8 @@ const handleSendWhatsApp = () => {
 };
 
 
+
+
   const updateLeadStatus = (id: string, status: Lead['status']) => {
   const lead = leads.find(l => l.id === id);
   if (!lead) return;
@@ -2054,10 +2239,28 @@ const performKYC = (leadId: string) => {
   const lead = leads.find(l => l.id === leadId);
   if (!lead) return;
 
-  // Update KYC status to in-progress
-  setKycs(kycs.map(kyc =>
-    kyc.leadId === leadId ? { ...kyc, status: 'in-progress' } : kyc
+  // Update lead progress status to kyc-started
+  setLeads(leads.map(l =>
+    l.id === leadId ? { ...l, progressStatus: 'kyc-started' } : l
   ));
+
+  // Update or create KYC record
+  const existingKyc = kycs.find(k => k.leadId === leadId);
+  if (existingKyc) {
+    setKycs(kycs.map(k =>
+      k.leadId === leadId ? { ...k, status: 'in-progress' } : k
+    ));
+  } else {
+    setKycs([
+      ...kycs,
+      {
+        id: `kyc-${Date.now()}`,
+        leadId,
+        status: 'in-progress',
+        completedDate: undefined
+      }
+    ]);
+  
 
   // Add KYC started activity
   const startActivity: ActivityItem = {
@@ -2069,6 +2272,7 @@ const performKYC = (leadId: string) => {
     status: 'in-progress',
   };
   setActivities([startActivity, ...activities]);
+};
 
   // Simulate KYC completion
   setTimeout(() => {
@@ -2186,7 +2390,7 @@ const handleThemeChange = (newTheme: ThemeName) => {
         </div>
               
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full grid-cols-6 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
+        <TabsList className={`grid w-full grid-cols-7 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
     value="dashboard"
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
@@ -2196,13 +2400,21 @@ const handleThemeChange = (newTheme: ThemeName) => {
   <TabsTrigger 
     value="leads" 
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
+   >
     <Users className="mr-2 h-4 w-4 text-green-500" /> Leads
+  </TabsTrigger>
+  <TabsTrigger 
+    value="kyc" 
+    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
+  >
+    <Shield className="mr-2 h-4 w-4 text-yellow-500" /> KYC
   </TabsTrigger>
   <TabsTrigger 
     value="clients" 
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
   >
+
+
     <User className="mr-2 h-4 w-4 text-purple-500" /> Clients
   </TabsTrigger>
   <TabsTrigger 
@@ -2796,53 +3008,80 @@ const handleThemeChange = (newTheme: ThemeName) => {
 
           {/* KYC Tab */}
           <TabsContent value="kyc">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className={`${cardBg} ${borderColor}`}>
-                <CardHeader>
-                  <CardTitle>KYC Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {kycs.map(kyc => {
-                      const lead = leads.find(l => l.id === kyc.leadId)
-                      return (
-                        <div key={kyc.id} className={`p-4 border rounded ${highlightBg} ${borderColor}`}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-bold">{lead?.name}</h3>
-                              <p className={`text-sm ${mutedText}`}>{lead?.email}</p>
-                            </div>
-                            <div className="text-right">
-                              <span className={`px-2 py-1 text-xs rounded-full ${
-                                kyc.status === 'pending' ? 'bg-gray-100 text-gray-800' :
-                                kyc.status === 'in-progress' ? 'bg-yellow-100 text-yellow-800' :
-                                kyc.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {kyc.status}
-                              </span>
-                              {kyc.completedDate && (
-                                <p className={`text-xs mt-1 ${mutedText}`}>Completed: {kyc.completedDate}</p>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-4">
-                            <Button 
-  variant="outline" 
-  size="sm" 
-  onClick={() => performKYC(kyc.leadId)}
-  disabled={kyc.status === 'in-progress' || kyc.status === 'completed'}
->
-  {kyc.status === 'pending' ? 'Start KYC' : 
-   kyc.status === 'in-progress' ? 'KYC in progress...' : 'KYC Completed'}
-</Button>
-                          </div>
-                        </div>
-                      )
-                    })}
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Card className={`${cardBg} ${borderColor}`}>
+      <CardHeader>
+        <CardTitle>KYC Status</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {leads
+            .filter(lead => 
+              lead.progressStatus === 'kyc-started' || 
+              lead.progressStatus === 'kyc-completed'
+            )
+            .map(lead => {
+              const kyc = kycs.find(k => k.leadId === lead.id);
+              return (
+                <div key={lead.id} className={`p-4 border rounded ${highlightBg} ${borderColor}`}>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold">{lead.name}</h3>
+                      <p className={`text-sm ${mutedText}`}>{lead.email}</p>
+                      <div className="mt-2">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          lead.progressStatus === 'kyc-started' ? 'bg-yellow-100 text-yellow-800' :
+                          lead.progressStatus === 'kyc-completed' ? 'bg-green-100 text-green-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {lead.progressStatus === 'kyc-started' ? 'KYC in Progress' : 'KYC Completed'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      {kyc?.completedDate && (
+                        <p className={`text-xs ${mutedText}`}>Completed: {kyc.completedDate}</p>
+                      )}
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="mt-4">
+                    {lead.progressStatus === 'kyc-started' ? (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          // Mark KYC as completed
+                          setLeads(leads.map(l => 
+                            l.id === lead.id ? {...l, progressStatus: 'kyc-completed'} : l
+                          ));
+                          setKycs(kycs.map(k => 
+                            k.leadId === lead.id ? {...k, status: 'completed', completedDate: new Date().toISOString().split('T')[0]} : k
+                          ));
+                        }}
+                      >
+                        <Check className="mr-2 h-4 w-4" /> Mark as Completed
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => {
+                          // Move to next step (CAN generation)
+                          setLeads(leads.map(l => 
+                            l.id === lead.id ? {...l, progressStatus: 'can-no-generated'} : l
+                          ));
+                        }}
+                      >
+                        <ArrowRight className="mr-2 h-4 w-4" /> Proceed to CAN Generation
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+      </CardContent>
+    </Card>
 
               <Card className={`${cardBg} ${borderColor}`}>
                 <CardHeader>
