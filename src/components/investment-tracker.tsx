@@ -2,223 +2,222 @@ import { useState, useEffect } from 'react'
 import { Star, Edit, Save, Lock, ChevronDown, ChevronUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
-
-// At the top of your file
+import { db } from "@/lib/firebase"
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore"
+import { Moon, Sun } from 'lucide-react';
 import { 
-  db, 
-  getCollectionData, 
-  addDocument, 
-  updateDocument 
-} from "../firebase/dataService";
-
+  ThemeName, 
+  ThemeColors, 
+  themes, 
+  getButtonClasses 
+} from '@/lib/theme';
 
 interface InvestmentRecord {
-  month: string;
-  monthIndex: number;
-  sipTarget: number;
-  lumpsumTarget: number;
-  sipAchieved: number;
-  lumpsumAchieved: number;
-  isEditable: boolean;y
+  month: string
+  monthIndex: number
+  sipTarget: number
+  lumpsumTarget: number
+  sipAchieved: number
+  lumpsumAchieved: number
+  isEditable: boolean
 }
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwmGKxXgdPpt1S_mlg6GplRmjQdT3UVKSpOibKJDWBouF1SvUnMcAkY7i3F4BvGoP5N/exec';
-const SHEET_ID = '1SCfx_gBaxLaXPXiOSctc1FjsvYHl7rA_fABypR4kymI';
 
-export default function InvestmentTracker() {
-  const [isEditingSummary, setIsEditingSummary] = useState(false);
-  const [isEditingMonthly, setIsEditingMonthly] = useState(false);
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(new Date().getMonth());
-  const [isLoading, setIsLoading] = useState(true);
+interface InvestmentTrackerProps {
+  theme?: ThemeName; // Add theme prop
+}
 
-// Replace your fetchInvestmentData with:
-const fetchInvestmentData = async () => {
-  setIsLoading(true);
-  try {
-    const data = await getCollectionData(`investments_${currentYear}`);
-    if (data.length > 0) {
-      setRecords(data.map((record: any) => ({
-        ...record,
-        isEditable: record.monthIndex === currentMonthIndex
-      })));
-    } else {
-      // Initialize with default data if no records exist
-      const defaultRecords = [
-        { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
-        // ... other months
-      ];
-      setRecords(defaultRecords);
-    }
-  } catch (error) {
-    console.error('Error loading investment data:', error);
-    toast({
-      title: "Error",
-      description: "Failed to load investment data",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
+const defaultRecords: InvestmentRecord[] = [
+  { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
+  { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "March", monthIndex: 2, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 7000, lumpsumAchieved: 0, isEditable: false },
+  { month: "April", monthIndex: 3, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "May", monthIndex: 4, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 14000, lumpsumAchieved: 0, isEditable: false },
+  { month: "June", monthIndex: 5, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "July", monthIndex: 6, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "August", monthIndex: 7, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "September", monthIndex: 8, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "October", monthIndex: 9, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "November", monthIndex: 10, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "December", monthIndex: 11, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+]
+
+const toggleTheme = () => {
+  if (darkMode) {
+    setDarkMode(false);
+    // Return to previous theme
+  } else {
+    setDarkMode(true);
+    setPreviousTheme(theme);
   }
 };
 
 
-// Update data in Google Sheets
-  const updateInvestmentData = async (monthIndex: number, field: string, value: number) => {
-    try {
-      const response = await fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'updateInvestments',
-          sheetId: SHEET_ID,
-          monthIndex,
-          field,
-          value,
-          year: currentYear
-        })
-      });
-      
-      if (!response.ok) throw new Error('Failed to update investment data');
-      
-      toast({
-        title: "Success",
-        description: "Investment data updated successfully",
-      });
-      
-    } catch (error) {
-      console.error('Error updating investment data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update investment data",
-        variant: "destructive",
-      });
-    }
-  };
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0
+  }).format(amount)
+}
 
-  const [records, setRecords] = useState<InvestmentRecord[]>([
-    { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
-    { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "March", monthIndex: 2, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 7000, lumpsumAchieved: 0, isEditable: false },
-    { month: "April", monthIndex: 3, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "May", monthIndex: 4, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 14000, lumpsumAchieved: 0, isEditable: false },
-    { month: "June", monthIndex: 5, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "July", monthIndex: 6, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "August", monthIndex: 7, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "September", monthIndex: 8, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "October", monthIndex: 9, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "November", monthIndex: 10, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-    { month: "December", monthIndex: 11, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  ]);
+
+export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTrackerProps) {
+   const currentTheme = themes[theme] || themes['blue-smoke'];
+   
+  const {
+    bgColor,
+    textColor,
+    cardBg,
+    borderColor,
+    inputBg,
+    mutedText,
+    highlightBg,
+    selectedBg,
+    buttonBg,
+    buttonHover,
+    buttonText
+  } = currentTheme;
 
   
-  // Check for year change every minute
-  useEffect(() => {
-    const checkYearChange = () => {
-      const now = new Date();
-      if (now.getFullYear() !== currentYear) {
-        setCurrentYear(now.getFullYear());
-        setCurrentMonthIndex(0); // Reset to January when year changes
+
+  const [isEditingSummary, setIsEditingSummary] = useState(false)
+  const [isEditingMonthly, setIsEditingMonthly] = useState(false)
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(new Date().getMonth())
+  const [isLoading, setIsLoading] = useState(true)
+  const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords)
+  
+  const [previousTheme, setPreviousTheme] = useState<ThemeName>(theme);
+  const [darkMode, setDarkMode] = useState(false);
+  const getThemedButtonClasses = (variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
+    return getButtonClasses(theme, variant);
+  };
+
+  
+  // Firestore document reference
+  const investmentDocRef = doc(db, 'investmentTracker', currentYear.toString())
+
+  // Load data from Firestore
+ useEffect(() => {
+    const unsubscribe = onSnapshot(investmentDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data()
+        // Update both records and current month index from Firestore
+        setRecords(data.records || defaultRecords)
+        setCurrentMonthIndex(data.currentMonthIndex || new Date().getMonth())
+      } else {
+        // Initialize with default data if document doesn't exist
+        initializeFirestoreData()
       }
-    };
+      setIsLoading(false)
+    })
 
-    const interval = setInterval(checkYearChange, 60000); // Check every minute
-    return () => clearInterval(interval);
-  }, [currentYear]);
+    return () => unsubscribe()
+  }, [currentYear])
 
+  const initializeFirestoreData = async () => {
+    try {
+      await setDoc(investmentDocRef, {
+        records: defaultRecords,
+        currentMonthIndex: new Date().getMonth(),
+        year: currentYear,
+        createdAt: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error("Error initializing data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to initialize investment tracker",
+        variant: "destructive"
+      })
+    }
+  }
+
+  // Update editable status based on current month
   useEffect(() => {
-    // Update editable status based on current month
     const updatedRecords = records.map(record => ({
       ...record,
       isEditable: record.monthIndex === currentMonthIndex
-    }));
-    setRecords(updatedRecords);
-  }, [currentMonthIndex]);
+    }))
+    // Only update if there are actual changes to prevent infinite loops
+    if (JSON.stringify(updatedRecords) !== JSON.stringify(records)) {
+      setRecords(updatedRecords)
+    }
+  }, [currentMonthIndex, records])
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
+      const calculateTotals = () => {
+  const monthlySipTarget = Math.max(0, records[0]?.sipTarget || 0);
+  const lumpsumTarget = Math.max(0, records.reduce((sum, record) => sum + (record.lumpsumTarget || 0), 0));
+  const sipAchieved = Math.max(0, records.reduce((sum, record) => sum + (record.sipAchieved || 0), 0));
+  const lumpsumAchieved = Math.max(0, records.reduce((sum, record) => sum + (record.lumpsumAchieved || 0), 0));
 
-const calculateTotals = () => {
-  const monthlySipTarget = records[0]?.sipTarget || 0;
   return {
-    sipTarget: monthlySipTarget * 12, // Multiply by 12 for yearly total
-    lumpsumTarget: records.reduce((sum, record) => sum + record.lumpsumTarget, 0),
-    sipAchieved: records.reduce((sum, record) => sum + record.sipAchieved, 0),
-    lumpsumAchieved: records.reduce((sum, record) => sum + record.lumpsumAchieved, 0),
+    sipTarget: monthlySipTarget * 12,
+    lumpsumTarget,
+    sipAchieved,
+    lumpsumAchieved,
   };
 };
 
-  const totals = calculateTotals();
+  const totals = calculateTotals()
 
-  // Replace handleUpdateAchievedValue with:
-const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
-  const updatedRecords = records.map(record => 
-    record.monthIndex === monthIndex ? { ...record, [field]: value } : record
-  );
-  setRecords(updatedRecords);
-  
-  if (isEditingMonthly) {
+  const saveToFirestore = async (updatedRecords: InvestmentRecord[], newMonthIndex?: number) => {
     try {
-      const monthData = updatedRecords.find(r => r.monthIndex === monthIndex);
-      if (monthData) {
-        await updateDocument(`investments_${currentYear}`, monthData.id || monthIndex.toString(), {
-          [field]: value
-        });
+      await setDoc(investmentDocRef, {
+        records: updatedRecords,
+        currentMonthIndex: newMonthIndex !== undefined ? newMonthIndex : currentMonthIndex,
+        year: currentYear,
+        updatedAt: new Date().toISOString()
+      }, { merge: true })
+      
+      // Update local state immediately for better UX
+      setRecords(updatedRecords)
+      if (newMonthIndex !== undefined) {
+        setCurrentMonthIndex(newMonthIndex)
       }
     } catch (error) {
-      console.error('Error updating investment data:', error);
+      console.error('Error saving to Firestore:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to save data',
+        variant: 'destructive'
+      })
     }
   }
-};
 
-  // Replace handleUpdateTargetValue with:
-const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', value: number) => {
-  const updatedRecords = records.map(record => ({
-    ...record,
-    [field]: field === 'sipTarget' ? value : 
-             (record.monthIndex === 0 ? value : 0)
-  }));
-  setRecords(updatedRecords);
-  
-  if (isEditingSummary) {
-    try {
-      // Update all records (for SIP) or just January (for lumpsum)
-      const updates = updatedRecords
-        .filter(record => field === 'sipTarget' || record.monthIndex === 0)
-        .map(record => 
-          updateDocument(`investments_${currentYear}`, record.id || record.monthIndex.toString(), {
-            [field]: record[field]
-          })
-        );
-      
-      await Promise.all(updates);
-    } catch (error) {
-      console.error('Error updating target values:', error);
-    }
+  const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
+    const updatedRecords = records.map(record => 
+      record.monthIndex === monthIndex ? { ...record, [field]: value } : record
+    )
+    await saveToFirestore(updatedRecords)
   }
-};
 
-  const completeCurrentMonth = () => {
-    if (currentMonthIndex < 11) {
-      setCurrentMonthIndex(currentMonthIndex + 1);
-    } else {
-      // If completing December, move to next year and reset to January
-      setCurrentYear(prev => prev + 1);
-      setCurrentMonthIndex(0);
+  const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', value: number) => {
+    const updatedRecords = records.map(record => ({
+      ...record,
+      [field]: field === 'sipTarget' ? value : 
+               (record.monthIndex === 0 ? value : 0)
+    }))
+    await saveToFirestore(updatedRecords)
+  }
+
+  const completeCurrentMonth = async () => {
+    let newMonthIndex = currentMonthIndex < 11 ? currentMonthIndex + 1 : 0
+    if (currentMonthIndex === 11) {
+      setCurrentYear(prev => prev + 1)
     }
-  };
+    await saveToFirestore(records, newMonthIndex)
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center items-center h-64">Loading...</div>
+  }
 
   return (
-    <div className="space-y-4">
+       <div className="space-y-4" >
       <Card className="bg-white">
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -245,27 +244,27 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
               {isEditingSummary ? "Save Summary" : "Edit Summary"}
             </Button>
           </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
             {/* SIP Summary */}
             <Card>
-  <CardHeader>
-    <CardTitle className="text-lg">SIP Summary (Yearly)</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-3">
-    <div className="flex justify-between">
-      <Label>Target:</Label>
-      {isEditingSummary ? (
-        <Input
-          type="number"
-          value={records[0]?.sipTarget || 0} // Still edit monthly amount
-          onChange={(e) => handleUpdateTargetValue('sipTarget', Number(e.target.value))}
-          className="w-24"
-        />
-      ) : (
-        <span className="font-medium">{formatCurrency(totals.sipTarget)}</span> // Show yearly total
-      )}
-    </div>
+              <CardHeader>
+                <CardTitle className="text-lg">SIP Summary (Yearly)</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex justify-between">
+                  <Label>Target:</Label>
+                  {isEditingSummary ? (
+                    <Input
+                      type="number"
+                      value={records[0]?.sipTarget || 0}
+                      onChange={(e) => handleUpdateTargetValue('sipTarget', Number(e.target.value))}
+                      className="w-24"
+                    />
+                  ) : (
+                    <span className="font-medium">{formatCurrency(totals.sipTarget)}</span>
+                  )}
+                </div>
                 <div className="flex justify-between">
                   <Label>Achieved:</Label>
                   <span className="text-primary font-medium">{formatCurrency(totals.sipAchieved)}</span>
@@ -279,15 +278,21 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
                   </span>
                 </div>
                 <div className="pt-2">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Progress: {Math.round((totals.sipAchieved / totals.sipTarget) * 100)}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="h-2 rounded-full bg-primary" 
-                      style={{ 
-                        width: `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
-                      }}
+  <div className="flex justify-between text-sm mb-1">
+    <span>Progress: {
+      totals.sipTarget > 0 
+        ? `${Math.min(100, Math.round((totals.sipAchieved / totals.sipTarget) * 100))}`
+        : '0'
+    }%</span>
+  </div>
+  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+    <div 
+      className="h-full rounded-full bg-blue-500 transition-all duration-300" 
+      style={{ 
+        width: totals.sipTarget > 0 
+          ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
+          : '0%'
+      }}
                     ></div>
                   </div>
                 </div>
@@ -326,18 +331,21 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
                   </span>
                 </div>
                 <div className="pt-2">
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Progress: {totals.lumpsumTarget > 0 ? 
-                      Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100) : 0}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="h-2 rounded-full bg-primary" 
-                      style={{ 
-                        width: totals.lumpsumTarget > 0 ? 
-                          `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%'
-                      }}
+  <div className="flex justify-between text-sm mb-1">
+    <span>Progress: {
+      totals.lumpsumTarget > 0 
+        ? `${Math.min(100, Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100))}`
+        : '0'
+    }%</span>
+  </div>
+  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+    <div 
+      className="h-full rounded-full bg-green-500 transition-all duration-300" 
+      style={{ 
+        width: totals.lumpsumTarget > 0 
+          ? `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` 
+          : '0%'
+      }}
                     ></div>
                   </div>
                 </div>
@@ -514,3 +522,54 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
   );
 }
 
+export const useInvestmentData = () => {
+  const [data, setData] = useState<{
+    records: InvestmentRecord[];
+    currentMonthIndex: number;
+    year: number;
+  } | null>(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+ 
+
+  useEffect(() => {
+    const currentYear = new Date().getFullYear();
+    const investmentDocRef = doc(db, 'investmentTracker', currentYear.toString());
+
+    const unsubscribe = onSnapshot(investmentDocRef, 
+      (docSnapshot) => {
+        try {
+          if (docSnapshot.exists()) {
+            const docData = docSnapshot.data();
+            setData({
+              records: docData.records || defaultRecords,
+              currentMonthIndex: docData.currentMonthIndex || new Date().getMonth(),
+              year: docData.year || currentYear
+            });
+          } else {
+            // Initialize with default data if document doesn't exist
+            setDoc(investmentDocRef, {
+              records: defaultRecords,
+              currentMonthIndex: new Date().getMonth(),
+              year: currentYear,
+              createdAt: new Date().toISOString()
+            });
+          }
+          setLoading(false);
+        } catch (err) {
+          setError(err as Error);
+          setLoading(false);
+        }
+      },
+      (err) => {
+        setError(err);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  return { data, loading, error };
+};

@@ -1,18 +1,21 @@
-import './index.css' // This imports your Tailwind CSS
-import CRMDashboard from './components/crm-dashboard'
+import { AuthProvider } from '@/context/auth-context';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Login from '@/components/login';
+import CRMDashboard from '@/components/crm-dashboard';
 
 function App() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <CRMDashboard />
-    </div>
-  )
-
-  return (
-    <ThemeProvider>
-      <CRMDashboard />
-    </ThemeProvider>
+    <Router>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<CRMDashboard />} />
+          <Route path="/" element={<Login />} />
+        </Routes>
+      </AuthProvider>
+    </Router>
   );
 }
 
-export default App
+export default App;
+

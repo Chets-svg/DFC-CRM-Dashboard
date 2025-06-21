@@ -9,6 +9,9 @@
     @apply bg-opacity-50;
   }
 }
+html {
+  overflow-y: scroll;
+}
 @layer components {
   /* Force dropdown content to use theme colors */
   .select-content {
