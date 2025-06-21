@@ -1,1 +1,39 @@
-.env.local"node_modules/" 
+# 👉 Node dependencies
+node_modules/
+
+# 👉 Build output
+dist/
+build/
+.vite/
+
+# 👉 System files
+.DS_Store
+Thumbs.db
+
+# 👉 Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+firebase-debug.log
+
+# 👉 Environment variables
+.env
+.env.local
+.env.*.local
+
+# 👉 Editor / IDE folders
+.vscode/
+.idea/
+
+# 👉 Mac system file (if you ever switch OS)
+__MACOSX/
+
+# 👉 Windows system files
+desktop.ini
+
+# 👉 Optional: lock files (if you don't want to commit them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
