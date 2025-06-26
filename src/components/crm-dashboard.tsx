@@ -1,4 +1,3 @@
-import { Grid, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useState,useRef, createContext, useContext } from 'react';
@@ -14,23 +13,8 @@ import 'react-calendar/dist/Calendar.css';
 import { Calendar as ReactCalendar } from 'react-calendar';
 import { useInvestmentData } from "@/components/investment-tracker";
 import { logout } from '@/lib/firebase-config';
-
-import { 
-  ThemeName, 
-  ThemeColors, 
-  themes, 
-  getButtonClasses 
-} from '@/lib/theme';
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { saveUserThemePreference } from '@/lib/firebase-config'
+import { ThemeName, themes, getButtonClasses } from '@/lib/theme';
 import { 
   Card, 
   CardContent, 
@@ -44,10 +28,9 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore'
+import { doc, onSnapshot, setDoc, getDoc, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/auth-context';
 import { 
@@ -91,7 +74,6 @@ import {
 } from "@/lib/firebase-config";
 
 type CommunicationType = 'email' | 'whatsapp' | 'call' | 'meeting' | 'document';
-
 type CommunicationPriority = 'low' | 'medium' | 'high';
 type CommunicationStatus = 'pending' | 'sent' | 'received' | 'read' | 'failed';
 
@@ -189,6 +171,8 @@ type Client = {
     lumpsum?: boolean;
     healthInsurance?: boolean;
     lifeInsurance?: boolean;
+    taxation?: boolean; // Add this
+    nps?: boolean; // Add this
   };
   createdAt: string;
 };
@@ -228,7 +212,6 @@ interface ActivityItem {
 }
 const LEAD_STATUS_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 const PRODUCT_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
-
 
 interface Event {
   date: Date;
@@ -328,19 +311,41 @@ return (
             {/* Calendar Component */}
             <div className="mb-4">
               <ReactCalendar
-                onChange={(value) => {
-                  setDate(value as Date);
-                  setActiveDate(value as Date);
-                }}
-                value={date}
-        className={`rounded-md border ${currentTheme.borderColor} ${currentTheme.textColor}`}
-        tileContent={tileContent}
-        tileClassName={tileClassName}
-        onClickDay={(value) => setActiveDate(value)}
-        minDetail="month"
-        prev2Label={null}
-        next2Label={null}
-              />
+  onChange={(value) => {
+    setDate(value as Date);
+    setActiveDate(value as Date);
+  }}
+  value={date}
+  className={`
+    react-calendar
+    bg-inherit
+    text-inherit
+    border-inherit
+    rounded-md
+    [&_.react-calendar__navigation]:bg-inherit
+    [&_.react-calendar__navigation__label]:text-inherit
+    [&_.react-calendar__navigation__arrow]:text-inherit
+  `}
+  tileContent={tileContent}
+  tileClassName={({ date, view }) => `
+    ${view === 'month' ? 'h-12' : ''}
+    ${date.toDateString() === new Date().toDateString() ? 
+      'react-calendar__tile--now' : ''}
+    hover:bg-opacity-10
+  `}
+  navigationLabel={({ label }) => (
+    <span className="text-inherit font-medium">{label}</span>
+  )}
+  formatMonthYear={(locale, date) =>
+    new Intl.DateTimeFormat(locale, {
+      month: 'long',
+      year: 'numeric',
+    }).format(date)
+  }
+  minDetail="month"
+  prev2Label={null}
+  next2Label={null}
+/>
             </div>
 
             {/* Events for selected date */}
@@ -488,6 +493,12 @@ export function InvestmentSummaryCards() {
 
   const totals = calculateTotals();
 
+  // Calculate progress percentages
+  const sipProgress = totals.sipTarget > 0 ? 
+    Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100) : 0;
+  const lumpsumProgress = totals.lumpsumTarget > 0 ? 
+    Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100) : 0;
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* SIP Summary */}
@@ -514,19 +525,21 @@ export function InvestmentSummaryCards() {
           </div>
           <div className="pt-2">
             <div className="flex justify-between text-sm mb-1">
-              <span>Progress: {Math.round((totals.sipAchieved / totals.sipTarget) * 100)}%</span>
+              <span>Progress: {Math.round(sipProgress)}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div 
-                className="h-2 rounded-full bg-primary" 
+                className="h-2.5 rounded-full bg-primary" 
                 style={{ 
-                  width: `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
+                  width: `${sipProgress}%`,
+                  transition: 'width 0.5s ease-in-out'
                 }}
               />
             </div>
           </div>
         </CardContent>
       </Card>
+      
 
       {/* Lumpsum Summary */}
       <Card>
@@ -552,16 +565,14 @@ export function InvestmentSummaryCards() {
           </div>
           <div className="pt-2">
             <div className="flex justify-between text-sm mb-1">
-              <span>Progress: {totals.lumpsumTarget > 0 ? 
-                Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100) : 0}%
-              </span>
+              <span>Progress: {Math.round(lumpsumProgress)}%</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div 
-                className="h-2 rounded-full bg-primary" 
+                className="h-2.5 rounded-full bg-primary" 
                 style={{ 
-                  width: totals.lumpsumTarget > 0 ? 
-                    `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%'
+                  width: `${lumpsumProgress}%`,
+                  transition: 'width 0.5s ease-in-out'
                 }}
               />
             </div>
@@ -615,30 +626,31 @@ export function InvestmentSummaryCards() {
   );
 }
 
-function ThemeSelector({ theme, setTheme }: { theme: ThemeName, setTheme: (theme: ThemeName) => void }) {
+function ThemeSelector({ theme, setTheme }: ThemeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const currentTheme = themes[theme] || themes['blue-smoke'];
 
   return (
-    <div cclassname="relative">
+    <div className="relative">
       <Button 
-  variant="outline" 
-  className={`${getButtonClasses(theme, 'outline')} flex items-center gap-2`}
-  onClick={() => setIsOpen(!isOpen)}
->
-  <div className="w-4 h-4 rounded-full" style={{ 
-    backgroundColor: themes[theme].buttonBg.replace('bg-[', '').replace(']', '')
-  }} />
-  <span>Theme</span>
-  {isOpen ? (
-    <ChevronUp className="h-4 w-4 opacity-50" />
-  ) : (
-    <ChevronDown className="h-4 w-4 opacity-50" />
-  )}
-</Button>
+        variant="outline" 
+        className={`flex items-center gap-2 ${getButtonClasses(theme, 'outline')}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="w-4 h-4 rounded-full" style={{ 
+          backgroundColor: themes[theme].buttonBg.replace('bg-[', '').replace(']', '')
+        }} />
+        <span>Theme</span>
+        {isOpen ? (
+          <ChevronUp className="h-4 w-4 opacity-50" />
+        ) : (
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        )}
+      </Button>
       
       {isOpen && (
         <div 
-          className="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
+          className={`absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 ${currentTheme.cardBg} ${currentTheme.borderColor}`}
           onMouseLeave={() => setIsOpen(false)}
         >
           <div className="py-1">
@@ -650,8 +662,10 @@ function ThemeSelector({ theme, setTheme }: { theme: ThemeName, setTheme: (theme
                   setIsOpen(false);
                 }}
                 className={`flex items-center px-4 py-2 text-sm w-full text-left ${
-                  theme === themeName ? 'bg-gray-100' : 'hover:bg-gray-100'
-                }`}
+                  theme === themeName 
+                    ? currentTheme.selectedBg 
+                    : `hover:${currentTheme.highlightBg}`
+                } ${currentTheme.textColor}`}
               >
                 <div className="w-4 h-4 rounded-full mr-3" style={{ 
                   backgroundColor: themeColors.buttonBg.replace('bg-[', '').replace(']', '')
@@ -684,55 +698,62 @@ function LeadProgressBar({
     { 
       id: 'lead-generated', 
       label: 'Generated', 
-      icon: <User className="w-4 h-4" />,
+      icon: <User className="w-5 h-5" />,
       description: 'Lead has been created in the system'
+    },
+    { 
+      id: 'Kyc-Status', 
+      label: 'KYC Status', 
+      icon: <Shield className="w-5 h-5" />,
+      description: 'Lead has been created in the system',
+      actionLink: 'https://www.cvlkra.com/'
     },
     { 
       id: 'kyc-started', 
       label: 'KYC Started', 
-      icon: <FileText className="w-4 h-4" />,
+      icon: <FileText className="w-5 h-5" />,
       description: 'KYC process initiated - verification required',
       actionLink: 'https://mfs.kfintech.com/dit/login'
     },
     { 
       id: 'kyc-completed', 
       label: 'KYC Done', 
-      icon: <Check className="w-4 w-4" />,
+      icon: <Check className="w-5 w-5" />,
       description: 'KYC documents verified and approved',
       actionLink: 'https://www.mfuonline.com/'
     },
     { 
       id: 'can-no-generated', 
       label: 'CAN No.', 
-      icon: <CreditCard className="w-4 w-4" />,
+      icon: <CreditCard className="w-5 w-5" />,
       description: 'Client Account Number generated',
       actionLink: 'https://www.mfuonline.com/'
     },
     { 
       id: 'can-account-created', 
       label: 'CAN Account', 
-      icon: <Check className="w-4 w-4" />,
+      icon: <Check className="w-5 w-5" />,
       description: 'Investment account created',
       actionLink: 'https://www.mfuonline.com/'
     },
     { 
       id: 'mandate-generated', 
       label: 'Mandate', 
-      icon: <FileSignature className="w-4 w-4" />,
+      icon: <FileSignature className="w-5 w-5" />,
       description: 'Auto-debit mandate generated',
       actionLink: 'https://www.mfuonline.com/'
     },
     { 
       id: 'mandate-accepted', 
       label: 'Accepted', 
-      icon: <ThumbsUp className="w-4 w-4" />,
+      icon: <ThumbsUp className="w-5 w-5" />,
       description: 'Mandate approved by client',
       actionLink: 'https://www.mfuonline.com/'
     },
     { 
       id: 'sip-setup', 
       label: 'SIP Done', 
-      icon: <CalendarCheck className="w-4 w-4" />,
+      icon: <CalendarCheck className="w-5 w-5" />,
       description: 'Systematic Investment Plan activated'
     }
   ];
@@ -884,7 +905,25 @@ function LeadProgressBar({
   );
 }
 
-  
+export const getUserThemePreference = async (userId: string): Promise<ThemeName> => {
+  try {
+    const docRef = doc(db, 'userPreferences', userId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      // Validate the theme exists in your themes object
+      if (data.theme && themes[data.theme as ThemeName]) {
+        return data.theme as ThemeName;
+      }
+    }
+    // Return default theme if no preference found or invalid
+    return 'blue-smoke';
+  } catch (error) {
+    console.error('Error getting theme preference:', error);
+    return 'blue-smoke'; // Fallback to default
+  }
+};
 
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
@@ -916,6 +955,7 @@ const [isAdding, setIsAdding] = useState(false)
 const [editingId, setEditingId] = useState<string | null>(null)
 const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: '', phone: '' })
 const [amountInput, setAmountInput] = useState(''); 
+const [themeLoading, setThemeLoading] = useState(true);
 
 const { user } = useAuth();
 const handleLogout = async () => {
@@ -936,10 +976,11 @@ const handleLogout = async () => {
 
 
 const PRODUCT_COLORS = {
-  // All mutual fund products (SIP, Lumpsum, STP, SWP) will use this color
   mutualFund: 'bg-blue-300 text-blue-900 border-blue-900',
   healthInsurance: 'bg-green-200 text-green-900 border-green-900',
-  lifeInsurance: 'bg-purple-200 text-purple-800 border-purple-900'
+  lifeInsurance: 'bg-purple-200 text-purple-800 border-purple-900',
+  taxation: 'bg-orange-200 text-orange-900 border-orange-900', // Add this
+  nps: 'bg-teal-200 text-teal-900 border-teal-900' // Add this
 };
 const getClientPrimaryProduct = (client: Client) => {
   // Check for any mutual fund product first
@@ -948,6 +989,8 @@ const getClientPrimaryProduct = (client: Client) => {
   }
   if (client.products.healthInsurance) return 'healthInsurance';
   if (client.products.lifeInsurance) return 'lifeInsurance';
+  if (client.products.taxation) return 'taxation'; // Add this
+  if (client.products.nps) return 'nps'; // Add this
   return 'mutualFund'; // Default to mutual fund if no product is selected
 };
  const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
@@ -1432,12 +1475,13 @@ const convertLeadToClient = async (leadId: string) => {
       lumpsum: lead.productInterest.some(p => p.includes('Lumpsum')),
       healthInsurance: lead.productInterest.includes('Health Insurance'),
       lifeInsurance: lead.productInterest.includes('Life Insurance'),
+      taxation: lead.productInterest.includes('Taxation Planning'), // Add this
+      nps: lead.productInterest.includes('National Pension System (NPS)') // Add this
     },
     sipStartDate: new Date().toISOString().split('T')[0],
     sipNextDate: calculateNextSIPDate('Monthly'),
-    createdAt: new Date().toISOString() // Add creation timestamp
+    createdAt: new Date().toISOString()
   };
-
   try {
     // First add the new client
     await addDocument(CLIENTS_COLLECTION, newClient);
@@ -1806,18 +1850,6 @@ const handleSendWhatsApp = () => {
     }
   };
 
-  
-    const toggleTheme = () => {
-    if (theme === 'dark') {
-      // When turning off dark mode, return to previous light theme
-      setTheme(previousLightTheme);
-    } else {
-      // When turning on dark mode, remember current light theme
-      setPreviousLightTheme(theme);
-      setTheme('dark');
-    }
-  };
-
   const toggleLead = (id: string) => {
     setExpandedLeadId(expandedLeadId === id ? null : id);
   };
@@ -1927,13 +1959,76 @@ const performKYC = (leadId: string) => {
   Refresh
 </Button>
 
-const handleThemeChange = (newTheme: ThemeName) => {
-    if (theme !== 'dark') {
-      // If not in dark mode, update the previous light theme
-      setPreviousLightTheme(newTheme);
+
+useEffect(() => {
+  const loadTheme = async () => {
+    try {
+      if (user?.uid) {
+        const savedTheme = await getUserThemePreference(user.uid);
+        if (savedTheme) {
+          setTheme(savedTheme);
+          if (savedTheme !== 'dark') {
+            setPreviousLightTheme(savedTheme);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading theme:', error);
+      // Fallback to default theme
+      setTheme('blue-smoke');
+      setPreviousLightTheme('blue-smoke');
+    } finally {
+      setThemeLoading(false);
     }
-    setTheme(newTheme);
   };
+  
+  loadTheme();
+}, [user?.uid]);
+
+// Update the theme change handlers
+const handleThemeChange = async (newTheme: ThemeName) => {
+  // Update local state immediately for better UX
+  setTheme(newTheme);
+  
+  if (newTheme !== 'dark') {
+    setPreviousLightTheme(newTheme);
+  }
+  
+  // Save to Firebase
+  if (user?.uid) {
+    try {
+      await saveUserThemePreference(user.uid, newTheme);
+    } catch (error) {
+      console.error('Error saving theme:', error);
+      // Revert if save fails
+      setTheme(theme);
+    }
+  }
+};
+
+const toggleTheme = async () => {
+  const newTheme = theme === 'dark' ? previousLightTheme : 'dark';
+  setTheme(newTheme);
+  
+  // Save to Firebase
+  if (user?.uid) {
+    try {
+      await saveUserThemePreference(user.uid, newTheme);
+    } catch (error) {
+      console.error('Error saving theme:', error);
+      // Revert if save fails
+      setTheme(theme);
+    }
+  }
+};
+if (themeLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
 
  return (
     <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
@@ -1980,8 +2075,7 @@ const handleThemeChange = (newTheme: ThemeName) => {
 </Button>
           </div>
         </div>
-              
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className={`grid w-full grid-cols-7 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
     value="dashboard"
@@ -2025,11 +2119,11 @@ const handleThemeChange = (newTheme: ThemeName) => {
   >
     <BarChart2 className="mr-2 h-4 w-4 text-teal-500" /> Investment Tracker
   </TabsTrigger>
-</TabsList>
+  </TabsList>
 <TabsContent value="investment-tracker">
-  <InvestmentTracker />
-</TabsContent>               
-
+    <InvestmentTracker theme={theme} />
+  </TabsContent>        
+       
           {/* Dashboard Tab */}
     <TabsContent value="dashboard">
   <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-6">
@@ -2159,42 +2253,52 @@ const handleThemeChange = (newTheme: ThemeName) => {
           <ResponsiveContainer width="100%" height="100%">
             <RechartsPieChart>
               <Pie
-                data={[
-                  { 
-                    name: 'SIP', 
-                    value: clients.filter(c => c.products.sip).length 
-                  },
-                  { 
-                    name: 'Lumpsum', 
-                    value: clients.filter(c => c.products.lumpsum).length 
-                  },
-                  { 
-                    name: 'Health Insurance', 
-                    value: clients.filter(c => c.products.healthInsurance).length 
-                  },
-                  { 
-                    name: 'Life Insurance', 
-                    value: clients.filter(c => c.products.lifeInsurance).length 
-                  }
-                ]}
-                cx="45%"
-                cy="45%"
-                labelLine={false}
-                outerRadius={80}
-                innerRadius={45}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              >
-                {[
-                  '#e46b0c', 
-                  '#00C49F', 
-                  '#FFBB28', 
-                  '#0088FE'
-                ].map((color, index) => (
-                  <Cell key={`cell-${index}`} fill={color} />
-                ))}
-              </Pie>
+  data={[
+    { 
+      name: 'SIP', 
+      value: clients.filter(c => c.products.sip).length 
+    },
+    { 
+      name: 'Lumpsum', 
+      value: clients.filter(c => c.products.lumpsum).length 
+    },
+    { 
+      name: 'Health Insurance', 
+      value: clients.filter(c => c.products.healthInsurance).length 
+    },
+    { 
+      name: 'Life Insurance', 
+      value: clients.filter(c => c.products.lifeInsurance).length 
+    },
+    { 
+      name: 'Taxation', 
+      value: clients.filter(c => c.products.taxation).length 
+    },
+    { 
+      name: 'NPS', 
+      value: clients.filter(c => c.products.nps).length 
+    }
+  ]}
+  cx="45%"
+  cy="45%"
+  labelLine={false}
+  outerRadius={80}
+  innerRadius={45}
+  fill="#8884d8"
+  dataKey="value"
+  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+>
+  {[
+    '#e46b0c', 
+    '#00C49F', 
+    '#FFBB28', 
+    '#0088FE',
+    '#FF8042', // Add color for Taxation
+    '#A4DE6C'  // Add color for NPS
+  ].map((color, index) => (
+    <Cell key={`cell-${index}`} fill={color} />
+  ))}
+</Pie>
               <Tooltip />
               <Legend />
             </RechartsPieChart>
@@ -2449,7 +2553,9 @@ const handleThemeChange = (newTheme: ThemeName) => {
       'Mutual Funds - SWP',
       'Mutual Funds - STP',
       'Health Insurance',
-      'Life Insurance'
+      'Life Insurance',
+      'Taxation Planning', // Add this
+    'National Pension System (NPS)' // Add this
     ].map(product => (
       <div key={product} className="flex items-center mb-2">
         <input
@@ -2499,19 +2605,24 @@ const handleThemeChange = (newTheme: ThemeName) => {
         <CardContent>
          <div className="space-y-4">
   {leads
-              .sort((a, b) => {
-                // Sort by createdAt in descending order (newest first)
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-              })
-              .map(lead => (
-                <div key={lead.id} className={`p-4 border rounded-lg ${borderColor} ${expandedLeadId === lead.id ? selectedBg : highlightBg}`}
-    >
+  .sort((a, b) => {
+    // Push lost leads to the bottom
+    if (a.status === 'lost' && b.status !== 'lost') return 1;
+    if (a.status !== 'lost' && b.status === 'lost') return -1;
+    // For non-lost leads, sort by creation date (newest first)
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  })
+  .map(lead => (
+    <div key={lead.id} className={`p-4 border rounded-lg ${borderColor} ${expandedLeadId === lead.id ? selectedBg : highlightBg}`}>
       <div 
         className="flex justify-between items-start cursor-pointer"
         onClick={() => toggleLead(lead.id)}
       >
         <div>
-          <h3 className="font-bold">{lead.name}</h3>
+          {/* Make lost lead names red */}
+          <h3 className={`font-bold ${lead.status === 'lost' ? 'text-red-600' : ''}`}>
+            {lead.name}
+          </h3>
           <div className="flex flex-wrap gap-1 mt-1">
             {lead.productInterest.map(product => (
               <span 
@@ -2541,16 +2652,17 @@ const handleThemeChange = (newTheme: ThemeName) => {
         </div>
       </div>
 
-      {/* Progress Bar - Added this line */}
-      {lead.productInterest.some(product => product.includes('Mutual Funds')) && (
-  <div className="my-3">
-    <LeadProgressBar 
-      status={lead.progressStatus} 
-      onStatusChange={(newStatus) => updateLeadProgress(lead.id, newStatus)}
-      theme={theme === 'dark' ? 'dark' : 'light'} 
-    />
-  </div>
-)}         
+      {/* Progress Bar - Always shown for lost leads when expanded, otherwise only for mutual fund leads */}
+      {(expandedLeadId === lead.id || (lead.productInterest.some(product => product.includes('Mutual Funds')) && lead.status !== 'lost')) && (
+        <div className="my-3">
+          <LeadProgressBar 
+            status={lead.progressStatus} 
+            onStatusChange={(newStatus) => updateLeadProgress(lead.id, newStatus)}
+            theme={theme === 'dark' ? 'dark' : 'light'} 
+            isLost={lead.status === 'lost'} // Pass isLost prop to customize appearance
+          />
+        </div>
+      )}
 
                       {/* Expanded Lead Details */}
                 {expandedLeadId === lead.id && (
@@ -2744,16 +2856,15 @@ const handleThemeChange = (newTheme: ThemeName) => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <CardTitle>Client Management</CardTitle>
         <div className="flex gap-2">
+          <Button 
+            onClick={() => setActiveTab("leads")} // Simply switch to leads tab instead
+            className={getButtonClasses(theme)}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Add Lead
+          </Button>
           <Select
             value={clientSortField}
-            onValueChange={(value) => {
-              const newField = value as ClientSortField;
-              setClientSortField(newField);
-              // For non-date fields, we'll use ascending by default
-              const newDirection = newField === 'createdAt' ? 'desc' : 'asc';
-              setClientSortDirection(newDirection);
-              fetchClients(newField, newDirection);
-            }}
+            onValueChange={(value) => setClientSortField(value as ClientSortField)}
           >
             <SelectTrigger className={`w-[180px] ${inputBg} ${borderColor}`}>
               <SelectValue placeholder="Sort by" />
@@ -2764,210 +2875,288 @@ const handleThemeChange = (newTheme: ThemeName) => {
               <SelectItem value="products">Primary Product</SelectItem>
             </SelectContent>
           </Select>
-          <Button
-            variant="outline"
-            onClick={() => {
-              const newDirection = clientSortDirection === 'asc' ? 'desc' : 'asc';
-              setClientSortDirection(newDirection);
-              fetchClients(clientSortField, newDirection);
-            }}
-            className={getButtonClasses(theme, 'outline')}
-          >
-            {clientSortDirection === 'asc' ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
         </div>
       </div>
     </CardHeader>
-    <CardContent>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {clients
-          .sort((a, b) => {
-            let comparison = 0;
-            
-            if (clientSortField === 'createdAt') {
-              comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-            } else if (clientSortField === 'name') {
-              comparison = a.name.localeCompare(b.name);
-            } else if (clientSortField === 'products') {
-              const productA = getClientPrimaryProduct(a);
-              const productB = getClientPrimaryProduct(b);
-              comparison = productA.localeCompare(productB);
-            }
-            
-            return clientSortDirection === 'asc' ? comparison : -comparison;
-          })
-          .map(client => {
-            const primaryProduct = getClientPrimaryProduct(client);
-            return (
-              <div 
-                key={client.id} 
-                className={`p-4 border rounded-lg ${PRODUCT_COLORS[primaryProduct]} ${
-                  clientDetailsId === client.id ? 'ring-2 ring-offset-2' : ''
-                } transition-colors`}
-              >
-                {/* Client info and avatar section */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${PRODUCT_COLORS[primaryProduct].replace('text-', 'bg-').split(' ')[0]}`}>
-                    <User className="h-8 w-8" />
-                  </div>
-                  <div className="flex-1">
-                    {editingClientId === client.id ? (
-                      <>
-                        <Input
-                          value={editedClient.name || client.name}
-                          onChange={(e) => setEditedClient({...editedClient, name: e.target.value})}
-                          className={`mb-2 ${inputBg} ${borderColor}`}
-                        />
-                        <Input
-                          value={editedClient.email || client.email}
-                          onChange={(e) => setEditedClient({...editedClient, email: e.target.value})}
-                          className={`mb-2 ${inputBg} ${borderColor}`}
-                        />
-                        <Input
-                          value={editedClient.phone || client.phone}
-                          onChange={(e) => setEditedClient({...editedClient, phone: e.target.value})}
-                          className={`${inputBg} ${borderColor}`}
-                        />
-                      </>
-                    ) : (
-                      <>
-                        <h3 className="font-bold">{client.name}</h3>
-                        <p className="text-sm opacity-80">{client.email}</p>
-                        <p className="text-sm opacity-80">{client.phone}</p>
-                      </>
-                    )}
-                  </div>
+    
+    {/* Add/Edit Client Form */}
+    {(isAdding || editingId) && (
+      <CardContent className="border-b pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Name</Label>
+            <Input
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className={`${inputBg} ${borderColor}`}
+            />
+          </div>
+          <div>
+            <Label>Email</Label>
+            <Input
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`${inputBg} ${borderColor}`}
+            />
+          </div>
+          <div>
+            <Label>Phone</Label>
+            <Input
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              className={`${inputBg} ${borderColor}`}
+            />
+          </div>
+          
+          {/* Products Selection */}
+          <div className="md:col-span-2">
+            <Label>Products</Label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
+              {Object.entries({
+                mutualFund: 'Mutual Funds',
+                sip: 'SIP',
+                lumpsum: 'Lumpsum',
+                healthInsurance: 'Health Insurance',
+                lifeInsurance: 'Life Insurance',
+                taxation: 'Taxation',
+                nps: 'NPS'
+              }).map(([key, label]) => (
+                <div key={key} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`product-${key}`}
+                    checked={formData.products?.[key as keyof Client['products']] || false}
+                    onCheckedChange={(checked) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        products: {
+                          ...prev.products,
+                          [key]: !!checked
+                        }
+                      }));
+                    }}
+                  />
+                  <Label htmlFor={`product-${key}`}>{label}</Label>
                 </div>
-                
-                {/* Products Grid */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  {Object.entries(editingClientId === client.id ? 
-                    {...client.products, ...editedClient.products} : 
-                    client.products).map(([product, isSelected]) => (
+              ))}
+            </div>
+          </div>
+          
+          <div className="md:col-span-2 flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={cancelForm}
+              className={getButtonClasses(theme, 'outline')}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={editingId ? handleUpdateClient : handleAddClient}
+              className={getButtonClasses(theme)}
+            >
+              {editingId ? 'Update Client' : 'Add Client'}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    )}
+
+    <CardContent>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {sortClients(clients).map(client => {
+          const primaryProduct = getClientPrimaryProduct(client);
+          return (
+            <div 
+              key={client.id} 
+              className={`p-4 border rounded-lg ${PRODUCT_COLORS[primaryProduct]} ${
+                clientDetailsId === client.id ? 'ring-2 ring-offset-2' : ''
+              } transition-colors`}
+            >
+              {/* Client info and avatar section */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${PRODUCT_COLORS[primaryProduct].replace('text-', 'bg-').split(' ')[0]}`}>
+                  <User className="h-8 w-8" />
+                </div>
+                <div className="flex-1">
+                  {editingClientId === client.id ? (
+                    <>
+                      <Input
+                        value={editedClient.name || client.name}
+                        onChange={(e) => setEditedClient({...editedClient, name: e.target.value})}
+                        className={`mb-2 ${inputBg} ${borderColor}`}
+                      />
+                      <Input
+                        value={editedClient.email || client.email}
+                        onChange={(e) => setEditedClient({...editedClient, email: e.target.value})}
+                        className={`mb-2 ${inputBg} ${borderColor}`}
+                      />
+                      <Input
+                        value={editedClient.phone || client.phone}
+                        onChange={(e) => setEditedClient({...editedClient, phone: e.target.value})}
+                        className={`${inputBg} ${borderColor}`}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="font-bold">{client.name}</h3>
+                      <p className="text-sm opacity-80">{client.email}</p>
+                      <p className="text-sm opacity-80">{client.phone}</p>
+                    </>
+                  )}
+                </div>
+              </div>
+              
+              {/* Products Grid - Enhanced with edit capability */}
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                {Object.entries(editingClientId === client.id ? 
+                  {...client.products, ...(editedClient.products || {})} : 
+                  client.products).map(([productKey, isSelected]) => {
+                  
+                  const displayName = productKey.split(/(?=[A-Z])/).join(' ');
+
+                  return (
                     <div 
-                      key={product}
-                      className={`p-1 rounded text-center text-xs cursor-pointer ${
-                        isSelected ? PRODUCT_COLORS[product as keyof typeof PRODUCT_COLORS] : 'bg-gray-100'
-                      }`}
+                      key={productKey}
+                      className={`
+                        p-1 rounded text-center text-xs cursor-pointer
+                        ${isSelected 
+                          ? 'bg-gray-100 text-gray-800 font-medium' // SELECTED = gray background
+                          : 'bg-inherit' // NOT SELECTED = inherits card's background color
+                        }
+                        border border-gray-200
+                        transition-colors duration-200
+                      `}
                       onClick={() => {
                         if (editingClientId === client.id) {
                           setEditedClient({
                             ...editedClient,
                             products: {
                               ...editedClient.products,
-                              [product]: !isSelected
+                              [productKey]: !isSelected
                             }
                           });
                         }
                       }}
                     >
-                      {product.split(/(?=[A-Z])/).join(' ')}
+                      {displayName}
                     </div>
-                  ))}
-                </div>
-
-                {/* Date Fields - Always shown in edit mode, toggleable in view mode */}
-                {(editingClientId === client.id || clientDetailsId === client.id) && (
-                  <div className="mt-4 space-y-2">
-                    {/* Date of Birth */}
-                    <div>
-                      <label className="block text-xs mb-1">Date of Birth</label>
-                      {editingClientId === client.id ? (
-                        <Input
-                          type="date"
-                          value={editedClient.dob || client.dob || ''}
-                          onChange={(e) => setEditedClient({...editedClient, dob: e.target.value})}
-                          className={`text-xs ${inputBg} ${borderColor}`}
-                        />
-                      ) : (
-                        client.dob && <p className="text-xs">{new Date(client.dob).toLocaleDateString()}</p>
-                      )}
-                    </div>
-                    
-                    {/* Marriage Anniversary */}
-                    <div>
-                      <label className="block text-xs mb-1">Marriage Anniversary</label>
-                      {editingClientId === client.id ? (
-                        <Input
-                          type="date"
-                          value={editedClient.marriageAnniversary || client.marriageAnniversary || ''}
-                          onChange={(e) => setEditedClient({...editedClient, marriageAnniversary: e.target.value})}
-                          className={`text-xs ${inputBg} ${borderColor}`}
-                        />
-                      ) : (
-                        client.marriageAnniversary && <p className="text-xs">{new Date(client.marriageAnniversary).toLocaleDateString()}</p>
-                      )}
-                    </div>
-                    
-                    {/* SIP Dates - Only shown if SIP product is selected */}
-                    {(client.products.sip || (editingClientId === client.id && editedClient.products?.sip)) && (
-                      <>
-                        <div>
-                          <label className="block text-xs mb-1">SIP Date</label>
-                          {editingClientId === client.id ? (
-                            <Input
-                              type="date"
-                              value={editedClient.sipStartDate || client.sipStartDate || ''}
-                              onChange={(e) => setEditedClient({...editedClient, sipStartDate: e.target.value})}
-                              className={`text-xs ${inputBg} ${borderColor}`}
-                            />
-                          ) : (
-                            client.sipStartDate && <p className="text-xs">{new Date(client.sipStartDate).toLocaleDateString()}</p>
-                          )}
-                        </div>
-                      </>
+                  );
+                })}
+              </div>
+              
+              {/* Date Fields */}
+              {(editingClientId === client.id || clientDetailsId === client.id) && (
+                <div className="mt-4 space-y-2">
+                  <div>
+                    <label className="block text-xs mb-1">Date of Birth</label>
+                    {editingClientId === client.id ? (
+                      <Input
+                        type="date"
+                        value={editedClient.dob || client.dob || ''}
+                        onChange={(e) => setEditedClient({...editedClient, dob: e.target.value})}
+                        className={`text-xs ${inputBg} ${borderColor}`}
+                      />
+                    ) : (
+                      client.dob && <p className="text-xs">{new Date(client.dob).toLocaleDateString()}</p>
                     )}
                   </div>
-                )}
-                
-                {/* Action Buttons */}
-                <div className="flex gap-2 mt-4">
-                  {editingClientId === client.id ? (
+                  
+                  <div>
+                    <label className="block text-xs mb-1">Marriage Anniversary</label>
+                    {editingClientId === client.id ? (
+                      <Input
+                        type="date"
+                        value={editedClient.marriageAnniversary || client.marriageAnniversary || ''}
+                        onChange={(e) => setEditedClient({...editedClient, marriageAnniversary: e.target.value})}
+                        className={`text-xs ${inputBg} ${borderColor}`}
+                      />
+                    ) : (
+                      client.marriageAnniversary && <p className="text-xs">{new Date(client.marriageAnniversary).toLocaleDateString()}</p>
+                    )}
+                  </div>
+                  
+                  {/* SIP Dates - Only shown if SIP product is selected */}
+                  {(client.products.sip || (editingClientId === client.id && editedClient.products?.sip)) && (
                     <>
-                      <Button 
-                        onClick={handleSaveEdit}
-                        className={`${getButtonClasses(theme)}`}
-                        size="sm"
-                      >
-                        <Check className="mr-2 h-4 w-4" /> Save
-                      </Button>
-                      <Button 
-                        onClick={handleCancelEdit}
-                        className={getButtonClasses(theme, 'danger')}
-                        size="sm"
-                      >
-                        <X className="mr-2 h-4 w-4" /> Cancel
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => handleEditClient(client)}
-                      >
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="flex-1"
-                        onClick={() => setClientDetailsId(clientDetailsId === client.id ? null : client.id)}
-                      >
-                        {clientDetailsId === client.id ? 'Hide' : 'Details'}
-                      </Button>
+                      <div>
+                        <label className="block text-xs mb-1">SIP Start Date</label>
+                        {editingClientId === client.id ? (
+                          <Input
+                            type="date"
+                            value={editedClient.sipStartDate || client.sipStartDate || ''}
+                            onChange={(e) => setEditedClient({...editedClient, sipStartDate: e.target.value})}
+                            className={`text-xs ${inputBg} ${borderColor}`}
+                          />
+                        ) : (
+                          client.sipStartDate && <p className="text-xs">{new Date(client.sipStartDate).toLocaleDateString()}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs mb-1">Next SIP Date</label>
+                        {editingClientId === client.id ? (
+                          <Input
+                            type="date"
+                            value={editedClient.sipNextDate || client.sipNextDate || ''}
+                            onChange={(e) => setEditedClient({...editedClient, sipNextDate: e.target.value})}
+                            className={`text-xs ${inputBg} ${borderColor}`}
+                          />
+                        ) : (
+                          client.sipNextDate && <p className="text-xs">{new Date(client.sipNextDate).toLocaleDateString()}</p>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div className="flex gap-2 mt-4">
+                {editingClientId === client.id ? (
+                  <>
+                    <Button 
+                      onClick={handleSaveEdit}
+                      className={getButtonClasses(theme)}
+                      size="sm"
+                    >
+                      <Check className="mr-2 h-4 w-4" /> Save
+                    </Button>
+                    <Button 
+                      onClick={handleCancelEdit}
+                      className={getButtonClasses(theme, 'danger')}
+                      size="sm"
+                    >
+                      <X className="mr-2 h-4 w-4" /> Cancel
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => {
+                        setEditingClientId(client.id);
+                        setEditedClient({ ...client });
+                      }}
+                    >
+                      <Edit className="mr-2 h-4 w-4" /> Edit
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => setClientDetailsId(clientDetailsId === client.id ? null : client.id)}
+                    >
+                      {clientDetailsId === client.id ? 'Hide' : 'Details'}
+                    </Button>
+                                      </>
+                )}
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
       </div>
     </CardContent>
   </Card>
@@ -2975,7 +3164,7 @@ const handleThemeChange = (newTheme: ThemeName) => {
 
 {/* Communication Tab */}
 <TabsContent value="communication">
-  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+  <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
     {/* Communication History */}
     <Card className={`${cardBg} ${borderColor} lg:col-span-2`}>
       <CardHeader>
@@ -3135,7 +3324,7 @@ const handleThemeChange = (newTheme: ThemeName) => {
   </div>
 
     {/* New Communication Panel */}
-    <Card className={`${cardBg} ${borderColor}`}>
+    <Card className={`${cardBg} ${borderColor} lg:col-span-2`}>
       <CardHeader>
         <CardTitle>New Communication</CardTitle>
       </CardHeader>
@@ -3205,19 +3394,19 @@ const handleThemeChange = (newTheme: ThemeName) => {
             </SelectTrigger>
             <SelectContent className={`${cardBg} ${borderColor}`}>
               {[
-                'Mutual Funds - SIP',
-                'Mutual Funds - Lumpsum',
-                'Health Insurance',
-                'Life Insurance',
-                'Retirement Planning',
-                'Tax Planning'
-              ].map(product => (
-                <SelectItem 
-                  key={product} 
-                  value={product} // Must be non-empty string
-                  className={`hover:${highlightBg} ${textColor}`}
-                >
-                  {product}
+    'Mutual Funds - SIP',
+    'Mutual Funds - Lumpsum',
+    'Health Insurance',
+    'Life Insurance',
+    'Taxation Planning', // Add this
+    'National Pension System (NPS)' // Add this
+       ].map(product => (
+    <SelectItem 
+      key={product} 
+      value={product}
+      className={`hover:${highlightBg} ${textColor}`}
+    >
+      {product}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -3237,7 +3426,7 @@ const handleThemeChange = (newTheme: ThemeName) => {
 
     {/* Content Textarea */}
     <div>
-      <label className="block mb-1">Content *</label>
+      <label className="block mb-2">Content *</label>
       <Textarea
         value={newCommunication.content}
         onChange={(e) => setNewCommunication({...newCommunication, content: e.target.value})}

@@ -4,6 +4,7 @@ import { getAuth, signInWithEmailAndPassword,
   signOut,
   User } from "firebase/auth"; // Add this import
 
+  console.log('Firebase config loaded'); // Add at top of file
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -68,6 +69,30 @@ export const subscribeToCollection = (
     }));
     callback(data);
   });
+};
+export const saveUserThemePreference = async (userId: string, theme: ThemeName) => {
+  try {
+    await setDoc(doc(db, 'userPreferences', userId), { theme }, { merge: true });
+  } catch (error) {
+    console.error('Error saving theme preference:', error);
+  }
+};
+export const getUserThemePreference = async (userId: string): Promise<ThemeName> => {
+  try {
+    const docRef = doc(db, 'userPreferences', userId);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      if (data.theme) {
+        return data.theme as ThemeName;
+      }
+    }
+    return 'blue-smoke'; // Default theme
+  } catch (error) {
+    console.error('Error getting theme preference:', error);
+    return 'blue-smoke';
+  }
 };
 
 export {

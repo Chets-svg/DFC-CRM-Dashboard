@@ -329,18 +329,18 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkButtonHover: 'hover:bg-[#e69500]'
   },
   dark: {
-    bgColor: 'bg-gray-800',
-    textColor: 'text-gray-100',
-    cardBg: 'bg-gray-700',
-    borderColor: 'border-gray-600',
-    inputBg: 'bg-gray-600',
-    mutedText: 'text-gray-300',
-    highlightBg: 'bg-gray-600',
-    selectedBg: 'bg-blue-900',
-    buttonBg: 'bg-gray-600',
-    buttonHover: 'hover:bg-gray-500',
-    buttonText: 'text-white'
-  }
+  bgColor: 'bg-gray-900',
+  textColor: 'text-gray-100',
+  cardBg: 'bg-gray-800',
+  borderColor: 'border-gray-700',
+  inputBg: 'bg-gray-700',
+  mutedText: 'text-gray-400',
+  highlightBg: 'bg-gray-700',
+  selectedBg: 'bg-gray-600',
+  buttonBg: 'bg-blue-600',
+  buttonHover: 'hover:bg-blue-700',
+  buttonText: 'text-white'
+}
 };
 export const getButtonClasses = (theme: ThemeName, variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
   const themeObj = themes[theme];

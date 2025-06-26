@@ -49,6 +49,61 @@ html {
     background: var(--selected);
     border-radius: 4px;
   }
+/* Calendar styles */
+  .react-calendar {
+    @apply w-full bg-inherit text-inherit border-inherit;
+  }
+
+  .react-calendar__navigation {
+    @apply flex mb-4;
+  }
+
+  .react-calendar__navigation button {
+    @apply bg-transparent text-current min-w-[44px] py-2 px-1;
+  }
+
+  .react-calendar__navigation button:enabled:hover,
+  .react-calendar__navigation button:enabled:focus {
+    @apply bg-opacity-10;
+  }
+
+  .react-calendar__month-view__weekdays {
+    @apply text-center text-sm mb-1;
+  }
+
+  .react-calendar__month-view__weekdays__weekday {
+    @apply py-2;
+  }
+
+  .react-calendar__month-view__weekdays__weekday abbr {
+    @apply no-underline;
+  }
+
+  .react-calendar__tile {
+    @apply rounded-md p-2 text-center h-12;
+  }
+
+  .react-calendar__tile:enabled:hover,
+  .react-calendar__tile:enabled:focus {
+    @apply bg-opacity-10;
+  }
+
+  .react-calendar__tile--now {
+    @apply bg-blue-100 dark:bg-blue-900;
+  }
+
+  .react-calendar__tile--active {
+    @apply bg-blue-500 text-white dark:bg-blue-600;
+  }
+
+  .react-calendar__month-view__days__day--weekend {
+    @apply text-red-500 dark:text-red-400;
+  }
+
+  .react-calendar__month-view__days__day--neighboringMonth {
+    @apply text-gray-400 dark:text-gray-600;
+  }
+
 }
 :root {
   --background: 0 0% 100%;
@@ -79,6 +134,15 @@ html {
   --input: 214.3 31.8% 91.4%;
   --ring: 222.2 84% 4.9%;
   --radius: 0.5rem;
+
+  --calendar-bg: 0 0% 100%;
+  --calendar-text: 222.2 84% 4.9%;
+  --calendar-border: 214.3 31.8% 91.4%;
+  --calendar-highlight: 210 40% 96.1%;
+  --calendar-selected: 222.2 47.4% 11.2%;
+
+    --calendar-nav-bg: 0 0% 100%;
+  --calendar-nav-text: 222.2 84% 4.9%;
 }
 
 .dark {
@@ -109,6 +173,15 @@ html {
   --border: 217.2 32.6% 17.5%;
   --input: 217.2 32.6% 17.5%;
   --ring: 212.7 26.8% 83.9%;
+
+  --calendar-bg: 222.2 84% 4.9%;
+  --calendar-text: 210 40% 98%;
+  --calendar-border: 217.2 32.6% 17.5%;
+  --calendar-highlight: 217.2 32.6% 17.5%;
+  --calendar-selected: 210 40% 98%;
+
+  --calendar-nav-bg: 222.2 84% 4.9%;
+  --calendar-nav-text: 210 40% 98%;
 }
 // Global CSS additions (add to your globals.css)
 
@@ -130,3 +203,4 @@ html {
   .select-item[data-state="checked"] {
     background-color: var(--selected) !important;
   }
+

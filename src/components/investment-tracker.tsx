@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast"
 import { db } from "@/lib/firebase"
 import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore"
 import { Moon, Sun } from 'lucide-react';
+import { createContext, useContext } from 'react';
 import { 
   ThemeName, 
   ThemeColors, 
@@ -29,6 +30,34 @@ interface InvestmentTrackerProps {
   theme?: ThemeName; // Add theme prop
 }
 
+const ThemeContext = createContext({
+  theme: 'blue-smoke',
+  setTheme: (theme: ThemeName) => {},
+  toggleTheme: () => {}
+});
+
+export const ThemeProvider = ({ children }) => {
+  const [theme, setTheme] = useState<ThemeName>('blue-smoke');
+  const [previousTheme, setPreviousTheme] = useState<ThemeName>('blue-smoke');
+
+  const toggleTheme = () => {
+    if (theme === 'dark') {
+      setTheme(previousTheme);
+    } else {
+      setPreviousTheme(theme);
+      setTheme('dark');
+    }
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export const useTheme = () => useContext(ThemeContext);
+
 const defaultRecords: InvestmentRecord[] = [
   { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
   { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
@@ -45,15 +74,15 @@ const defaultRecords: InvestmentRecord[] = [
 ]
 
 const toggleTheme = () => {
-  if (darkMode) {
-    setDarkMode(false);
-    // Return to previous theme
-  } else {
-    setDarkMode(true);
-    setPreviousTheme(theme);
-  }
-};
-
+    if (theme === 'dark') {
+      // When turning off dark mode, return to previous light theme
+      setTheme(previousLightTheme);
+    } else {
+      // When turning on dark mode, remember current light theme
+      setPreviousLightTheme(theme);
+      setTheme('dark');
+    }
+  };
 
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -63,10 +92,17 @@ export const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
+const handleThemeChange = (newTheme: ThemeName) => {
+    if (theme !== 'dark') {
+      // If not in dark mode, update the previous light theme
+      setPreviousLightTheme(newTheme);
+    }
+    setTheme(newTheme);
+  };
 
 export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTrackerProps) {
-   const currentTheme = themes[theme] || themes['blue-smoke'];
-   
+  const currentTheme = themes[theme] || themes['blue-smoke'];
+  
   const {
     bgColor,
     textColor,
@@ -75,13 +111,8 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
     inputBg,
     mutedText,
     highlightBg,
-    selectedBg,
-    buttonBg,
-    buttonHover,
-    buttonText
+    selectedBg
   } = currentTheme;
-
-  
 
   const [isEditingSummary, setIsEditingSummary] = useState(false)
   const [isEditingMonthly, setIsEditingMonthly] = useState(false)
@@ -95,7 +126,6 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   const getThemedButtonClasses = (variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
     return getButtonClasses(theme, variant);
   };
-
   
   // Firestore document reference
   const investmentDocRef = doc(db, 'investmentTracker', currentYear.toString())
@@ -217,8 +247,8 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   }
 
   return (
-       <div className="space-y-4" >
-      <Card className="bg-white">
+       <div className={`space-y-4 ${bgColor} ${textColor}`}>
+      <Card className={`${cardBg} ${borderColor}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
@@ -236,18 +266,18 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Investment Summary</h3>
             <Button
-              onClick={() => setIsEditingSummary(!isEditingSummary)}
-              variant="outline"
-              className="gap-2"
-            >
-              {isEditingSummary ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-              {isEditingSummary ? "Save Summary" : "Edit Summary"}
-            </Button>
+  onClick={() => setIsEditingSummary(!isEditingSummary)}
+  variant="outline"
+  className={`gap-2 ${getButtonClasses(theme, 'outline')}`}
+>
+  {isEditingSummary ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+  {isEditingSummary ? "Save Summary" : "Edit Summary"}
+</Button>
           </div>
            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
             {/* SIP Summary */}
-            <Card>
+            <Card className={`${highlightBg} ${borderColor}`}>
               <CardHeader>
                 <CardTitle className="text-lg">SIP Summary (Yearly)</CardTitle>
               </CardHeader>
@@ -259,7 +289,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                       type="number"
                       value={records[0]?.sipTarget || 0}
                       onChange={(e) => handleUpdateTargetValue('sipTarget', Number(e.target.value))}
-                      className="w-24"
+                       className={`w-24 ${inputBg} ${borderColor}`}
                     />
                   ) : (
                     <span className="font-medium">{formatCurrency(totals.sipTarget)}</span>
@@ -285,22 +315,24 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
         : '0'
     }%</span>
   </div>
-  <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-    <div 
-      className="h-full rounded-full bg-blue-500 transition-all duration-300" 
-      style={{ 
-        width: totals.sipTarget > 0 
-          ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
-          : '0%'
-      }}
-                    ></div>
-                  </div>
+ <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+  <div 
+    className={`h-full rounded-full ${
+      theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500'
+    } transition-all duration-300`} 
+    style={{ 
+      width: totals.sipTarget > 0 
+        ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` 
+        : '0%'
+    }}
+  ></div>
+</div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Lumpsum Summary */}
-            <Card>
+            <Card className={`${highlightBg} ${borderColor}`}>
               <CardHeader>
                 <CardTitle className="text-lg">Lumpsum Summary</CardTitle>
               </CardHeader>
@@ -312,7 +344,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                       type="number"
                       value={records[0]?.lumpsumTarget || 0}
                       onChange={(e) => handleUpdateTargetValue('lumpsumTarget', Number(e.target.value))}
-                      className="w-24"
+                       className={`w-24 ${inputBg} ${borderColor}`}
                     />
                   ) : (
                     <span className="font-medium">{formatCurrency(records[0]?.lumpsumTarget || 0)}</span>
@@ -353,7 +385,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
             </Card>
 
             {/* Year Summary */}
-            <Card>
+            <Card className={`${highlightBg} ${borderColor}`}>
               <CardHeader>
                 <CardTitle className="text-lg">{currentYear} Summary</CardTitle>
               </CardHeader>
@@ -399,7 +431,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
       </Card>
 
       {/* Monthly Details Table */}
-      <Card className="bg-white">
+      <Card className={`${cardBg} ${borderColor}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
@@ -414,7 +446,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
               <Button
                 onClick={() => setIsEditingMonthly(!isEditingMonthly)}
                 variant="outline"
-                className="gap-2"
+                className={`gap-2 ${getButtonClasses(theme, 'outline')}`}
               >
                 {isEditingMonthly ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                 {isEditingMonthly ? "Save Monthly Data" : "Edit Monthly Data"}
@@ -423,7 +455,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                 <Button
                   onClick={completeCurrentMonth}
                   variant="default"
-                  className="gap-2"
+                  className={`gap-2 ${getButtonClasses(theme, 'outline')}`}
                 >
                   Complete Current Month
                 </Button>
@@ -446,74 +478,76 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {records.map((record) => (
-                  <tr 
-                    key={record.month} 
-                    className={record.isEditable ? "bg-blue-50" : ""}
-                  >
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {record.month}
-                      {record.isEditable && <span className="ml-2 text-xs text-blue-500">(Current)</span>}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {formatCurrency(record.sipTarget)}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {record.isEditable && isEditingMonthly ? (
-                          <Input
-                            type="number"
-                            value={record.sipAchieved}
-                            onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'sipAchieved', Number(e.target.value))}
-                            className="w-24"
-                          />
-                        ) : (
-                          <>
-                            {formatCurrency(record.sipAchieved)}
-                            {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground" />}
-                          </>
-                        )}
-                        {record.sipAchieved >= record.sipTarget && record.sipTarget > 0 && (
-                          <Star className="h-4 w-4 ml-1 text-green-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className={`px-4 py-2 whitespace-nowrap ${
-                      record.sipAchieved >= record.sipTarget ? 'text-green-500' : 'text-red-500'
-                    }`}>
-                      {formatCurrency(record.sipAchieved - record.sipTarget)}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      {formatCurrency(record.lumpsumTarget)}
-                    </td>
-                    <td className="px-4 py-2 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {record.isEditable && isEditingMonthly ? (
-                          <Input
-                            type="number"
-                            value={record.lumpsumAchieved}
-                            onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'lumpsumAchieved', Number(e.target.value))}
-                            className="w-24"
-                          />
-                        ) : (
-                          <>
-                            {formatCurrency(record.lumpsumAchieved)}
-                            {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground" />}
-                          </>
-                        )}
-                        {record.lumpsumAchieved >= record.lumpsumTarget && record.lumpsumTarget > 0 && (
-                          <Star className="h-4 w-4 ml-1 text-green-500" />
-                        )}
-                      </div>
-                    </td>
-                    <td className={`px-4 py-2 whitespace-nowrap ${
-                      record.lumpsumAchieved >= record.lumpsumTarget ? 'text-green-500' : 'text-red-500'
-                    }`}>
-                      {formatCurrency(record.lumpsumAchieved - record.lumpsumTarget)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+  {records.map((record) => (
+    <tr 
+  key={record.month}
+  className={`border-b ${borderColor} ${
+    record.isEditable ? (theme === 'dark' ? 'bg-white text-black' : 'bg-blue-50') : ''
+  }`}
+>
+      <td className="px-4 py-2 whitespace-nowrap">
+        {record.month}
+        {record.isEditable && <span className="ml-2 text-xs text-blue-500 dark:text-blue-400">(Current)</span>}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        {formatCurrency(record.sipTarget)}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="flex items-center">
+          {record.isEditable && isEditingMonthly ? (
+            <Input
+              type="number"
+              value={record.sipAchieved}
+              onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'sipAchieved', Number(e.target.value))}
+              className={`w-24 ${inputBg} ${borderColor}`}
+            />
+          ) : (
+            <>
+              {formatCurrency(record.sipAchieved)}
+              {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
+            </>
+          )}
+          {record.sipAchieved >= record.sipTarget && record.sipTarget > 0 && (
+            <Star className="h-4 w-4 ml-1 text-green-500" />
+          )}
+        </div>
+      </td>
+      <td className={`px-4 py-2 whitespace-nowrap ${
+        record.sipAchieved >= record.sipTarget ? 'text-green-500' : 'text-red-500'
+      }`}>
+        {formatCurrency(record.sipAchieved - record.sipTarget)}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        {formatCurrency(record.lumpsumTarget)}
+      </td>
+      <td className="px-4 py-2 whitespace-nowrap">
+        <div className="flex items-center">
+          {record.isEditable && isEditingMonthly ? (
+            <Input
+              type="number"
+              value={record.lumpsumAchieved}
+              onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'lumpsumAchieved', Number(e.target.value))}
+              className={`w-24 ${inputBg} ${borderColor}`}
+            />
+          ) : (
+            <>
+              {formatCurrency(record.lumpsumAchieved)}
+              {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
+            </>
+          )}
+          {record.lumpsumAchieved >= record.lumpsumTarget && record.lumpsumTarget > 0 && (
+            <Star className="h-4 w-4 ml-1 text-green-500" />
+          )}
+        </div>
+      </td>
+      <td className={`px-4 py-2 whitespace-nowrap ${
+        record.lumpsumAchieved >= record.lumpsumTarget ? 'text-green-500' : 'text-red-500'
+      }`}>
+        {formatCurrency(record.lumpsumAchieved - record.lumpsumTarget)}
+      </td>
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
         </CardContent>
