@@ -8,6 +8,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "noImplicitAny": false,
     "baseUrl": "src",
     "paths": {
       "@/*": ["./*"],
@@ -15,6 +17,6 @@
       "@components/*": ["./components/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx"],
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/**/*.js", "src/**/*.jsx", "server.ts"],
   "exclude": ["node_modules"]
 }

@@ -204,3 +204,21 @@ html {
     background-color: var(--selected) !important;
   }
 
+/* custom-table-styles.css */
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid #ccc;
+  padding: 8px;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+}

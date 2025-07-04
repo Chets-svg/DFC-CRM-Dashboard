@@ -37,3 +37,7 @@ desktop.ini
 # package-lock.json
 # yarn.lock
 # pnpm-lock.yaml
+
+
+# .gitignore
+server/serviceAccountKey.json

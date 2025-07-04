@@ -7,10 +7,17 @@ import {
   ToastTitle,
   ToastViewport,
 } from "@/components/ui/toast"
+type Toast = { id: string; message: string };
+
+interface ToasterProps {
+  toasts?: Toast[]; // ✅ make optional
+}
+
 
 export function Toaster() {
-  const { toasts } = useToast()
+  const { toasts = [] } = useToast()
 
+  
   return (
     <ToastProvider>
       {toasts.map(function ({ id, title, description, action, ...props }) {

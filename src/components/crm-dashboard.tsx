@@ -15,6 +15,14 @@ import { useInvestmentData } from "@/components/investment-tracker";
 import { logout } from '@/lib/firebase-config';
 import { saveUserThemePreference } from '@/lib/firebase-config'
 import { ThemeName, themes, getButtonClasses } from '@/lib/theme';
+import ClientCelebrations from './client-celebrations';
+import { EmailComponent } from '/src/components/email.tsx'
+import { Toaster } from 'react-hot-toast'
+import { BirthdayBanner } from '@/components/birthday-banner';
+import EnhancedTaskTab from './enhanced-task-tab';
+import { Checkbox } from "@/components/ui/checkbox";
+import { ThemeProvider } from '@/components/theme-provider'
+
 import { 
   Card, 
   CardContent, 
@@ -23,12 +31,13 @@ import {
   CardDescription,
   CardFooter 
 } from "@/components/ui/card";
-import {
+import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue } from "@/components/ui/select";
+  SelectValue 
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { doc, onSnapshot, setDoc, getDoc, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
@@ -55,8 +64,9 @@ import {
   Phone,
   CalendarDays, 
   Bell,
-  CheckCircle,
-  FileText, CreditCard, FileSignature, ThumbsUp, CalendarCheck, ExternalLink, ChevronLeft, ChevronRight
+  ListChecks,
+  CheckCircle, Trash2, 
+  FileText, CreditCard, FileSignature, ThumbsUp, CalendarCheck, ExternalLink, ChevronLeft, ChevronRight, MessageSquare
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
@@ -81,11 +91,29 @@ interface ThemeSelectorProps {
   theme: ThemeName
   setTheme: (theme: ThemeName) => void
 }
+type ViewMode = 'grid' | 'list'
 
 type LeadSortField = 'createdAt' | 'name' | 'status' | 'productInterest';
 
 interface AddSIPReminderFormProps {
   theme: ThemeName;
+}
+
+type TaskStatus = 'not-started' | 'in-progress' | 'completed' | 'on-hold' | 'cancelled';
+type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+interface Task {
+  id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate: string;
+  assignedTo: string;
+  clientId?: string;
+  leadId?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface KYCDetails {
@@ -396,6 +424,8 @@ return (
               )}
             </div>
 
+            
+
             {/* Upcoming Events (when not viewing today) */}
             {activeDate?.toDateString() !== new Date().toDateString() && (
               <div className="mt-6">
@@ -699,7 +729,8 @@ function LeadProgressBar({
       id: 'lead-generated', 
       label: 'Generated', 
       icon: <User className="w-5 h-5" />,
-      description: 'Lead has been created in the system'
+      description: 'Lead has been created in the system',
+      actionLink: 'https://www.cvlkra.com/'
     },
     { 
       id: 'Kyc-Status', 
@@ -713,7 +744,7 @@ function LeadProgressBar({
       label: 'KYC Started', 
       icon: <FileText className="w-5 h-5" />,
       description: 'KYC process initiated - verification required',
-      actionLink: 'https://mfs.kfintech.com/dit/login'
+      actionLink: 'https://edge360.camsonline.com/signin', 
     },
     { 
       id: 'kyc-completed', 
@@ -956,6 +987,11 @@ const [editingId, setEditingId] = useState<string | null>(null)
 const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: '', phone: '' })
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
+
+const [emailComponentProps, setEmailComponentProps] = useState({
+  defaultRecipient: '',
+  openCompose: false
+});
 
 const { user } = useAuth();
 const handleLogout = async () => {
@@ -1228,6 +1264,7 @@ const [showSIPForm, setShowSIPForm] = useState(false);
   const unsubscribeClients = subscribeToCollection(CLIENTS_COLLECTION, (data) => {
     setClients(data as Client[]);
   });
+  
 
   const unsubscribeComms = onSnapshot(
     collection(db, COMMUNICATIONS_COLLECTION),
@@ -2029,16 +2066,17 @@ if (themeLoading) {
     );
   }
 
-
  return (
     <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
+      <Toaster position="top-right" />
       <div className="container mx-auto px-4 py-8">
         {/* Header with theme selector */}
          <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold">DFS CRM Dashboard</h1>
+          <ClientCelebrations clients={clients} />
           <div className="flex items-center gap-2">
-            <ThemeSelector theme={theme} setTheme={handleThemeChange} />
-            
+           <ThemeSelector theme={theme} setTheme={handleThemeChange} />
+            <Toaster position="top-right" />
             {/* Updated Theme Toggle Button */}
             <Button 
   variant="outline" 
@@ -2076,7 +2114,7 @@ if (themeLoading) {
           </div>
         </div>
                       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full grid-cols-7 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
+        <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
     value="dashboard"
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
@@ -2114,19 +2152,33 @@ if (themeLoading) {
     <Mail className="mr-2 h-4 w-4 text-indigo-500" /> Communication
   </TabsTrigger>
   <TabsTrigger 
+  value="email" 
+  className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <Mail theme={theme} /> Email
+</TabsTrigger>
+<TabsTrigger 
+      value="tasks" 
+      className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
+    >
+      <ListChecks className="mr-2 h-4 w-4 text-indigo-500" /> Tasks
+    </TabsTrigger>
+  <TabsTrigger 
     value="investment-tracker" 
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
   >
     <BarChart2 className="mr-2 h-4 w-4 text-teal-500" /> Investment Tracker
   </TabsTrigger>
+
   </TabsList>
+  
 <TabsContent value="investment-tracker">
     <InvestmentTracker theme={theme} />
-  </TabsContent>        
+      </TabsContent>        
        
           {/* Dashboard Tab */}
     <TabsContent value="dashboard">
-  <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-6">
+  <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
     {/* First row - Metrics cards */}
     <div className="lg:col-span-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -2184,7 +2236,7 @@ if (themeLoading) {
 
     {/* Second row - Charts and Activity */}
     {/* Leads vs Clients Chart - Column 1 */}
-    <div className="lg:col-span-2">
+        <div className="lg:col-span-2">
       <Card className={`${cardBg} ${borderColor} h-full`}>
         <CardHeader>
           <CardTitle>Leads vs Clients</CardTitle>
@@ -2196,13 +2248,12 @@ if (themeLoading) {
               <XAxis dataKey="name" />
               <YAxis />
               <Tooltip />
-              <Bar dataKey="value" fill="#8884d8" />
+              <Bar dataKey="value" fill="#F97316" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
-
 
     {/* Lead Status Distribution - Column 2 */}
     <div className="lg:col-span-2">
@@ -2387,9 +2438,9 @@ if (themeLoading) {
 <div className="lg:col-span-2">
   <DashboardCalendar theme={theme} />
          </div>
-
+          
     {/* Recent Activity - Column 3 */}
-    <div className="lg:col-span-4">
+    <div className="lg:col-span-2">
       <Card className={`${cardBg} ${borderColor} h-full`}>
   <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
     <CardTitle className="text-xl md:text-2xl">Recent Activity</CardTitle>
@@ -2420,8 +2471,8 @@ if (themeLoading) {
         </SelectContent>
       </Select>
     </div>
-  </CardHeader>
 
+  </CardHeader>
   
         <CardContent>
           {filteredActivities.length === 0 ? (
@@ -2489,13 +2540,30 @@ if (themeLoading) {
                     </div>
                   </div>
                 </div>
+                
               ))}
             </div>
+            
           )}
         </CardContent>
       </Card>
     </div>
+    <div className="lg:col-span-2 {`${cardBg} ${borderColor}">
+      <ClientCelebrations clients={clients}/>
+    </div>
        </div>
+</TabsContent>
+<TabsContent value="email">
+  <EmailComponent 
+    theme={theme} 
+    clients={clients} 
+    defaultRecipient={emailComponentProps.defaultRecipient}
+    openCompose={emailComponentProps.openCompose}
+  />
+</TabsContent>
+
+<TabsContent value="tasks">
+  <EnhancedTaskTab theme={theme} />
 </TabsContent>
 
           {/* Leads Tab */}
@@ -3112,7 +3180,7 @@ if (themeLoading) {
               )}
               
               {/* Action Buttons */}
-              <div className="flex gap-2 mt-4">
+              <div className="flex gap-2 mt-3">
                 {editingClientId === client.id ? (
                   <>
                     <Button 
@@ -3151,6 +3219,56 @@ if (themeLoading) {
                     >
                       {clientDetailsId === client.id ? 'Hide' : 'Details'}
                     </Button>
+                    <div className="flex gap-2">
+    
+  {/* Email button without tooltip */}
+  <Button
+  variant="outline"
+  size="sm"
+  className="flex-1 flex items-center justify-center gap-1"
+  onClick={() => {
+    setActiveTab("email");
+    setEmailComponentProps({
+      defaultRecipient: client.email,
+      openCompose: true
+    });
+  }}
+  title="Email"
+>
+  <img
+    src="https://img.icons8.com/color/20/gmail--v1.png"
+    alt="Gmail"
+    className="h-4 w-4"
+  />
+  Email
+</Button>
+
+
+  {/* WhatsApp button without tooltip */}
+  <a
+  href={`https://api.whatsapp.com/send/?phone=91${client.phone}&text=${encodeURIComponent(
+    `Hi ${client.name}, this is Chetan from Dhanam Financial Services. Let’s connect!`
+  )}&type=phone_number&app_absent=0`}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="flex-1"
+>
+  <Button
+    variant="outline"
+    size="sm"
+    className="w-full flex items-center justify-center gap-1"
+    title="Message on WhatsApp"
+  >
+    <img
+      src="https://img.icons8.com/color/20/whatsapp--v1.png"
+      alt="WhatsApp"
+      className="h-4 w-4"
+    />
+    WhatsApp
+  </Button>
+</a>
+</div>
+                    
                                       </>
                 )}
               </div>

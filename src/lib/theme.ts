@@ -1,3 +1,4 @@
+
 export type ThemeName = 'canberra' | 'wisteria' | 'apricot' | 'blue-smoke' | 'green-smoke' | 
                 'tradewind' | 'dark' | 'sunrise' | 'ocean' | 'lava' | 
                 'coral-teal' | 'orange-blue' | 'blue-pink' | 
@@ -87,7 +88,7 @@ export const themes: Record<ThemeName, ThemeColors> = {
 
   // Vibrant Blue + Pink
   'blue-smoke': {
-    bgColor: 'bg-[#7DA0C4]',          // Light blue background
+    bgColor: 'bg-[#F5FAFD]',          // Light blue background
     textColor: 'text-[#0d3b66]',      // Dark blue text
     cardBg: 'bg-white',
     borderColor: 'border-[#b3e0ff]',  // Light blue border
@@ -107,7 +108,7 @@ export const themes: Record<ThemeName, ThemeColors> = {
 
   // Vibrant Green + Purple
   'green-smoke': {
-    bgColor: 'bg-[#7bae37]',          // Light green background
+    bgColor: 'bg-[#D3EFC1]',          // Light green background
     textColor: 'text-[#14532d]',      // Dark green text
     cardBg: 'bg-white',
     borderColor: 'border-[#b3ffc2]',  // Light green border
