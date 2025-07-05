@@ -95,6 +95,26 @@ export const getUserThemePreference = async (userId: string): Promise<ThemeName>
   }
 };
 
+export const getUserPreference = async (userId: string, key: string) => {
+  try {
+    const docRef = doc(db, 'userPreferences', userId);
+    const docSnap = await getDoc(docRef);
+    return docSnap.exists() ? docSnap.data()[key] : null;
+  } catch (error) {
+    console.error('Error getting user preference:', error);
+    return null;
+  }
+};
+
+export const setUserPreference = async (userId: string, key: string, value: any) => {
+  try {
+    const docRef = doc(db, 'userPreferences', userId);
+    await setDoc(docRef, { [key]: value }, { merge: true });
+  } catch (error) {
+    console.error('Error setting user preference:', error);
+  }
+};
+
 export {
   db,
   auth,

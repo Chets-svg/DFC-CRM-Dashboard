@@ -7,8 +7,6 @@ import { EmailComponent } from './components/email';
 import AuthCallback from './pages/AuthCallback'; // 👈 You missed this line
 import { ThemeProvider } from './components/theme-provider'; // Adjusted import path
 
-
-
 function App() {
   return (
     <ThemeProvider>

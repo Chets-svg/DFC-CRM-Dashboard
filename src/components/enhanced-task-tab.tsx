@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/
 import { Input } from "./ui/input"
 import { Label } from "./ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
+
 import {
   Select,
   SelectContent,
@@ -36,6 +37,12 @@ const formatIndianDate = (dateString: string) => {
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
+};
+
+const statusClasses = {
+  'Not Started': 'bg-gray-100 text-gray-800',
+  'In Progress': 'bg-blue-100 text-blue-800',
+  'Completed': 'bg-green-100 text-green-800'
 };
   
 type Priority = 'High' | 'Medium' | 'Low'
@@ -331,6 +338,43 @@ const isDueSoon = (dueDate: string) => {
     })
   }
 
+  const toggleStatus = async (id: string) => {
+  try {
+    // Find the task to get current status
+    const taskToUpdate = tasks.find(task => task.id === id);
+    if (!taskToUpdate) return;
+
+    // Determine new status
+    let newStatus: Status;
+    switch(taskToUpdate.status) {
+      case 'Not Started': 
+        newStatus = 'In Progress';
+        break;
+      case 'In Progress': 
+        newStatus = 'Completed';
+        break;
+      case 'Completed': 
+        newStatus = 'Not Started'; // Optional: cycle back to start
+        break;
+      default:
+        newStatus = 'Not Started';
+    }
+
+    // Update in Firestore first
+    await updateTaskInFirestore(id, { status: newStatus });
+
+    // Then update local state
+    setTasks(tasks.map(task => 
+      task.id === id ? {...task, status: newStatus} : task
+    ));
+
+  } catch (error) {
+    console.error('Error updating task status:', error);
+    // Optionally show error to user
+    setError('Failed to update task status');
+  }
+};
+
   const toggleSelectAll = useCallback(() => {
     if (selectedTasks.length === tasks.length) {
       setSelectedTasks([]);
@@ -533,9 +577,18 @@ const isDueSoon = (dueDate: string) => {
           <p>
             <span className="font-medium">Priority:</span> {task.priority}
           </p>
-          <p>
+          <p 
+            className="cursor-pointer hover:underline"
+            onClick={() => updateTaskStatus(task.id, getNextStatus(task.status))}
+          >
             <span className="font-medium">Status:</span> {task.status}
           </p>
+          <span 
+  
+  onClick={() => updateTaskStatus(task.id, getNextStatus(task.status))}
+>
+  
+</span>
         </CardContent>
       </Card>
     ))}
@@ -957,8 +1010,7 @@ const isDueSoon = (dueDate: string) => {
                           variant="ghost" 
                           size="sm" 
                           className={`${getStatusColor(task.status)} hover:bg-opacity-80`}
-                          onClick={() => toggleStatus(task.id)}
-                          
+                          onClick={() => toggleStatus(task.id)}                        
                         >
                           {task.status}
                         </Button>
@@ -1016,4 +1068,3 @@ const isDueSoon = (dueDate: string) => {
     </div>
   )
 }
-

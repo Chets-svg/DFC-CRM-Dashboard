@@ -22,6 +22,7 @@ import { BirthdayBanner } from '@/components/birthday-banner';
 import EnhancedTaskTab from './enhanced-task-tab';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeProvider } from '@/components/theme-provider'
+import { Routes, Route, Link, useLocation } from 'react-router-dom';
 
 import { 
   Card, 
@@ -284,6 +285,18 @@ function DashboardCalendar({ theme }: DashboardCalendarProps) {
       description: 'Demo meeting with potential client' 
     },
   ];
+
+  const VALID_TABS = [
+  'dashboard',
+  'leads',
+  'kyc',
+  'clients',
+  'sip',
+  'communication',
+  'email',
+  'tasks',
+  'investment-tracker'
+];
 
   // Custom class for days with events
   const tileContent = ({ date, view }: { date: Date; view: string }) => {
@@ -959,7 +972,6 @@ export const getUserThemePreference = async (userId: string): Promise<ThemeName>
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
-  const [activeTab, setActiveTab] = useState("dashboard");
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [emailContent, setEmailContent] = useState('');
   const [whatsappContent, setWhatsappContent] = useState('');
@@ -987,6 +999,17 @@ const [editingId, setEditingId] = useState<string | null>(null)
 const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: '', phone: '' })
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
+const [tabLoading, setTabLoading] = useState(true);
+
+const getInitialTab = () => {
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || 'dashboard';
+  }
+  return 'dashboard';
+};
+
+const [activeTab, setActiveTab] = useState<string>(getInitialTab());
 
 const [emailComponentProps, setEmailComponentProps] = useState({
   defaultRecipient: '',
@@ -1008,8 +1031,6 @@ const handleLogout = async () => {
     showAlert('Error logging out');
   }
 };
-
-
 
 const PRODUCT_COLORS = {
   mutualFund: 'bg-blue-300 text-blue-900 border-blue-900',
@@ -1038,6 +1059,14 @@ const getClientPrimaryProduct = (client: Client) => {
   nextDate: '',
   status: 'active'
 });
+
+const handleTabChange = (value: string) => {
+  setActiveTab(value);
+  const newUrl = new URL(window.location.href);
+  newUrl.searchParams.set('tab', value);
+  window.history.pushState({}, '', newUrl);
+};
+
 
 // 2. Update the AddSIPReminderForm component
 const AddSIPReminderForm = () => {
@@ -1087,6 +1116,111 @@ const AddSIPReminderForm = () => {
       showAlert(error.message || 'Error adding SIP reminder');
     }
   };
+
+const syncTabWithURL = (tab: string) => {
+  if (typeof window !== 'undefined') {
+    window.location.hash = tab;
+  }
+};
+
+// 2. Unified tab loading effect
+useEffect(() => {
+  const loadTabPreference = async () => {
+    try {
+      setTabLoading(true);
+      
+      // First check URL hash if present
+      const hashTab = typeof window !== 'undefined' 
+        ? window.location.hash.replace('#', '')
+        : '';
+      
+      if (hashTab && ['dashboard', 'leads', 'kyc', 'clients', 'sip', 'communication', 'email', 'tasks', 'investment-tracker'].includes(hashTab)) {
+        setActiveTab(hashTab);
+        localStorage.setItem('activeTab', hashTab);
+        return;
+      }
+
+      // Then check localStorage
+      const localTab = localStorage.getItem('activeTab');
+      
+      // Finally check Firestore if user is logged in
+      if (user?.uid) {
+        const docRef = doc(db, 'userPreferences', user.uid);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists() && docSnap.data().activeTab) {
+          const firestoreTab = docSnap.data().activeTab;
+          setActiveTab(firestoreTab);
+          localStorage.setItem('activeTab', firestoreTab);
+          syncTabWithURL(firestoreTab);
+          return;
+        }
+      }
+      
+      // Fallback to localStorage or default
+      if (localTab) {
+        setActiveTab(localTab);
+        syncTabWithURL(localTab);
+      } else {
+        setActiveTab('dashboard');
+        syncTabWithURL('dashboard');
+      }
+    } catch (error) {
+      console.error('Error loading tab preference:', error);
+      setActiveTab('dashboard');
+      syncTabWithURL('dashboard');
+    } finally {
+      setTabLoading(false);
+    }
+  };
+
+  loadTabPreference();
+
+  useEffect(() => {
+  const loadTabPreference = async () => {
+    if (!user?.uid) {
+      setActiveTab('dashboard');
+      setTabLoading(false);
+      return;
+    }
+
+    let tabFromHash = window.location.hash.replace('#', '');
+    let finalTab = tabFromHash || 'dashboard';
+
+    try {
+      const docRef = doc(db, 'userPreferences', user.uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const firestoreTab = docSnap.data().activeTab;
+        finalTab = firestoreTab || finalTab;
+      }
+    } catch (error) {
+      console.error('Failed to load tab from Firestore:', error);
+    } finally {
+      setActiveTab(finalTab);
+      setTabLoading(false);
+    }
+  };
+
+  loadTabPreference();
+}, [user?.uid]);
+
+
+  // Handle browser back/forward navigation
+  const handleHashChange = () => {
+    const tab = window.location.hash.replace('#', '');
+    if (tab && tab !== activeTab) {
+      setActiveTab(tab);
+      localStorage.setItem('activeTab', tab);
+    }
+  };
+
+  window.addEventListener('hashchange', handleHashChange);
+  return () => window.removeEventListener('hashchange', handleHashChange);
+}, [user?.uid]);
+
+// 3. Unified tab change handler
+
 
   return (
     <Card className={`mt-1 ${cardBg} ${borderColor}`}>
@@ -1265,7 +1399,7 @@ const [showSIPForm, setShowSIPForm] = useState(false);
     setClients(data as Client[]);
   });
   
-
+  
   const unsubscribeComms = onSnapshot(
     collection(db, COMMUNICATIONS_COLLECTION),
     (snapshot) => {
@@ -1393,8 +1527,6 @@ const updateLeadProgress = async (leadId: string, newStatus: ProgressStatus) => 
     console.error(error);
   }
 };
-
-
 
 // For clients
 const addClient = async (clientData: Omit<Client, 'id'>) => {
@@ -2043,6 +2175,10 @@ const handleThemeChange = async (newTheme: ThemeName) => {
   }
 };
 
+
+  
+
+
 const toggleTheme = async () => {
   const newTheme = theme === 'dark' ? previousLightTheme : 'dark';
   setTheme(newTheme);
@@ -2113,8 +2249,8 @@ if (themeLoading) {
 </Button>
           </div>
         </div>
-                      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
+<Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
     value="dashboard"
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
