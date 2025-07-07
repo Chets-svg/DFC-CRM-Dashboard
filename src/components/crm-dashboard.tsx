@@ -23,7 +23,19 @@ import EnhancedTaskTab from './enhanced-task-tab';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeProvider } from '@/components/theme-provider'
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Search, Heart } from "lucide-react";
+import { useMemo } from 'react';
+import { 
+  Dialog, 
+  DialogTrigger, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+  DialogFooter 
+} from "@/components/ui/dialog";
 import { 
   Card, 
   CardContent, 
@@ -124,6 +136,26 @@ interface KYCDetails {
   idType: 'passport' | 'driver-license' | 'national-id'
   idNumber: string
   status: 'pending' | 'verified' | 'revoked'
+}
+
+interface ClientDetailsModalProps {
+  client: {
+    id: string
+    name: string
+    email: string
+    phone: string
+    address: string
+    products: {
+      sip: boolean
+      mutualFunds: boolean
+      stocks: boolean
+      bonds: boolean
+    }
+    createdAt: string
+    notes: string
+    riskProfile: 'conservative' | 'moderate' | 'aggressive'
+  }
+  theme: ThemeName
 }
 
 interface KYCContextType {
@@ -239,6 +271,8 @@ interface ActivityItem {
   user?: string;
   status?: 'completed' | 'failed';
 }
+
+
 const LEAD_STATUS_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 const PRODUCT_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a4de6c'];
 
@@ -251,12 +285,17 @@ interface Event {
 interface DashboardCalendarProps {
   theme: ThemeName;
 }
+
+
+
 function DashboardCalendar({ theme }: DashboardCalendarProps) {
   const [date, setDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(true);
   const [activeDate, setActiveDate] = useState<Date | null>(new Date());
 
   const currentTheme = themes[theme] || themes['blue-smoke']; // Fallback to 'blue-smoke' if theme is invalid
+
+  
 
   // Sample events data
   const events: Event[] = [
@@ -291,6 +330,7 @@ function DashboardCalendar({ theme }: DashboardCalendarProps) {
   'leads',
   'kyc',
   'clients',
+  'crm',
   'sip',
   'communication',
   'email',
@@ -969,6 +1009,250 @@ export const getUserThemePreference = async (userId: string): Promise<ThemeName>
   }
 };
 
+export function ClientDetailsModal({ 
+  client, 
+  theme,
+  sipReminders = [], 
+  investments = [],
+  onNavigateToSIP,
+  onNavigateToInvestments
+}: {
+  client: Client;
+  theme: ThemeName;
+  sipReminders?: SIPReminder[];
+  investments?: any[]; // Add your investment type here
+  onNavigateToSIP: () => void;
+  onNavigateToInvestments: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const currentTheme = themes[theme] || themes['blue-smoke'];
+  
+  const getInitials = (name: string) => 
+    name.split(' ').map(n => n[0]).join('');
+  
+  const formatDate = (dateString?: string) => 
+    dateString ? new Date(dateString).toLocaleDateString() : 'Not set';
+
+  const formatCurrency = (amount: number) => 
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(amount);
+
+  const getProductDisplayName = (productKey: string) => {
+    return productKey.split(/(?=[A-Z])/).join(' ');
+  };
+
+  // Get SIP reminders for this client
+  const clientSIPs = sipReminders.filter(reminder => reminder.clientId === client.id);
+  
+  // Get investments for this client
+  const clientInvestments = investments.filter(inv => inv.clientId === client.id);
+  
+  // Calculate total investment value
+  const totalInvestmentValue = clientInvestments.reduce((sum, inv) => sum + (inv.currentValue || 0), 0);
+  
+  // Calculate total SIP amount
+  const totalSIPAmount = clientSIPs.reduce((sum, sip) => sum + sip.amount, 0);
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="outline" 
+          className={`${getButtonClasses(theme, 'outline')} mt-0`}
+        >
+          View Details
+        </Button>
+      </DialogTrigger>
+      
+      <DialogContent className={`${currentTheme.cardBg} ${currentTheme.borderColor} border max-w-4xl`}>
+        <div className="relative">
+          <Button
+            variant="ghost"
+            onClick={() => setOpen(false)}
+            className="absolute right-0 top-0 p-2"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          
+          <CardHeader>
+            <div className="flex items-center gap-4">
+              <div className={`w-14 h-14 rounded-xl flex items-center justify-center bg-blue-500 shadow-md`}>
+                <span className="text-white font-bold text-xl">
+                  {getInitials(client.name)}
+                </span>
+              </div>
+              <div>
+                <CardTitle className="text-2xl">{client.name}</CardTitle>
+                <p className={`text-sm ${currentTheme.mutedText}`}>
+                  Client since {formatDate(client.createdAt)}
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg">Contact Information</h3>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  <span>{client.email}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>{client.phone}</span>
+                </div>
+                {client.address && (
+                  <div className="flex items-start gap-2">
+                    <span className="mt-1">
+                      <Home className="h-4 w-4" />
+                    </span>
+                    <span>{client.address}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Personal Dates */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg">Personal Dates</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {client.dob && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Birthday</p>
+                    <p className="text-sm">
+                      {formatDate(client.dob)}
+                    </p>
+                  </div>
+                )}
+                {client.marriageAnniversary && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Anniversary</p>
+                    <p className="text-sm">
+                      {formatDate(client.marriageAnniversary)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Investment Profile */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-lg">Investment Profile</h3>
+              <div className="space-y-2">
+                <p>
+                  <span className="font-medium">Risk Profile:</span> 
+                  <span className={`capitalize ml-2 px-2 py-1 rounded-full text-xs ${
+                    client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' :
+                    client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {client.riskProfile}
+                  </span>
+                </p>
+                
+                <div className="mt-3">
+                  <h4 className="font-medium mb-2">Products:</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(client.products)
+                      .filter(([_, isSelected]) => isSelected)
+                      .map(([productKey]) => (
+                        <span 
+                          key={productKey} 
+                          className={`px-3 py-1 rounded-full text-sm ${
+                            productKey === 'sip' ? 'bg-blue-100 text-blue-800' :
+                            productKey === 'mutualFund' ? 'bg-purple-100 text-purple-800' :
+                            productKey === 'lumpsum' ? 'bg-green-100 text-green-800' :
+                            productKey === 'healthInsurance' ? 'bg-teal-100 text-teal-800' :
+                            productKey === 'lifeInsurance' ? 'bg-indigo-100 text-indigo-800' :
+                            productKey === 'taxation' ? 'bg-orange-100 text-orange-800' :
+                            productKey === 'nps' ? 'bg-pink-100 text-pink-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {getProductDisplayName(productKey)}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+                       
+            {/* SIP Information */}
+            {client.products.sip && (
+              <div className="space-y-4">
+                <h3 className="font-medium text-lg">SIP Details</h3>
+                {clientSIPs.length > 0 ? (
+                  <div className="space-y-3">
+                    {clientSIPs.map((sip, index) => (
+                      <div 
+                        key={index} 
+                        className={`p-3 rounded-lg ${currentTheme.highlightBg}`}
+                      >
+                        <div className="flex justify-between">
+                          <div>
+                            <p className="font-medium">{formatCurrency(sip.amount)}</p>
+                            <p className="text-sm text-gray-500">
+                              {sip.frequency} • Next: {formatDate(sip.nextDate)}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 text-xs rounded-full ${
+                            sip.status === 'active' ? 'bg-green-100 text-green-800' :
+                            sip.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {sip.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={`p-3 rounded-lg ${currentTheme.highlightBg}`}>
+                    <p className="text-sm">No active SIPs found</p>
+                  </div>
+                )}
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setOpen(false);
+                    onNavigateToSIP();
+                  }}
+                  className={getButtonClasses(theme, 'outline')}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> Add SIP Reminder
+                </Button>
+              </div>
+            )}
+            
+            {/* Recent Investments */}
+            
+            {/* Notes */}
+            <div className="md:col-span-1">
+              <h3 className="font-medium text-lg mb-3">Notes</h3>
+              <div className={`p-2 rounded-lg ${currentTheme.highlightBg}`}>
+                {client.notes || "No notes available for this client."}
+              </div>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              className={getButtonClasses(theme, 'outline')}
+            >
+              Close
+            </Button>
+            
+          </CardFooter>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
@@ -1000,6 +1284,66 @@ const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: 
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
 const [tabLoading, setTabLoading] = useState(true);
+const [searchTerm, setSearchTerm] = useState('');
+const [investments, setInvestments] = useState<any[]>([]);
+const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+const getClientPrimaryProduct = (client: Client) => {
+  // Check for any mutual fund product first
+  if (client.products.mutualFund || client.products.sip || client.products.lumpsum) {
+    return 'mutualFund';
+  }
+  if (client.products.healthInsurance) return 'healthInsurance';
+  if (client.products.lifeInsurance) return 'lifeInsurance';
+  if (client.products.taxation) return 'taxation'; // Add this
+  if (client.products.nps) return 'nps'; // Add this
+  return 'mutualFund'; // Default to mutual fund if no product is selected
+};
+
+const filteredClients = useMemo(() => {
+  const searchedClients = clients.filter(client => 
+    client.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.phone?.includes(searchTerm)
+  );
+
+  return [...searchedClients].sort((a, b) => {
+    let comparison = 0;
+    
+    if (clientSortField === 'createdAt') {
+      comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    } else if (clientSortField === 'name') {
+      comparison = (a.name || '').localeCompare(b.name || '');
+    } else if (clientSortField === 'products') {
+      const productA = getClientPrimaryProduct(a);
+      const productB = getClientPrimaryProduct(b);
+      comparison = productA.localeCompare(productB);
+    }
+    
+    return clientSortDirection === 'asc' ? comparison : -comparison;
+  });
+}, [clients, searchTerm, clientSortField, clientSortDirection]);
+
+const SortControls = () => (
+  <div className="flex items-center gap-1">
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => setClientSortDirection('asc')}
+      className={`p-1 h-8 w-8 ${clientSortDirection === 'asc' ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+    >
+      <ChevronUp className="h-4 w-4" />
+    </Button>
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => setClientSortDirection('desc')}
+      className={`p-1 h-8 w-8 ${clientSortDirection === 'desc' ? 'bg-gray-200 dark:bg-gray-700' : ''}`}
+    >
+      <ChevronDown className="h-4 w-4" />
+    </Button>
+  </div>
+);
 
 const getInitialTab = () => {
   if (typeof window !== 'undefined') {
@@ -1031,6 +1375,409 @@ const handleLogout = async () => {
     showAlert('Error logging out');
   }
 };
+// new client card
+
+function ClientCard({ 
+  client, 
+  theme, 
+  onEdit, 
+  onDetailsToggle, 
+  onEmail, 
+  onWhatsApp,
+  isExpanded,
+  sipReminders,
+  investments
+}: {
+  client: Client;
+  theme: ThemeName;
+  onEdit: () => void;
+  onDetailsToggle: () => void;
+  onEmail: () => void;
+  onWhatsApp: () => void;
+  isExpanded: boolean;
+  sipReminders: SIPReminder[];
+  investments: any[];
+}) {
+  const currentTheme = themes[theme] || themes['blue-smoke'];
+  const getInitials = (name: string) => 
+    name.split(' ').map(n => n[0]).join('');
+
+  const formatDate = (dateString?: string) =>
+    dateString ? new Date(dateString).toLocaleDateString() : 'Not set';
+
+  const primaryProduct = getClientPrimaryProduct(client);
+  const productColor = PRODUCT_COLORS[primaryProduct];
+
+  // Calculate upcoming SIPs
+  const upcomingSIPs = sipReminders.filter(r => r.clientId === client.id && r.status === 'active');
+  const hasUpcomingSIP = upcomingSIPs.length > 0;
+  
+  // Calculate total investments
+  const clientInvestments = investments.filter(i => i.clientId === client.id);
+  const totalInvestment = clientInvestments.reduce((sum, inv) => sum + (inv.currentValue || 0), 0);
+
+  // Check for upcoming birthdays/anniversaries
+  const today = new Date();
+  const isBirthdayThisMonth = client.dob && new Date(today.getFullYear(), today.getMonth(), 1) <= new Date(client.dob) && 
+                            new Date(client.dob) <= new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const isAnniversaryThisMonth = client.marriageAnniversary && 
+                               new Date(today.getFullYear(), today.getMonth(), 1) <= new Date(client.marriageAnniversary) && 
+                               new Date(client.marriageAnniversary) <= new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+  return (    
+    <div className={`bg-white rounded-xl shadow-lg border ${currentTheme.borderColor} overflow-hidden`}>
+      {/* Header */}
+      <div 
+        className={`px-5 py-3 flex justify-between items-center ${
+          theme === 'dark' 
+            ? themes[theme].darkBgColor 
+              ? `bg-gradient-to-r ${themes[theme].darkButtonBg} ${themes[theme].darkButtonHover}`
+              : `bg-gradient-to-r from-gray-700 to-gray-600`
+            : `bg-gradient-to-r ${themes[theme].buttonBg} ${themes[theme].buttonHover}`
+        }`}
+      >
+        <div>
+          <h2 className="text-white font-semibold text-lg">{client.name}</h2>
+          <p className="text-blue-100 text-sm">Added on {formatDate(client.createdAt)}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {client.products.sip && (
+            <Badge className="bg-white/20 text-white">
+              {hasUpcomingSIP ? 'Upcoming SIP' : 'SIP Client'}
+            </Badge>
+          )}
+          {client.riskProfile && (
+            <Badge className={`
+              ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
+                client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' : 
+                'bg-red-100 text-red-800'}
+            `}>
+              {client.riskProfile}
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="p-5 space-y-4">
+        <div className="flex items-start gap-4">
+          {/* Avatar with date indicators */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-500 rounded-full" />
+            <Avatar className="relative h-14 w-14 border-2 border-blue-500">
+              <AvatarFallback className="bg-transparent text-white font-bold text-xl">
+                {getInitials(client.name)}
+              </AvatarFallback>
+            </Avatar>
+            {/* Date indicators */}
+            <div className="absolute -bottom-1 -right-1 flex">
+              {isBirthdayThisMonth && (
+                <div className="bg-pink-500 rounded-full p-1">
+                  <CalendarDays className="h-3 w-3 text-white" />
+                </div>
+              )}
+              {isAnniversaryThisMonth && (
+                <div className="bg-purple-500 rounded-full p-1">
+                  <Heart className="h-3 w-3 text-white" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="flex-1">
+            <div className="text-sm text-gray-600 space-y-0">
+              <div className="flex items-center gap-1">
+                <Mail className="w-4 h-4 text-blue-500" />
+                {client.email}
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-500" />
+                  {client.phone}
+                </div>
+                {/* Edit Button - Added here next to phone number */}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onEdit}
+                  className="text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100"
+                >
+                  <Edit className="h-4 w-4 mr-1" /> Edit
+                </Button>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-600" 
+                  onClick={onEmail}
+                >
+                  <Mail className="w-4 w-4 mr-1" />
+                  Email
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="border-green-200 bg-green-50 hover:bg-green-100 text-green-600" 
+                  onClick={onWhatsApp}
+                >
+                  <MessageSquare className="w-4 w-4 mr-1" /> WhatsApp
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {client.products.sip && (
+            <div className={`p-0 rounded ${cardBg.highlightBg}`}>
+              <p className="text-xs text-gray-500">SIP Amount</p>
+              <p className="font-medium">
+                {upcomingSIPs.length > 0 
+                  ? `₹${upcomingSIPs[0].amount.toLocaleString()}` 
+                  : 'No active SIP'}
+              </p>
+            </div>
+          )}
+          <div className={`p-0 rounded ${cardBg.highlightBg}`}>
+            <p className="text-xs text-gray-500">Total Investment</p>
+            <p className="font-medium">
+              {totalInvestment > 0 
+                ? `₹${totalInvestment.toLocaleString()}` 
+                : 'No investments'}
+            </p>
+          </div>
+        </div>
+
+        {/* Products */}
+        <div className="pt-0">
+          <h4 className="font-medium text-sm text-gray-700 mb-1">Products</h4>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(client.products).filter(([_, value]) => value).map(([key]) => (
+              <Badge key={key} className="text-blue-600 bg-blue-50 border border-blue-100 text-xs px-2 py-1 capitalize">
+                {key.replace(/([A-Z])/g, ' $1')}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        
+        <div className="pt-2 flex justify-between text-xs text-gray-500">
+          <span>Client ID: {getInitials(client.name)}-{client.createdAt.replace(/-/g, '').slice(2)}</span>
+          <ClientDetailsModal 
+            client={client} 
+            theme={theme}
+            sipReminders={sipReminders.filter(r => r.clientId === client.id)}
+            investments={investments.filter(i => i.clientId === client.id)}
+            onNavigateToSIP={() => {
+              setActiveTab("sip");
+              setSelectedClientId(client.id);
+            }}
+            onNavigateToInvestments={() => {
+              setActiveTab("investment-tracker");
+              setSelectedClientId(client.id);
+            }}
+          >
+            
+          </ClientDetailsModal>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditClientModal({
+  client,
+  onSave,
+  onCancel,
+  theme
+}: {
+  client: Client;
+  onSave: (updatedClient: Client) => void;
+  onCancel: () => void;
+  theme: ThemeName;
+}) {
+  const [editedClient, setEditedClient] = useState<Client>(client);
+  const currentTheme = themes[theme] || themes['blue-smoke'];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setEditedClient(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDateChange = (name: keyof Client, date: Date | undefined) => {
+    setEditedClient(prev => ({
+      ...prev,
+      [name]: date?.toISOString().split('T')[0] || ''
+    }));
+  };
+
+  const handleProductToggle = (product: keyof Client['products']) => {
+    setEditedClient(prev => ({
+      ...prev,
+      products: {
+        ...prev.products,
+        [product]: !prev.products[product]
+      }
+    }));
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className={`${currentTheme.cardBg} ${currentTheme.borderColor} max-w-4xl`}>
+        <DialogHeader>
+          <DialogTitle>Edit Client</DialogTitle>
+          <DialogDescription>
+            Edit all details for {client.name}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Basic Information */}
+          <div className="space-y-2">
+            <h3 className="font-medium">Basic Information</h3>
+            
+            <div>
+              <div className="space-y-2"></div>
+              <Label className="mb-1 block">Full Name *</Label>
+              <Input
+                name="name"
+                value={editedClient.name}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">Email *</Label>
+              <Input
+                name="email"
+                type="email"
+                value={editedClient.email}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">Phone *</Label>
+              <Input
+                name="phone"
+                value={editedClient.phone}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+                required
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">Address</Label>
+              <Input
+                name="address"
+                value={editedClient.address || ''}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+              />
+            </div>
+          </div>
+
+          {/* Dates Section */}
+          <div className="space-y-4">
+            <h3 className="font-medium">Important Dates</h3>
+            <div>
+              <Label className="mb-1 block">Date of Birth</Label>
+              <Input
+                type="date"
+                name="dob"
+                value={editedClient.dob || ''}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">Marriage Anniversary</Label>
+              <Input
+                type="date"
+                name="marriageAnniversary"
+                value={editedClient.marriageAnniversary || ''}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">Risk Profile</Label>
+              <Select
+                value={editedClient.riskProfile || 'moderate'}
+                onValueChange={(value) => setEditedClient(prev => ({
+                  ...prev,
+                  riskProfile: value as 'conservative' | 'moderate' | 'aggressive'
+                }))}
+              >
+                <SelectTrigger className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}>
+                  <SelectValue placeholder="Select risk profile" />
+                </SelectTrigger>
+                <SelectContent className={`${currentTheme.cardBg} ${currentTheme.borderColor}`}>
+                  <SelectItem value="conservative">Conservative</SelectItem>
+                  <SelectItem value="moderate">Moderate</SelectItem>
+                  <SelectItem value="aggressive">Aggressive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Products Section */}
+          <div className="md:col-span-2 space-y-4">
+            <h3 className="font-medium">Investment Products</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {Object.entries(editedClient.products).map(([product, isSelected]) => (
+                <div key={product} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`product-${product}`}
+                    checked={isSelected}
+                    onCheckedChange={() => handleProductToggle(product as keyof Client['products'])}
+                  />
+                  <Label htmlFor={`product-${product}`} className="text-sm font-normal capitalize">
+                    {product.split(/(?=[A-Z])/).join(' ')}
+                  </Label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Notes Section */}
+          <div className="md:col-span-2">
+            <Label className="mb-1 block">Notes</Label>
+            <Textarea
+              value={editedClient.notes || ''}
+              onChange={(e) => setEditedClient(prev => ({ ...prev, notes: e.target.value }))}
+              className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+              placeholder="Additional notes about the client..."
+              rows={3}
+            />
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button 
+            variant="outline" 
+            onClick={onCancel}
+            className={getButtonClasses(theme, 'outline')}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => onSave(editedClient)}
+            className={getButtonClasses(theme)}
+          >
+            Save Changes
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const PRODUCT_COLORS = {
   mutualFund: 'bg-blue-300 text-blue-900 border-blue-900',
@@ -1039,17 +1786,7 @@ const PRODUCT_COLORS = {
   taxation: 'bg-orange-200 text-orange-900 border-orange-900', // Add this
   nps: 'bg-teal-200 text-teal-900 border-teal-900' // Add this
 };
-const getClientPrimaryProduct = (client: Client) => {
-  // Check for any mutual fund product first
-  if (client.products.mutualFund || client.products.sip || client.products.lumpsum) {
-    return 'mutualFund';
-  }
-  if (client.products.healthInsurance) return 'healthInsurance';
-  if (client.products.lifeInsurance) return 'lifeInsurance';
-  if (client.products.taxation) return 'taxation'; // Add this
-  if (client.products.nps) return 'nps'; // Add this
-  return 'mutualFund'; // Default to mutual fund if no product is selected
-};
+
  const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
   clientId: '',
   clientName: '',
@@ -1220,7 +1957,15 @@ useEffect(() => {
 }, [user?.uid]);
 
 // 3. Unified tab change handler
+const unsubscribeInvestments = subscribeToCollection(
+    'investments', // or your collection name
+    (data) => setInvestments(data)
+  );
 
+  return () => {
+    // ... existing unsubscribes ...
+    unsubscribeInvestments();
+  };
 
   return (
     <Card className={`mt-1 ${cardBg} ${borderColor}`}>
@@ -2175,10 +2920,6 @@ const handleThemeChange = async (newTheme: ThemeName) => {
   }
 };
 
-
-  
-
-
 const toggleTheme = async () => {
   const newTheme = theme === 'dark' ? previousLightTheme : 'dark';
   setTheme(newTheme);
@@ -2275,6 +3016,7 @@ if (themeLoading) {
   >
     <User className="mr-2 h-4 w-4 text-purple-500" /> Clients
   </TabsTrigger>
+  
   <TabsTrigger 
     value="sip" 
     className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
@@ -2311,7 +3053,7 @@ if (themeLoading) {
 <TabsContent value="investment-tracker">
     <InvestmentTracker theme={theme} />
       </TabsContent>        
-       
+      
           {/* Dashboard Tab */}
     <TabsContent value="dashboard">
   <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
@@ -3059,362 +3801,113 @@ if (themeLoading) {
     <CardHeader>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <CardTitle>Client Management</CardTitle>
-        <div className="flex gap-2">
+        
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <Input
+              placeholder="Search clients..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          </div>
+          
           <Button 
-            onClick={() => setActiveTab("leads")} // Simply switch to leads tab instead
+            onClick={() => setActiveTab("leads")}
             className={getButtonClasses(theme)}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Lead
           </Button>
-          <Select
-            value={clientSortField}
-            onValueChange={(value) => setClientSortField(value as ClientSortField)}
-          >
-            <SelectTrigger className={`w-[180px] ${inputBg} ${borderColor}`}>
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent className={`${cardBg} ${borderColor}`}>
-              <SelectItem value="createdAt">Date Created</SelectItem>
-              <SelectItem value="name">Name</SelectItem>
-              <SelectItem value="products">Primary Product</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          
+      <div className="flex items-center gap-2">
+  <Select
+    value={clientSortField}
+    onValueChange={(value) => setClientSortField(value as ClientSortField)}
+  >
+    <SelectTrigger className={`w-[180px] ${inputBg} ${borderColor}`}>
+      <SelectValue placeholder="Sort by" />
+    </SelectTrigger>
+    <SelectContent className={`${cardBg} ${borderColor}`}>
+      <SelectItem value="createdAt">Date Created</SelectItem>
+      <SelectItem value="name">Name</SelectItem>
+      <SelectItem value="products">Primary Product</SelectItem>
+    </SelectContent>
+  </Select>
+
+  {/* Single toggle button for sort direction */}
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => setClientSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+    className="p-2"
+  >
+    {clientSortDirection === 'asc' ? (
+      <ChevronUp className="h-4 w-4" />
+    ) : (
+      <ChevronDown className="h-4 w-4" />
+    )}
+  </Button>
+</div>
+          </div>
       </div>
     </CardHeader>
     
-    {/* Add/Edit Client Form */}
-    {(isAdding || editingId) && (
-      <CardContent className="border-b pb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Name</Label>
-            <Input
-              name="name"
-              value={formData.name}
-              onChange={handleInputChange}
-              className={`${inputBg} ${borderColor}`}
-            />
-          </div>
-          <div>
-            <Label>Email</Label>
-            <Input
-              name="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              className={`${inputBg} ${borderColor}`}
-            />
-          </div>
-          <div>
-            <Label>Phone</Label>
-            <Input
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              className={`${inputBg} ${borderColor}`}
-            />
-          </div>
-          
-          {/* Products Selection */}
-          <div className="md:col-span-2">
-            <Label>Products</Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
-              {Object.entries({
-                mutualFund: 'Mutual Funds',
-                sip: 'SIP',
-                lumpsum: 'Lumpsum',
-                healthInsurance: 'Health Insurance',
-                lifeInsurance: 'Life Insurance',
-                taxation: 'Taxation',
-                nps: 'NPS'
-              }).map(([key, label]) => (
-                <div key={key} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`product-${key}`}
-                    checked={formData.products?.[key as keyof Client['products']] || false}
-                    onCheckedChange={(checked) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        products: {
-                          ...prev.products,
-                          [key]: !!checked
-                        }
-                      }));
-                    }}
-                  />
-                  <Label htmlFor={`product-${key}`}>{label}</Label>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="md:col-span-2 flex justify-end gap-2">
-            <Button 
-              variant="outline" 
-              onClick={cancelForm}
-              className={getButtonClasses(theme, 'outline')}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={editingId ? handleUpdateClient : handleAddClient}
-              className={getButtonClasses(theme)}
-            >
-              {editingId ? 'Update Client' : 'Add Client'}
-            </Button>
-          </div>
-        </div>
-      </CardContent>
-    )}
-
     <CardContent>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {sortClients(clients).map(client => {
-          const primaryProduct = getClientPrimaryProduct(client);
-          return (
-            <div 
-              key={client.id} 
-              className={`p-4 border rounded-lg ${PRODUCT_COLORS[primaryProduct]} ${
-                clientDetailsId === client.id ? 'ring-2 ring-offset-2' : ''
-              } transition-colors`}
-            >
-              {/* Client info and avatar section */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center ${PRODUCT_COLORS[primaryProduct].replace('text-', 'bg-').split(' ')[0]}`}>
-                  <User className="h-8 w-8" />
-                </div>
-                <div className="flex-1">
-                  {editingClientId === client.id ? (
-                    <>
-                      <Input
-                        value={editedClient.name || client.name}
-                        onChange={(e) => setEditedClient({...editedClient, name: e.target.value})}
-                        className={`mb-2 ${inputBg} ${borderColor}`}
-                      />
-                      <Input
-                        value={editedClient.email || client.email}
-                        onChange={(e) => setEditedClient({...editedClient, email: e.target.value})}
-                        className={`mb-2 ${inputBg} ${borderColor}`}
-                      />
-                      <Input
-                        value={editedClient.phone || client.phone}
-                        onChange={(e) => setEditedClient({...editedClient, phone: e.target.value})}
-                        className={`${inputBg} ${borderColor}`}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <h3 className="font-bold">{client.name}</h3>
-                      <p className="text-sm opacity-80">{client.email}</p>
-                      <p className="text-sm opacity-80">{client.phone}</p>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              {/* Products Grid - Enhanced with edit capability */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                {Object.entries(editingClientId === client.id ? 
-                  {...client.products, ...(editedClient.products || {})} : 
-                  client.products).map(([productKey, isSelected]) => {
-                  
-                  const displayName = productKey.split(/(?=[A-Z])/).join(' ');
-
-                  return (
-                    <div 
-                      key={productKey}
-                      className={`
-                        p-1 rounded text-center text-xs cursor-pointer
-                        ${isSelected 
-                          ? 'bg-gray-100 text-gray-800 font-medium' // SELECTED = gray background
-                          : 'bg-inherit' // NOT SELECTED = inherits card's background color
-                        }
-                        border border-gray-200
-                        transition-colors duration-200
-                      `}
-                      onClick={() => {
-                        if (editingClientId === client.id) {
-                          setEditedClient({
-                            ...editedClient,
-                            products: {
-                              ...editedClient.products,
-                              [productKey]: !isSelected
-                            }
-                          });
-                        }
-                      }}
-                    >
-                      {displayName}
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Date Fields */}
-              {(editingClientId === client.id || clientDetailsId === client.id) && (
-                <div className="mt-4 space-y-2">
-                  <div>
-                    <label className="block text-xs mb-1">Date of Birth</label>
-                    {editingClientId === client.id ? (
-                      <Input
-                        type="date"
-                        value={editedClient.dob || client.dob || ''}
-                        onChange={(e) => setEditedClient({...editedClient, dob: e.target.value})}
-                        className={`text-xs ${inputBg} ${borderColor}`}
-                      />
-                    ) : (
-                      client.dob && <p className="text-xs">{new Date(client.dob).toLocaleDateString()}</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs mb-1">Marriage Anniversary</label>
-                    {editingClientId === client.id ? (
-                      <Input
-                        type="date"
-                        value={editedClient.marriageAnniversary || client.marriageAnniversary || ''}
-                        onChange={(e) => setEditedClient({...editedClient, marriageAnniversary: e.target.value})}
-                        className={`text-xs ${inputBg} ${borderColor}`}
-                      />
-                    ) : (
-                      client.marriageAnniversary && <p className="text-xs">{new Date(client.marriageAnniversary).toLocaleDateString()}</p>
-                    )}
-                  </div>
-                  
-                  {/* SIP Dates - Only shown if SIP product is selected */}
-                  {(client.products.sip || (editingClientId === client.id && editedClient.products?.sip)) && (
-                    <>
-                      <div>
-                        <label className="block text-xs mb-1">SIP Start Date</label>
-                        {editingClientId === client.id ? (
-                          <Input
-                            type="date"
-                            value={editedClient.sipStartDate || client.sipStartDate || ''}
-                            onChange={(e) => setEditedClient({...editedClient, sipStartDate: e.target.value})}
-                            className={`text-xs ${inputBg} ${borderColor}`}
-                          />
-                        ) : (
-                          client.sipStartDate && <p className="text-xs">{new Date(client.sipStartDate).toLocaleDateString()}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1">Next SIP Date</label>
-                        {editingClientId === client.id ? (
-                          <Input
-                            type="date"
-                            value={editedClient.sipNextDate || client.sipNextDate || ''}
-                            onChange={(e) => setEditedClient({...editedClient, sipNextDate: e.target.value})}
-                            className={`text-xs ${inputBg} ${borderColor}`}
-                          />
-                        ) : (
-                          client.sipNextDate && <p className="text-xs">{new Date(client.sipNextDate).toLocaleDateString()}</p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-              
-              {/* Action Buttons */}
-              <div className="flex gap-2 mt-3">
-                {editingClientId === client.id ? (
-                  <>
-                    <Button 
-                      onClick={handleSaveEdit}
-                      className={getButtonClasses(theme)}
-                      size="sm"
-                    >
-                      <Check className="mr-2 h-4 w-4" /> Save
-                    </Button>
-                    <Button 
-                      onClick={handleCancelEdit}
-                      className={getButtonClasses(theme, 'danger')}
-                      size="sm"
-                    >
-                      <X className="mr-2 h-4 w-4" /> Cancel
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => {
-                        setEditingClientId(client.id);
-                        setEditedClient({ ...client });
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" /> Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => setClientDetailsId(clientDetailsId === client.id ? null : client.id)}
-                    >
-                      {clientDetailsId === client.id ? 'Hide' : 'Details'}
-                    </Button>
-                    <div className="flex gap-2">
-    
-  {/* Email button without tooltip */}
-  <Button
-  variant="outline"
-  size="sm"
-  className="flex-1 flex items-center justify-center gap-1"
-  onClick={() => {
-    setActiveTab("email");
-    setEmailComponentProps({
-      defaultRecipient: client.email,
-      openCompose: true
-    });
-  }}
-  title="Email"
->
-  <img
-    src="https://img.icons8.com/color/20/gmail--v1.png"
-    alt="Gmail"
-    className="h-4 w-4"
+        {filteredClients.map(client => (
+  <ClientCard
+    key={client.id}
+    client={client}
+    theme={theme}
+    isExpanded={clientDetailsId === client.id}
+    onEdit={() => setEditingClient(client)}
+    onDetailsToggle={() => 
+      setClientDetailsId(clientDetailsId === client.id ? null : client.id)
+    }
+    onEmail={() => {
+      setActiveTab("email");
+      setEmailComponentProps({
+        defaultRecipient: client.email,
+        openCompose: true
+      });
+    }}
+    onWhatsApp={() => {
+      window.open(
+        `https://api.whatsapp.com/send/?phone=91${client.phone}&text=${encodeURIComponent(
+          `Hi ${client.name}, this is from Dhanam Financial Services. Let's connect!`
+        )}&type=phone_number&app_absent=0`,
+        '_blank'
+      );
+    }}
+    sipReminders={sipReminders.filter(r => r.clientId === client.id)}
+    investments={investments.filter(i => i.clientId === client.id)}
   />
-  Email
-</Button>
+))}
 
+{editingClient && (
+  <EditClientModal
+    client={editingClient}
+    onSave={async (updatedClient) => {
+      try {
+        await updateClient(updatedClient.id, updatedClient);
+        setEditingClient(null);
+        showAlert('Client updated successfully');
+      } catch (error) {
+        console.error('Error updating client:', error);
+        showAlert('Error updating client');
+      }
+    }}
+    onCancel={() => setEditingClient(null)}
+    theme={theme}
+  />
+)}
 
-  {/* WhatsApp button without tooltip */}
-  <a
-  href={`https://api.whatsapp.com/send/?phone=91${client.phone}&text=${encodeURIComponent(
-    `Hi ${client.name}, this is Chetan from Dhanam Financial Services. Let’s connect!`
-  )}&type=phone_number&app_absent=0`}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="flex-1"
->
-  <Button
-    variant="outline"
-    size="sm"
-    className="w-full flex items-center justify-center gap-1"
-    title="Message on WhatsApp"
-  >
-    <img
-      src="https://img.icons8.com/color/20/whatsapp--v1.png"
-      alt="WhatsApp"
-      className="h-4 w-4"
-    />
-    WhatsApp
-  </Button>
-</a>
-</div>
-                    
-                                      </>
-                )}
-              </div>
-            </div>
-          );
-        })}
       </div>
     </CardContent>
   </Card>
 </TabsContent>
+
 
 {/* Communication Tab */}
 <TabsContent value="communication">
@@ -3501,6 +3994,7 @@ if (themeLoading) {
             })}
         </div>
       </CardContent>
+      
     </Card>
 
     {/* Schedule Meeting Section - Added this new section */}
