@@ -1419,7 +1419,11 @@ function ClientCard({
     name.split(' ').map(n => n[0]).join('');
 
   const formatDate = (dateString?: string) =>
-    dateString ? new Date(dateString).toLocaleDateString() : 'Not set';
+    dateString ? new Date(dateString).toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    }) : 'Not set';
 
   const primaryProduct = getClientPrimaryProduct(client);
   const productColor = PRODUCT_COLORS[primaryProduct];
@@ -1440,8 +1444,9 @@ function ClientCard({
                                new Date(today.getFullYear(), today.getMonth(), 1) <= new Date(client.marriageAnniversary) && 
                                new Date(client.marriageAnniversary) <= new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
+
   return (    
-    <div className={`bg-white rounded-xl shadow-lg border ${currentTheme.borderColor} overflow-hidden`}>
+     <div className={`bg-white rounded-xl shadow-lg border ${currentTheme.borderColor} overflow-hidden`}>
       {/* Header */}
       <div 
         className={`px-5 py-3 flex justify-between items-center ${
@@ -1522,6 +1527,23 @@ function ClientCard({
                   <Edit className="h-4 w-4 mr-1" /> Edit
                 </Button>
               </div>
+              
+              {/* Add DOB and Anniversary here */}
+              <div className="flex flex-wrap gap-3 mt-4 text-sm">
+                {client.dob && (
+                  <div className="flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3 text-blue-500" />
+                    <span>DOB: {formatDate(client.dob)}</span>
+                  </div>
+                )}
+                {client.marriageAnniversary && (
+                  <div className="flex items-center gap-1">
+                    <Heart className="w-3 h-3 text-pink-500" />
+                    <span>Anniversary: {formatDate(client.marriageAnniversary)}</span>
+                  </div>
+                )}
+              </div>
+              
               <div className="flex gap-2 mt-2">
                 <Button 
                   size="sm" 
@@ -1580,7 +1602,6 @@ function ClientCard({
         </div>
 
         {/* Footer */}
-        
         <div className="pt-2 flex justify-between text-xs text-gray-500">
           <span>Client ID: {getInitials(client.name)}-{client.createdAt.replace(/-/g, '').slice(2)}</span>
           <ClientDetailsModal 
@@ -1596,8 +1617,7 @@ function ClientCard({
               setActiveTab("investment-tracker");
               setSelectedClientId(client.id);
             }}
-          >
-          </ClientDetailsModal>
+          />
         </div>
       </div>
     </div>
