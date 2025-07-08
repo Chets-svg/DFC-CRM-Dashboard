@@ -25,9 +25,8 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Heart } from "lucide-react";
+import { Search, Heart, MoreVertical } from "lucide-react";
 import { useMemo } from 'react';
-
 import { 
   Dialog, 
   DialogTrigger, 
@@ -2841,47 +2840,157 @@ if (themeLoading) {
       <div className="container mx-auto px-4 py-8">
         {/* Header with theme selector */}
          <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">DFS CRM Dashboard</h1>
-          <ClientCelebrations clients={clients} />
-          <div className="flex items-center gap-2">
-           <ThemeSelector theme={theme} setTheme={handleThemeChange} />
-            <Toaster position="top-right" />
-            {/* Updated Theme Toggle Button */}
-            <Button 
-  variant="outline" 
-  onClick={toggleTheme}
-  className={`${getButtonClasses(theme, 'outline')} flex items-center gap-2`}
->
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="h-4 w-4" />
-                  <span>Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="h-4 w-4" />
-                  <span>Dark Mode</span>
-                </>
-              )}
-            </Button>
-            <Button 
-  onClick={async () => {
-    try {
-      await logout();
-      // Optionally redirect to login page
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Logout failed:', error);
-      showAlert('Logout failed. Please try again.');
-    }
-  }}
-  variant="outline"
-  className={getButtonClasses(theme, 'danger')}
->
-  Logout
-</Button>
-          </div>
+  <h1 className="text-3xl font-bold">DFS CRM Dashboard</h1>
+  <ClientCelebrations clients={clients} />
+  <div className="flex items-center gap-2">
+    <ThemeSelector theme={theme} setTheme={handleThemeChange} />
+    <Toaster position="top-right" />
+    {/* Updated Theme Toggle Button */}
+    <Button 
+      variant="outline" 
+      onClick={toggleTheme}
+      className={`${getButtonClasses(theme, 'outline')} flex items-center gap-2`}
+    >
+      {theme === 'dark' ? (
+        <>
+          <Sun className="h-4 w-4" />
+          <span>Light Mode</span>
+        </>
+      ) : (
+        <>
+          <Moon className="h-4 w-4" />
+          <span>Dark Mode</span>
+        </>
+      )}
+    </Button>
+    
+    {/* Logout Button */}
+    <Button 
+      onClick={async () => {
+        try {
+          await logout();
+          window.location.href = '/login';
+        } catch (error) {
+          console.error('Logout failed:', error);
+          showAlert('Logout failed. Please try again.');
+        }
+      }}
+      variant="outline"
+      className={getButtonClasses(theme, 'danger')}
+    >
+      Logout
+    </Button>
+    
+    {/* Quick Links Dropdown - Hover Version with Fixed Colors */}
+  <div className="relative group">
+    <Button 
+      variant="ghost" 
+      size="icon" 
+      className="ml-2 hover:bg-transparent"
+      onMouseEnter={(e) => e.preventDefault()}
+    >
+      <MoreVertical className="h-5 w-5" />
+    </Button>
+    
+    {/* Dropdown Content */}
+    <div className={`
+      absolute right-0 top-full mt-1 w-56
+      ${themes[theme].cardBg} ${themes[theme].borderColor}
+      border rounded-md shadow-lg
+      opacity-0 invisible group-hover:opacity-100 group-hover:visible
+      transition-opacity duration-200 ease-in-out
+      z-50
+    `}>
+      <div className="p-1">
+        <div className={`px-2 py-1.5 text-sm font-semibold ${themes[theme].textColor}`}>Quick Links</div>
+        <div className={`h-px ${themes[theme].borderColor} mx-2`}></div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://dhanamfinser.themfbox.com/', '_blank')}
+        >
+          DFS Themebox
         </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://www.cvlkra.com/', '_blank')}
+        >
+          CVL KRA Portal
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://edge360.camsonline.com/signin', '_blank')}
+        >
+          Edge360 Portal
+        </div>
+         <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://mfs.kfintech.com/dit/login', '_blank')}
+        >
+          Kfintech Portal
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://www.mfuonline.com/', '_blank')}
+        >
+          MF Utilities Portal
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://app.mintpro.in/home', '_blank')}
+        >
+          Turtlemint Pro
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://www.njindiaonline.in/pdesk/login.fin?cmdAction=login', '_blank')}
+        >
+          NJ Partner Desk
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
+        >
+          Income Tax
+        </div>
+        <div 
+          className={`px-2 py-1.5 text-sm rounded cursor-pointer
+            ${theme === 'dark' ? 
+              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
+              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
+          onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
+        >
+          Dhanam Financial Services
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
