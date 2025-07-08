@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Heart } from "lucide-react";
 import { useMemo } from 'react';
+
 import { 
   Dialog, 
   DialogTrigger, 
@@ -79,7 +80,7 @@ import {
   Bell,
   ListChecks,
   CheckCircle, Trash2, 
-  FileText, CreditCard, FileSignature, ThumbsUp, CalendarCheck, ExternalLink, ChevronLeft, ChevronRight, MessageSquare
+  FileText, CreditCard, FileSignature, ThumbsUp, CalendarCheck, ExternalLink, ChevronLeft, ChevronRight, MessageSquare, Home
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell } from "recharts";
@@ -1070,7 +1071,7 @@ export function ClientDetailsModal({
             onClick={() => setOpen(false)}
             className="absolute right-0 top-0 p-2"
           >
-            <X className="h-5 w-5" />
+            
           </Button>
           
           <CardHeader>
@@ -1280,7 +1281,23 @@ const [clientSortField, setClientSortField] = useState<ClientSortField>('created
 const [clientSortDirection, setClientSortDirection] = useState<'asc' | 'desc'>('desc');
 const [isAdding, setIsAdding] = useState(false)
 const [editingId, setEditingId] = useState<string | null>(null)
-const [formData, setFormData] = useState<Omit<Client, 'id'>>({ name: '', email: '', phone: '' })
+const [formData, setFormData] = useState<Omit<Client, 'id'>>({ 
+  name: '', 
+  email: '', 
+  phone: '' 
+});
+
+// SIP Reminder form state
+const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
+  clientId: '',
+  clientName: '',
+  amount: 0,
+  frequency: 'Monthly',
+  startDate: new Date().toISOString().split('T')[0],
+  nextDate: '',
+  status: 'active'
+});
+
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
 const [tabLoading, setTabLoading] = useState(true);
@@ -1581,7 +1598,6 @@ function ClientCard({
               setSelectedClientId(client.id);
             }}
           >
-            
           </ClientDetailsModal>
         </div>
       </div>
@@ -1786,17 +1802,6 @@ const PRODUCT_COLORS = {
   taxation: 'bg-orange-200 text-orange-900 border-orange-900', // Add this
   nps: 'bg-teal-200 text-teal-900 border-teal-900' // Add this
 };
-
- const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
-  clientId: '',
-  clientName: '',
-  amount: 0,
-  frequency: 'Monthly',
-  startDate: new Date().toISOString().split('T')[0],
-  nextDate: '',
-  status: 'active'
-});
-
 const handleTabChange = (value: string) => {
   setActiveTab(value);
   const newUrl = new URL(window.location.href);
@@ -1806,7 +1811,7 @@ const handleTabChange = (value: string) => {
 
 
 // 2. Update the AddSIPReminderForm component
-const AddSIPReminderForm = () => {
+const AddSIPReminderForm = ({ theme }: AddSIPReminderFormProps) => {
   const currentTheme = themes[theme] || themes['blue-smoke'];
   const { cardBg, borderColor, inputBg, highlightBg, textColor } = currentTheme;
 
@@ -1852,119 +1857,6 @@ const AddSIPReminderForm = () => {
       console.error('Error adding SIP reminder:', error);
       showAlert(error.message || 'Error adding SIP reminder');
     }
-  };
-
-const syncTabWithURL = (tab: string) => {
-  if (typeof window !== 'undefined') {
-    window.location.hash = tab;
-  }
-};
-
-// 2. Unified tab loading effect
-useEffect(() => {
-  const loadTabPreference = async () => {
-    try {
-      setTabLoading(true);
-      
-      // First check URL hash if present
-      const hashTab = typeof window !== 'undefined' 
-        ? window.location.hash.replace('#', '')
-        : '';
-      
-      if (hashTab && ['dashboard', 'leads', 'kyc', 'clients', 'sip', 'communication', 'email', 'tasks', 'investment-tracker'].includes(hashTab)) {
-        setActiveTab(hashTab);
-        localStorage.setItem('activeTab', hashTab);
-        return;
-      }
-
-      // Then check localStorage
-      const localTab = localStorage.getItem('activeTab');
-      
-      // Finally check Firestore if user is logged in
-      if (user?.uid) {
-        const docRef = doc(db, 'userPreferences', user.uid);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists() && docSnap.data().activeTab) {
-          const firestoreTab = docSnap.data().activeTab;
-          setActiveTab(firestoreTab);
-          localStorage.setItem('activeTab', firestoreTab);
-          syncTabWithURL(firestoreTab);
-          return;
-        }
-      }
-      
-      // Fallback to localStorage or default
-      if (localTab) {
-        setActiveTab(localTab);
-        syncTabWithURL(localTab);
-      } else {
-        setActiveTab('dashboard');
-        syncTabWithURL('dashboard');
-      }
-    } catch (error) {
-      console.error('Error loading tab preference:', error);
-      setActiveTab('dashboard');
-      syncTabWithURL('dashboard');
-    } finally {
-      setTabLoading(false);
-    }
-  };
-
-  loadTabPreference();
-
-  useEffect(() => {
-  const loadTabPreference = async () => {
-    if (!user?.uid) {
-      setActiveTab('dashboard');
-      setTabLoading(false);
-      return;
-    }
-
-    let tabFromHash = window.location.hash.replace('#', '');
-    let finalTab = tabFromHash || 'dashboard';
-
-    try {
-      const docRef = doc(db, 'userPreferences', user.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        const firestoreTab = docSnap.data().activeTab;
-        finalTab = firestoreTab || finalTab;
-      }
-    } catch (error) {
-      console.error('Failed to load tab from Firestore:', error);
-    } finally {
-      setActiveTab(finalTab);
-      setTabLoading(false);
-    }
-  };
-
-  loadTabPreference();
-}, [user?.uid]);
-
-
-  // Handle browser back/forward navigation
-  const handleHashChange = () => {
-    const tab = window.location.hash.replace('#', '');
-    if (tab && tab !== activeTab) {
-      setActiveTab(tab);
-      localStorage.setItem('activeTab', tab);
-    }
-  };
-
-  window.addEventListener('hashchange', handleHashChange);
-  return () => window.removeEventListener('hashchange', handleHashChange);
-}, [user?.uid]);
-
-// 3. Unified tab change handler
-const unsubscribeInvestments = subscribeToCollection(
-    'investments', // or your collection name
-    (data) => setInvestments(data)
-  );
-
-  return () => {
-    // ... existing unsubscribes ...
-    unsubscribeInvestments();
   };
 
   return (
@@ -2433,7 +2325,7 @@ function calculateNextSIPDate(frequency: 'Monthly' | 'Quarterly' | 'Yearly'): st
       break;
     case 'Yearly':
       nextDate.setFullYear(today.getFullYear() + 1);
-      break;s
+      break;
   }
   
   return nextDate.toISOString().split('T')[0];
@@ -4227,7 +4119,7 @@ if (themeLoading) {
       </div>
     </CardHeader>
     
-    {showSIPForm && <AddSIPReminderForm />}
+    {showSIPForm && <AddSIPReminderForm theme={theme} />}
 
     <CardContent>
       <div className="space-y-4">
