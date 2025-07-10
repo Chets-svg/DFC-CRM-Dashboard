@@ -1,6 +1,6 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState,useRef, createContext, useContext } from 'react';
+import { useState,useRef, useCallback, createContext, useContext } from 'react';
 import { Calendar } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Pause, Play } from "lucide-react";
@@ -22,7 +22,7 @@ import { BirthdayBanner } from '@/components/birthday-banner';
 import EnhancedTaskTab from './enhanced-task-tab';
 import { Checkbox } from "@/components/ui/checkbox";
 import { ThemeProvider } from '@/components/theme-provider'
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, Heart, MoreVertical } from "lucide-react";
@@ -1253,6 +1253,9 @@ export function ClientDetailsModal({
   );
 }
 
+const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+const WARNING_TIMEOUT = 8 * 60 * 1000; // 8 minutes (show warning at 8 minutes)
+
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
@@ -1280,11 +1283,80 @@ const [clientSortField, setClientSortField] = useState<ClientSortField>('created
 const [clientSortDirection, setClientSortDirection] = useState<'asc' | 'desc'>('desc');
 const [isAdding, setIsAdding] = useState(false)
 const [editingId, setEditingId] = useState<string | null>(null)
+const [inactiveTime, setInactiveTime] = useState(0); 
+const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
+const logoutTimer = useRef<NodeJS.Timeout | null>(null);
+const warningTimer = useRef<NodeJS.Timeout>();
+const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+const [lastActivity, setLastActivity] = useState(Date.now());
+
 const [formData, setFormData] = useState<Omit<Client, 'id'>>({ 
   name: '', 
   email: '', 
   phone: '' 
 });
+
+const handleLogout = useCallback(async () => {
+  try {
+    await logout();
+    window.location.href = '/login';
+  } catch (error) {
+    console.error('Logout failed:', error);
+    toast.error('Logout failed. Please try again.');
+  }
+}, []);
+
+const resetInactivityTimer = useCallback(() => {
+  // Don't reset if warning is already showing
+  if (showTimeoutWarning) return;
+
+  // Clear existing timers
+  if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+  if (warningTimer.current) clearTimeout(warningTimer.current);
+
+  // Set new warning timer
+  warningTimer.current = setTimeout(() => {
+    setShowTimeoutWarning(true);
+  }, WARNING_TIMEOUT);
+
+  // Set new logout timer
+  inactivityTimer.current = setTimeout(() => {
+    handleLogout();
+  }, INACTIVITY_TIMEOUT);
+}, [handleLogout, showTimeoutWarning]);
+
+// Set up event listeners
+useEffect(() => {
+  // Initial setup
+  resetInactivityTimer();
+
+  const handleActivity = (e: Event) => {
+    // Ignore mouse movements when warning is shown
+    if (showTimeoutWarning && e.type === 'mousemove') {
+      return;
+    }
+    resetInactivityTimer();
+  };
+
+  // Events that indicate user activity
+  const events = [
+    'mousedown', 'keypress', 'scroll', 
+    'touchstart', 'click', 'input', 'wheel'
+  ];
+
+  events.forEach(event => {
+    window.addEventListener(event, handleActivity);
+  });
+
+  // Cleanup
+  return () => {
+    events.forEach(event => {
+      window.removeEventListener(event, handleActivity);
+    });
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    if (warningTimer.current) clearTimeout(warningTimer.current);
+  };
+}, [resetInactivityTimer, showTimeoutWarning]);
 
 // SIP Reminder form state
 const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
@@ -1377,21 +1449,10 @@ const [emailComponentProps, setEmailComponentProps] = useState({
 });
 
 const { user } = useAuth();
-const handleLogout = async () => {
-  try {
-    await logout();
-    // You might want to redirect to login page after logout
-    // For example, if using react-router:
-    // navigate('/login');
-    // Or if using Next.js:
-    // router.push('/login');
-    showAlert('Logged out successfully');
-  } catch (error) {
-    console.error('Error logging out:', error);
-    showAlert('Error logging out');
+const location = useLocation();
+ if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
-};
-// new client card
 
 function ClientCard({ 
   client, 
@@ -2543,7 +2604,6 @@ const getStatusColor = (status: CommunicationStatus) => {
   }
 };
 
-
 const handleSendEmail = () => {
   if (!selectedClientId || !emailContent.trim()) {
     showAlert('Please select a client and enter email content');
@@ -2855,7 +2915,44 @@ if (themeLoading) {
   }
 
  return (
-    <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
+      <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
+    {/* Timeout Warning Modal */}
+    {showTimeoutWarning && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div 
+      className={`p-6 rounded-lg ${themes[theme].cardBg} ${themes[theme].borderColor} max-w-md w-full`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <h3 className="text-xl font-bold mb-4">Session Timeout Warning</h3>
+      <p className="mb-4">Your session is about to expire due to inactivity.</p>
+      <p className="mb-6">Would you like to continue your session?</p>
+      
+      {/* Add the countdown timer here */}
+      <p className="mb-6 text-sm text-yellow-600 dark:text-yellow-400">
+        Your session will expire in {Math.ceil((INACTIVITY_TIMEOUT - WARNING_TIMEOUT) / 1000)} seconds.
+      </p>
+      
+      <div className="flex justify-end gap-2">
+        <Button 
+          onClick={() => {
+            resetInactivityTimer();
+            setShowTimeoutWarning(false);
+          }}
+          className={getButtonClasses(theme)}
+        >
+          Continue Session
+        </Button>
+        <Button 
+          onClick={handleLogout}
+          variant="outline"
+          className={getButtonClasses(theme, 'outline')}
+        >
+          Log Out Now
+        </Button>
+      </div>
+    </div>
+  </div>
+)}
       <Toaster position="top-right" />
       <div className="container mx-auto px-4 py-8">
         {/* Header with theme selector */}
@@ -2996,16 +3093,7 @@ if (themeLoading) {
         >
           Income Tax
         </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
-        >
-          Dhanam Financial Services
-        </div>
-      </div>
+              </div>
     </div>
   </div>
 </div>

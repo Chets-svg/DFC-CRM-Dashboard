@@ -98,13 +98,17 @@ const initialDrafts: Draft[] = [
 ];
 
 export function EmailComponent({ theme, clients, defaultRecipient = '', openCompose = false }: EmailComponentProps) {
+  const [initialized, setInitialized] = useState(false);
   const [composeManuallyClosed, setComposeManuallyClosed] = useState(false)
   useEffect(() => {
-    if (openCompose && defaultRecipient) {
-      setEmailSubTab('compose');
-      setRecipients([defaultRecipient]);
+    if (!initialized) {
+      if (openCompose && defaultRecipient) {
+        setEmailSubTab('compose');
+        setRecipients([defaultRecipient]);
+      }
+      setInitialized(true);
     }
-  }, [openCompose, defaultRecipient]);
+  }, [openCompose, defaultRecipient, initialized]);
 
   const currentTheme = themes[theme] || themes['blue-smoke']
   const {
@@ -817,13 +821,31 @@ const moveToTrash = (id: string) => {
 
         {/* Email Sidebar Content */}
         {activeTab === 'email' && (
-          <>
-          <button 
-          className={`w-full rounded-full ${getButtonClasses(theme)} mb-5`}
-          
-          onClick={() => login()}>
-         Login with Gmail
-</button>
+  <>
+    <Button
+      className={`w-full rounded-full mb-5 ${getButtonClasses(theme, 'outline')}`}
+      onClick={() => login()}
+    >
+      <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
+        <path 
+          fill="#EA4335" 
+          d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.198 2.698 1.24 6.65l4.026 3.115z"
+        />
+        <path 
+          fill="#34A853" 
+          d="M16.04 18.013c-1.09.703-2.474 1.078-4.04 1.078a7.077 7.077 0 0 1-6.723-4.823l-4.04 3.067A11.965 11.965 0 0 0 12 24c2.933 0 5.735-1.043 7.834-3l-3.793-2.987z"
+        />
+        <path 
+          fill="#FBBC05" 
+          d="M19.834 21c2.195-2.048 3.62-5.096 3.62-9 0-.706-.1-1.417-.264-2.09H12v4.09h6.44a5.09 5.09 0 0 1-2.2 3.32L19.834 21z"
+        />
+        <path 
+          fill="#4285F4" 
+          d="M5.277 14.268A7.12 7.12 0 0 1 4.909 12c0-.782.125-1.533.357-2.235L1.24 6.65A11.934 11.934 0 0 0 0 12c0 1.92.445 3.73 1.237 5.335l4.04-3.067z"
+        />
+      </svg>
+      Login with Gmail
+    </Button>
 <Button
               className={`w-full rounded-full ${getButtonClasses(theme)} mb-6`}
               onClick={openNewCompose} // Use the new function here
