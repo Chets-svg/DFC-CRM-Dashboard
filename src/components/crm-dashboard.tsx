@@ -203,6 +203,10 @@ type Lead = {
   createdAt: String;
 };
 
+interface TimeoutWarningModalProps {
+  theme: ThemeName;
+}
+
 interface LeadProgressBarProps {
   status: ProgressStatus;
   onStatusChange: (newStatus: ProgressStatus) => void;
@@ -1253,9 +1257,69 @@ export function ClientDetailsModal({
   );
 }
 
-const INACTIVITY_TIMEOUT = 10 * 60 * 1000; // 10 minutes
-const WARNING_TIMEOUT = 8 * 60 * 1000; // 8 minutes (show warning at 8 minutes)
+function TimeoutWarningModal({ theme }: TimeoutWarningModalProps) {
+  const { 
+    inactiveTime, 
+    showTimeoutWarning, 
+    resetInactivityTimer,
+    logout
+  } = useAuth();
+  const currentTheme = themes[theme] || themes['blue-smoke'];
 
+  if (!showTimeoutWarning) return null;
+
+  const minutes = Math.floor(inactiveTime / 60);
+  const seconds = inactiveTime % 60;
+
+  const handleContinue = () => {
+    resetInactivityTimer();
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div 
+        className={`timeout-modal p-6 rounded-lg ${currentTheme.cardBg} ${currentTheme.borderColor} max-w-md w-full`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="text-xl font-bold mb-4">Session Timeout Warning</h3>
+        <p className="mb-4">Your session is about to expire due to inactivity.</p>
+        <p className="mb-6">Would you like to continue your session?</p>
+        
+        {/* Countdown timer */}
+        <div className="mb-6 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+              {minutes}:{seconds.toString().padStart(2, '0')}
+            </div>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Time remaining
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex justify-end gap-2">
+          <Button 
+            onClick={handleContinue}
+            className={getButtonClasses(theme)}
+          >
+            Continue Session
+          </Button>
+          <Button 
+            onClick={handleLogout}
+            variant="outline"
+            className={getButtonClasses(theme, 'outline')}
+          >
+            Log Out Now
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
@@ -1283,12 +1347,6 @@ const [clientSortField, setClientSortField] = useState<ClientSortField>('created
 const [clientSortDirection, setClientSortDirection] = useState<'asc' | 'desc'>('desc');
 const [isAdding, setIsAdding] = useState(false)
 const [editingId, setEditingId] = useState<string | null>(null)
-const [inactiveTime, setInactiveTime] = useState(0); 
-const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
-const logoutTimer = useRef<NodeJS.Timeout | null>(null);
-const warningTimer = useRef<NodeJS.Timeout>();
-const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
-const [lastActivity, setLastActivity] = useState(Date.now());
 
 const [formData, setFormData] = useState<Omit<Client, 'id'>>({ 
   name: '', 
@@ -1305,58 +1363,6 @@ const handleLogout = useCallback(async () => {
     toast.error('Logout failed. Please try again.');
   }
 }, []);
-
-const resetInactivityTimer = useCallback(() => {
-  // Don't reset if warning is already showing
-  if (showTimeoutWarning) return;
-
-  // Clear existing timers
-  if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-  if (warningTimer.current) clearTimeout(warningTimer.current);
-
-  // Set new warning timer
-  warningTimer.current = setTimeout(() => {
-    setShowTimeoutWarning(true);
-  }, WARNING_TIMEOUT);
-
-  // Set new logout timer
-  inactivityTimer.current = setTimeout(() => {
-    handleLogout();
-  }, INACTIVITY_TIMEOUT);
-}, [handleLogout, showTimeoutWarning]);
-
-// Set up event listeners
-useEffect(() => {
-  // Initial setup
-  resetInactivityTimer();
-
-  const handleActivity = (e: Event) => {
-    // Ignore mouse movements when warning is shown
-    if (showTimeoutWarning && e.type === 'mousemove') {
-      return;
-    }
-    resetInactivityTimer();
-  };
-
-  // Events that indicate user activity
-  const events = [
-    'mousedown', 'keypress', 'scroll', 
-    'touchstart', 'click', 'input', 'wheel'
-  ];
-
-  events.forEach(event => {
-    window.addEventListener(event, handleActivity);
-  });
-
-  // Cleanup
-  return () => {
-    events.forEach(event => {
-      window.removeEventListener(event, handleActivity);
-    });
-    if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
-    if (warningTimer.current) clearTimeout(warningTimer.current);
-  };
-}, [resetInactivityTimer, showTimeoutWarning]);
 
 // SIP Reminder form state
 const [newSIPReminder, setNewSIPReminder] = useState<Omit<SIPReminder, 'id'>>({
@@ -1448,7 +1454,13 @@ const [emailComponentProps, setEmailComponentProps] = useState({
   openCompose: false
 });
 
-const { user } = useAuth();
+const { 
+  user, 
+  logout, 
+  inactiveTime, 
+  resetInactivityTimer
+} = useAuth();
+
 const location = useLocation();
  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
@@ -2917,42 +2929,7 @@ if (themeLoading) {
  return (
       <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
     {/* Timeout Warning Modal */}
-    {showTimeoutWarning && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div 
-      className={`p-6 rounded-lg ${themes[theme].cardBg} ${themes[theme].borderColor} max-w-md w-full`}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <h3 className="text-xl font-bold mb-4">Session Timeout Warning</h3>
-      <p className="mb-4">Your session is about to expire due to inactivity.</p>
-      <p className="mb-6">Would you like to continue your session?</p>
-      
-      {/* Add the countdown timer here */}
-      <p className="mb-6 text-sm text-yellow-600 dark:text-yellow-400">
-        Your session will expire in {Math.ceil((INACTIVITY_TIMEOUT - WARNING_TIMEOUT) / 1000)} seconds.
-      </p>
-      
-      <div className="flex justify-end gap-2">
-        <Button 
-          onClick={() => {
-            resetInactivityTimer();
-            setShowTimeoutWarning(false);
-          }}
-          className={getButtonClasses(theme)}
-        >
-          Continue Session
-        </Button>
-        <Button 
-          onClick={handleLogout}
-          variant="outline"
-          className={getButtonClasses(theme, 'outline')}
-        >
-          Log Out Now
-        </Button>
-      </div>
-    </div>
-  </div>
-)}
+<TimeoutWarningModal theme={theme} />
       <Toaster position="top-right" />
       <div className="container mx-auto px-4 py-8">
         {/* Header with theme selector */}
