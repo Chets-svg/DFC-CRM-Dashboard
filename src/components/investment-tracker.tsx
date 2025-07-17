@@ -59,6 +59,14 @@ export const ThemeProvider = ({ children }) => {
 
 export const useTheme = () => useContext(ThemeContext);
 
+const getCurrentMonthData = () => {
+  const now = new Date();
+  return {
+    monthIndex: now.getMonth(),
+    monthName: now.toLocaleString('default', { month: 'long' })
+  };
+};
+
 const defaultRecords: InvestmentRecord[] = [
   { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
   { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
@@ -115,71 +123,17 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
     selectedBg
   } = currentTheme;
 
-  const [isEditingSummary, setIsEditingSummary] = useState(false)
-  const [isEditingMonthly, setIsEditingMonthly] = useState(false)
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
-  const [currentMonthIndex, setCurrentMonthIndex] = useState(new Date().getMonth())
-  const [isLoading, setIsLoading] = useState(true)
-  const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords)
-  
-  const [previousTheme, setPreviousTheme] = useState<ThemeName>(theme);
-  const [darkMode, setDarkMode] = useState(false);
-  const getThemedButtonClasses = (variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
-    return getButtonClasses(theme, variant);
-  };
-  
-  // Firestore document reference
-  const investmentDocRef = doc(db, 'investmentTracker', currentYear.toString())
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [isEditingMonthly, setIsEditingMonthly] = useState(false);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonthIndex, setCurrentMonthIndex] = useState(new Date().getMonth());
+  const [currentMonthName, setCurrentMonthName] = useState(
+    new Date().toLocaleString('default', { month: 'long' })
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords);
 
-  // Load data from Firestore
- useEffect(() => {
-    const unsubscribe = onSnapshot(investmentDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        const data = docSnapshot.data()
-        // Update both records and current month index from Firestore
-        setRecords(data.records || defaultRecords)
-        setCurrentMonthIndex(data.currentMonthIndex || new Date().getMonth())
-      } else {
-        // Initialize with default data if document doesn't exist
-        initializeFirestoreData()
-      }
-      setIsLoading(false)
-    })
-
-    return () => unsubscribe()
-  }, [currentYear])
-
-  const initializeFirestoreData = async () => {
-    try {
-      await setDoc(investmentDocRef, {
-        records: defaultRecords,
-        currentMonthIndex: new Date().getMonth(),
-        year: currentYear,
-        createdAt: new Date().toISOString()
-      })
-    } catch (error) {
-      console.error("Error initializing data:", error)
-      toast({
-        title: "Error",
-        description: "Failed to initialize investment tracker",
-        variant: "destructive"
-      })
-    }
-  }
-
-  // Update editable status based on current month
-  useEffect(() => {
-    const updatedRecords = records.map(record => ({
-      ...record,
-      isEditable: record.monthIndex === currentMonthIndex
-    }))
-    // Only update if there are actual changes to prevent infinite loops
-    if (JSON.stringify(updatedRecords) !== JSON.stringify(records)) {
-      setRecords(updatedRecords)
-    }
-  }, [currentMonthIndex, records])
-
-      const calculateTotals = () => {
+  const calculateTotals = () => {
   const monthlySipTarget = Math.max(0, records[0]?.sipTarget || 0);
   const lumpsumTarget = Math.max(0, records.reduce((sum, record) => sum + (record.lumpsumTarget || 0), 0));
   const sipAchieved = Math.max(0, records.reduce((sum, record) => sum + (record.sipAchieved || 0), 0));
@@ -193,7 +147,107 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   };
 };
 
-  const totals = calculateTotals()
+const totals = calculateTotals();
+
+
+const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
+  const updatedRecords = records.map(record => 
+    record.monthIndex === monthIndex ? { ...record, [field]: value } : record
+  );
+  await saveToFirestore(updatedRecords);
+};
+
+const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', value: number) => {
+  const updatedRecords = records.map(record => ({
+    ...record,
+    [field]: field === 'sipTarget' ? value : 
+             (record.monthIndex === 0 ? value : 0)
+  }));
+  await saveToFirestore(updatedRecords);
+};
+
+  // Update current month when component mounts and periodically
+  useEffect(() => {
+    const updateCurrentMonth = () => {
+      const now = new Date();
+      const newMonthIndex = now.getMonth();
+      const newYear = now.getFullYear();
+      
+      if (newMonthIndex !== currentMonthIndex) {
+        setCurrentMonthIndex(newMonthIndex);
+        setCurrentMonthName(now.toLocaleString('default', { month: 'long' }));
+      }
+      
+      if (newYear !== currentYear) {
+        setCurrentYear(newYear);
+      }
+    };
+    
+    // Update immediately
+    updateCurrentMonth();
+    
+    // Set up interval to check for month changes
+    const interval = setInterval(updateCurrentMonth, 3600000); // Check every hour
+    
+    return () => clearInterval(interval);
+  }, [currentMonthIndex, currentYear]);
+
+  // Firestore document reference
+  const investmentDocRef = doc(db, 'investmentTracker', currentYear.toString());
+
+  // Load data from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(investmentDocRef, (docSnapshot) => {
+      if (docSnapshot.exists()) {
+        const data = docSnapshot.data();
+        // Update records from Firestore
+        setRecords(data.records || defaultRecords);
+        // Only update month index if it's not the current month
+        if (data.currentMonthIndex !== currentMonthIndex) {
+          setCurrentMonthIndex(data.currentMonthIndex);
+          setCurrentMonthName(
+            new Date(currentYear, data.currentMonthIndex, 1)
+              .toLocaleString('default', { month: 'long' })
+          );
+        }
+      } else {
+        // Initialize with default data if document doesn't exist
+        initializeFirestoreData();
+      }
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentYear]);
+
+  const initializeFirestoreData = async () => {
+    try {
+      await setDoc(investmentDocRef, {
+        records: defaultRecords,
+        currentMonthIndex: currentMonthIndex,
+        year: currentYear,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error initializing data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize investment tracker",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Update editable status based on current month
+  useEffect(() => {
+    const updatedRecords = records.map(record => ({
+      ...record,
+      isEditable: record.monthIndex === currentMonthIndex
+    }));
+    if (JSON.stringify(updatedRecords) !== JSON.stringify(records)) {
+      setRecords(updatedRecords);
+    }
+  }, [currentMonthIndex, records]);
 
   const saveToFirestore = async (updatedRecords: InvestmentRecord[], newMonthIndex?: number) => {
     try {
@@ -202,50 +256,42 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
         currentMonthIndex: newMonthIndex !== undefined ? newMonthIndex : currentMonthIndex,
         year: currentYear,
         updatedAt: new Date().toISOString()
-      }, { merge: true })
+      }, { merge: true });
       
-      // Update local state immediately for better UX
-      setRecords(updatedRecords)
+      setRecords(updatedRecords);
       if (newMonthIndex !== undefined) {
-        setCurrentMonthIndex(newMonthIndex)
+        setCurrentMonthIndex(newMonthIndex);
+        setCurrentMonthName(
+          new Date(currentYear, newMonthIndex, 1)
+            .toLocaleString('default', { month: 'long' })
+        );
       }
     } catch (error) {
-      console.error('Error saving to Firestore:', error)
+      console.error('Error saving to Firestore:', error);
       toast({
         title: 'Error',
         description: 'Failed to save data',
         variant: 'destructive'
-      })
+      });
     }
-  }
-
-  const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
-    const updatedRecords = records.map(record => 
-      record.monthIndex === monthIndex ? { ...record, [field]: value } : record
-    )
-    await saveToFirestore(updatedRecords)
-  }
-
-  const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', value: number) => {
-    const updatedRecords = records.map(record => ({
-      ...record,
-      [field]: field === 'sipTarget' ? value : 
-               (record.monthIndex === 0 ? value : 0)
-    }))
-    await saveToFirestore(updatedRecords)
-  }
+  };
 
   const completeCurrentMonth = async () => {
-    let newMonthIndex = currentMonthIndex < 11 ? currentMonthIndex + 1 : 0
+    let newMonthIndex = currentMonthIndex < 11 ? currentMonthIndex + 1 : 0;
+    let newYear = currentYear;
+    
     if (currentMonthIndex === 11) {
-      setCurrentYear(prev => prev + 1)
+      newYear = currentYear + 1;
+      setCurrentYear(newYear);
     }
-    await saveToFirestore(records, newMonthIndex)
-  }
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>
-  }
+    
+    setCurrentMonthIndex(newMonthIndex);
+    setCurrentMonthName(
+      new Date(newYear, newMonthIndex, 1)
+        .toLocaleString('default', { month: 'long' })
+    );
+    await saveToFirestore(records, newMonthIndex);
+  };
 
   return (
        <div className={`space-y-4 ${bgColor} ${textColor}`}>
@@ -256,9 +302,9 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
               <CardTitle>Investment Tracker - {currentYear}</CardTitle>
               <CardDescription>Track your monthly investment goals and achievements</CardDescription>
             </div>
-            <div className="text-sm text-muted-foreground">
-              Current Month: {records[currentMonthIndex]?.month}
-            </div>
+          <div className="text-sm text-muted-foreground">
+  Current Month: {currentMonthName} {currentYear}
+</div>
           </div>
         </CardHeader>
 
