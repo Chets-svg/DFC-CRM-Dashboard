@@ -1959,7 +1959,7 @@ const AddSIPReminderForm = ({ theme }: AddSIPReminderFormProps) => {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Client Selection */}
-          <div className="space-y-2"> {/* Added space-y-2 between label and input */}
+          <div className="space-y-2"> {/* Added space-y-1 between label and input */}
       <Label htmlFor="client">Client*</Label>
             
             <Select
@@ -4316,50 +4316,57 @@ if (themeLoading) {
     {showSIPForm && <AddSIPReminderForm theme={theme} />}
 
     <CardContent>
-      <div className="space-y-4">
-        {sipReminders.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-            No SIP reminders yet. Add one above!
-          </div>
-        ) : (
-          sipReminders
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()) // Sort by date descending
-              .map(reminder => (
-                <div key={reminder.id} className={`p-4 rounded-lg ${cardBg} ${borderColor}`}>
-              <div className="flex justify-between items-start">
-                <div>
-                  <h4 className="font-medium">{reminder.clientName}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    ₹{reminder.amount} • {reminder.frequency} • Next: {reminder.nextDate}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => markReminderSent(reminder.id)}
-                    className="text-green-600 hover:text-green-700 dark:text-green-400"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => toggleSipStatus(reminder.id)}
-                    className={reminder.status === 'active' 
+  <div className="divide-y divide-gray-200 dark:divide-gray-700">
+    {sipReminders.length === 0 ? (
+      <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+        No SIP reminders yet. Add one above!
+      </div>
+    ) : (
+      sipReminders
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map(reminder => (
+          <div 
+            key={reminder.id} 
+            className={`p-4 ${cardBg} ${borderColor}`}
+          >
+            <div className="flex justify-between items-start">
+              <div>
+                <h4 className="font-medium">{reminder.clientName}</h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  ₹{reminder.amount} • {reminder.frequency} • Next: {reminder.nextDate}
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => markReminderSent(reminder.id)}
+                  className="text-green-600 hover:text-green-700 dark:text-green-400"
+                >
+                  <Check className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => toggleSipStatus(reminder.id)}
+                  className={
+                    reminder.status === 'active' 
                       ? "text-yellow-600 hover:text-yellow-700 dark:text-yellow-400" 
                       : "text-blue-600 hover:text-blue-700 dark:text-blue-400"
-                    }
-                  >
-                    {reminder.status === 'active' ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                  </Button>
-                </div>
+                  }
+                >
+                  {reminder.status === 'active' 
+                    ? <Pause className="h-4 w-4" /> 
+                    : <Play className="h-4 w-4" />}
+                </Button>
               </div>
             </div>
-          ))
-        )}
-      </div>
-    </CardContent>
+          </div>
+        ))
+    )}
+  </div>
+</CardContent>
+
   </Card>
 
     {/* Statistics Column - Now 3rd column */}
