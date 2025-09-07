@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from 'react'
-import { Star, Edit, Save, Lock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Star, Edit, Save, Lock, ChevronDown, ChevronUp, Plus, Trash } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +19,13 @@ import {
   getButtonClasses 
 } from '@/lib/theme';
 
+interface ClientInvestment {
+  id: string;
+  name: string;
+  sipAmount: number;
+  lumpsumAmount: number;
+}
+
 interface InvestmentRecord {
   month: string
   monthIndex: number
@@ -25,10 +34,11 @@ interface InvestmentRecord {
   sipAchieved: number
   lumpsumAchieved: number
   isEditable: boolean
+  clients: ClientInvestment[]
 }
 
 interface InvestmentTrackerProps {
-  theme?: ThemeName; // Add theme prop
+  theme?: ThemeName;
 }
 
 const ThemeContext = createContext({
@@ -68,30 +78,19 @@ const getCurrentMonthData = () => {
 };
 
 const defaultRecords: InvestmentRecord[] = [
-  { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false },
-  { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "March", monthIndex: 2, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 7000, lumpsumAchieved: 0, isEditable: false },
-  { month: "April", monthIndex: 3, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "May", monthIndex: 4, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 14000, lumpsumAchieved: 0, isEditable: false },
-  { month: "June", monthIndex: 5, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "July", monthIndex: 6, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "August", monthIndex: 7, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "September", monthIndex: 8, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "October", monthIndex: 9, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "November", monthIndex: 10, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
-  { month: "December", monthIndex: 11, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false },
+  { month: "January", monthIndex: 0, sipTarget: 15000, lumpsumTarget: 4000000, sipAchieved: 15000, lumpsumAchieved: 85000, isEditable: false, clients: [] },
+  { month: "February", monthIndex: 1, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "March", monthIndex: 2, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 7000, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "April", monthIndex: 3, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "May", monthIndex: 4, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 14000, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "June", monthIndex: 5, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "July", monthIndex: 6, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "August", monthIndex: 7, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "September", monthIndex: 8, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "October", monthIndex: 9, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "November", monthIndex: 10, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
+  { month: "December", monthIndex: 11, sipTarget: 15000, lumpsumTarget: 0, sipAchieved: 0, lumpsumAchieved: 0, isEditable: false, clients: [] },
 ]
-
-const toggleTheme = () => {
-    if (theme === 'dark') {
-      // When turning off dark mode, return to previous light theme
-      setTheme(previousLightTheme);
-    } else {
-      // When turning on dark mode, remember current light theme
-      setPreviousLightTheme(theme);
-      setTheme('dark');
-    }
-  };
 
 export const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -100,14 +99,6 @@ export const formatCurrency = (amount: number) => {
     maximumFractionDigits: 0
   }).format(amount)
 }
-
-const handleThemeChange = (newTheme: ThemeName) => {
-    if (theme !== 'dark') {
-      // If not in dark mode, update the previous light theme
-      setPreviousLightTheme(newTheme);
-    }
-    setTheme(newTheme);
-  };
 
 export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTrackerProps) {
   const currentTheme = themes[theme] || themes['blue-smoke'];
@@ -132,6 +123,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   );
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords);
+  const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({});
 
   const calculateTotals = () => {
   const monthlySipTarget = Math.max(0, records[0]?.sipTarget || 0);
@@ -149,6 +141,62 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
 
 const totals = calculateTotals();
 
+const toggleMonthExpansion = (monthIndex: number) => {
+  setExpandedMonths(prev => ({
+    ...prev,
+    [monthIndex]: !prev[monthIndex]
+  }));
+};
+
+const handleClientChange = async (monthIndex: number, clientId: string, field: keyof ClientInvestment, value: string | number) => {
+  const updatedRecords = records.map(record => {
+    if (record.monthIndex === monthIndex) {
+      const updatedClients = record.clients.map(client => 
+        client.id === clientId ? { ...client, [field]: value } : client
+      );
+      return { ...record, clients: updatedClients };
+    }
+    return record;
+  });
+  
+  setRecords(updatedRecords);
+  await saveToFirestore(updatedRecords);
+};
+
+const addNewClient = async (monthIndex: number) => {
+  const updatedRecords = records.map(record => {
+    if (record.monthIndex === monthIndex) {
+      // Ensure clients array exists
+      const clients = record.clients || [];
+      const newClient: ClientInvestment = {
+        id: `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: `New Client ${clients.length + 1}`,
+        sipAmount: 0,
+        lumpsumAmount: 0
+      };
+      return { ...record, clients: [...clients, newClient] };
+    }
+    return record;
+  });
+  
+  setRecords(updatedRecords);
+  await saveToFirestore(updatedRecords);
+};
+
+const removeClient = async (monthIndex: number, clientId: string) => {
+  const updatedRecords = records.map(record => {
+    if (record.monthIndex === monthIndex) {
+      return { 
+        ...record, 
+        clients: record.clients.filter(client => client.id !== clientId) 
+      };
+    }
+    return record;
+  });
+  
+  setRecords(updatedRecords);
+  await saveToFirestore(updatedRecords);
+};
 
 const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
   const updatedRecords = records.map(record => 
@@ -197,47 +245,55 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
 
   // Load data from Firestore
   useEffect(() => {
-    const unsubscribe = onSnapshot(investmentDocRef, (docSnapshot) => {
-      if (docSnapshot.exists()) {
-        const data = docSnapshot.data();
-        // Update records from Firestore
-        setRecords(data.records || defaultRecords);
-        // Only update month index if it's not the current month
-        if (data.currentMonthIndex !== currentMonthIndex) {
-          setCurrentMonthIndex(data.currentMonthIndex);
-          setCurrentMonthName(
-            new Date(currentYear, data.currentMonthIndex, 1)
-              .toLocaleString('default', { month: 'long' })
-          );
-        }
-      } else {
-        // Initialize with default data if document doesn't exist
-        initializeFirestoreData();
+  const unsubscribe = onSnapshot(investmentDocRef, (docSnapshot) => {
+    if (docSnapshot.exists()) {
+      const data = docSnapshot.data();
+      // Ensure all records have properly initialized clients arrays
+      const sanitizedRecords = (data.records || defaultRecords).map(record => ({
+        ...record,
+        clients: record.clients || []
+      }));
+      
+      // Update records from Firestore
+      setRecords(sanitizedRecords);
+      // Only update month index if it's not the current month
+      if (data.currentMonthIndex !== currentMonthIndex) {
+        setCurrentMonthIndex(data.currentMonthIndex);
+        setCurrentMonthName(
+          new Date(currentYear, data.currentMonthIndex, 1)
+            .toLocaleString('default', { month: 'long' })
+        );
       }
-      setIsLoading(false);
-    });
+    } else {
+      // Initialize with default data if document doesn't exist
+      initializeFirestoreData();
+    }
+    setIsLoading(false);
+  });
 
-    return () => unsubscribe();
-  }, [currentYear]);
+  return () => unsubscribe();
+}, [currentYear]);
 
   const initializeFirestoreData = async () => {
-    try {
-      await setDoc(investmentDocRef, {
-        records: defaultRecords,
-        currentMonthIndex: currentMonthIndex,
-        year: currentYear,
-        createdAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error("Error initializing data:", error);
-      toast({
-        title: "Error",
-        description: "Failed to initialize investment tracker",
-        variant: "destructive"
-      });
-    }
-  };
-
+  try {
+    await setDoc(investmentDocRef, {
+      records: defaultRecords.map(record => ({ 
+        ...record, 
+        clients: record.clients || [] // Ensure clients array is always initialized
+      })),
+      currentMonthIndex: currentMonthIndex,
+      year: currentYear,
+      createdAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error("Error initializing data:", error);
+    toast({
+      title: "Error",
+      description: "Failed to initialize investment tracker",
+      variant: "destructive"
+    });
+  }
+};
   // Update editable status based on current month
   useEffect(() => {
     const updatedRecords = records.map(record => ({
@@ -250,31 +306,37 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
   }, [currentMonthIndex, records]);
 
   const saveToFirestore = async (updatedRecords: InvestmentRecord[], newMonthIndex?: number) => {
-    try {
-      await setDoc(investmentDocRef, {
-        records: updatedRecords,
-        currentMonthIndex: newMonthIndex !== undefined ? newMonthIndex : currentMonthIndex,
-        year: currentYear,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-      
-      setRecords(updatedRecords);
-      if (newMonthIndex !== undefined) {
-        setCurrentMonthIndex(newMonthIndex);
-        setCurrentMonthName(
-          new Date(currentYear, newMonthIndex, 1)
-            .toLocaleString('default', { month: 'long' })
-        );
-      }
-    } catch (error) {
-      console.error('Error saving to Firestore:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save data',
-        variant: 'destructive'
-      });
+  try {
+    // Ensure all records have properly initialized clients arrays
+    const sanitizedRecords = updatedRecords.map(record => ({
+      ...record,
+      clients: record.clients || []
+    }));
+    
+    await setDoc(investmentDocRef, {
+      records: sanitizedRecords,
+      currentMonthIndex: newMonthIndex !== undefined ? newMonthIndex : currentMonthIndex,
+      year: currentYear,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    
+    setRecords(sanitizedRecords);
+    if (newMonthIndex !== undefined) {
+      setCurrentMonthIndex(newMonthIndex);
+      setCurrentMonthName(
+        new Date(currentYear, newMonthIndex, 1)
+          .toLocaleString('default', { month: 'long' })
+      );
     }
-  };
+  } catch (error) {
+    console.error('Error saving to Firestore:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to save data',
+      variant: 'destructive'
+    });
+  }
+};
 
   const completeCurrentMonth = async () => {
     let newMonthIndex = currentMonthIndex < 11 ? currentMonthIndex + 1 : 0;
@@ -533,8 +595,26 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
   }`}
 >
       <td className="px-4 py-2 whitespace-nowrap">
-        {record.month}
-        {record.isEditable && <span className="ml-2 text-xs text-blue-500 dark:text-blue-400">(Current)</span>}
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleMonthExpansion(record.monthIndex);
+            }}
+            className="p-1 mr-2"
+          >
+            {expandedMonths[record.monthIndex] ? 
+              <ChevronUp className="h-4 w-4" /> : 
+              <ChevronDown className="h-4 w-4" />
+            }
+          </Button>
+          <span>
+            {record.month}
+            {record.isEditable && <span className="ml-2 text-xs text-blue-500 dark:text-blue-400">(Current)</span>}
+          </span>
+        </div>
       </td>
       <td className="px-4 py-2 whitespace-nowrap">
         {formatCurrency(record.sipTarget)}
@@ -597,12 +677,145 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
 </tbody>
             </table>
           </div>
+
+       {/* Client Details Section */}
+{records.map((record) => {
+  if (!expandedMonths[record.monthIndex]) return null;
+  
+  return (
+    <div key={`client-${record.monthIndex}`} className="mt-6 border-t pt-6">
+      <h3 className="text-lg font-semibold mb-4">Client Investments for {record.month} {currentYear}</h3>
+      
+      {isEditingMonthly && (
+        <div className="mb-4">
+          <Button 
+            onClick={() => addNewClient(record.monthIndex)}
+            variant="outline"
+            size="sm"
+            className="gap-1"
+          >
+            <Plus className="h-4 w-4" />
+            Add Client
+          </Button>
+        </div>
+      )}
+      
+      {(!record.clients || record.clients.length === 0) ? (
+        <div className="text-center py-8 text-muted-foreground">
+          <p>No clients added for this month</p>
+          {isEditingMonthly && (
+            <Button 
+              onClick={() => addNewClient(record.monthIndex)}
+              variant="outline"
+              size="sm"
+              className="mt-2"
+            >
+              Add First Client
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Client</th>
+                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">SIP Amount</th>
+                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Lumpsum Amount</th>
+                {isEditingMonthly && (
+                  <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {(record.clients || []).map((client) => (
+                <tr key={client.id}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {isEditingMonthly ? (
+                      <Input
+                        value={client.name}
+                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'name', e.target.value)}
+                      />
+                    ) : (
+                      client.name
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {isEditingMonthly ? (
+                      <Input
+                        type="number"
+                        value={client.sipAmount || 0}
+                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'sipAmount', Number(e.target.value))}
+                        className="w-24"
+                      />
+                    ) : (
+                      formatCurrency(client.sipAmount || 0)
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {isEditingMonthly ? (
+                      <Input
+                        type="number"
+                        value={client.lumpsumAmount || 0}
+                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'lumpsumAmount', Number(e.target.value))}
+                        className="w-24"
+                      />
+                    ) : (
+                      formatCurrency(client.lumpsumAmount || 0)
+                    )}
+                  </td>
+                  {isEditingMonthly && (
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeClient(record.monthIndex, client.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      <div className="mt-4 p-4 rounded-lg bg-muted">
+        <h4 className="font-medium mb-2">Summary for {record.month}:</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Total SIP</p>
+            <p className="font-medium">
+              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0), 0))}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Total Lumpsum</p>
+            <p className="font-medium">
+              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0))}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Total Investment</p>
+            <p className="font-medium">
+              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0) + (client.lumpsumAmount || 0), 0))}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})}
         </CardContent>
       </Card>
     </div>
   );
 }
 
+// Export the hook properly
 export const useInvestmentData = () => {
   const [data, setData] = useState<{
     records: InvestmentRecord[];
@@ -612,7 +825,6 @@ export const useInvestmentData = () => {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
- 
 
   useEffect(() => {
     const currentYear = new Date().getFullYear();
@@ -623,15 +835,24 @@ export const useInvestmentData = () => {
         try {
           if (docSnapshot.exists()) {
             const docData = docSnapshot.data();
+            // Ensure all records have properly initialized clients arrays
+            const sanitizedRecords = (docData.records || defaultRecords).map(record => ({
+              ...record,
+              clients: record.clients || []
+            }));
+            
             setData({
-              records: docData.records || defaultRecords,
+              records: sanitizedRecords,
               currentMonthIndex: docData.currentMonthIndex || new Date().getMonth(),
               year: docData.year || currentYear
             });
           } else {
             // Initialize with default data if document doesn't exist
             setDoc(investmentDocRef, {
-              records: defaultRecords,
+              records: defaultRecords.map(record => ({ 
+                ...record, 
+                clients: record.clients || [] 
+              })),
               currentMonthIndex: new Date().getMonth(),
               year: currentYear,
               createdAt: new Date().toISOString()
