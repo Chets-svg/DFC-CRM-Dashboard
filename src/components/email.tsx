@@ -129,6 +129,7 @@ export function EmailComponent({ theme, clients, defaultRecipient = '', openComp
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1)
   const recipientsRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const emailContentRef = useRef<HTMLDivElement>(null);
   
 
 const handleRecipientChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -509,12 +510,12 @@ return {
   subject,
   date,
   body,
-  read: false,
-  starred: false,
+  read: !msg.labelIds?.includes('UNREAD'), // Gmail uses UNREAD label
+  starred: msg.labelIds?.includes('STARRED') || false,
   important: false,
   folder,
   category: categorizeEmail({ from }),
-       }
+}
       })
     )
 
@@ -671,13 +672,28 @@ const login = useGoogleLogin({
   onSuccess: async (tokenResponse) => {
     console.log('✅ Access Token:', tokenResponse.access_token);
     localStorage.setItem('gmail_token', tokenResponse.access_token);
-    fetchGmail(); // fetch inbox as before
+    
+    // Fetch emails for inbox after login
+    const inboxEmails = await fetchGmail('inbox');
+    setGmailEmails(inboxEmails);
+    setEmailSubTab('inbox'); // Switch to inbox tab
   },
   onError: () => {
     console.error('Login Failed');
   }
 });
 
+useEffect(() => {
+  const fetchEmailsOnLogin = async () => {
+    const token = localStorage.getItem('gmail_token');
+    if (token && emailSubTab === 'inbox' && gmailEmails.length === 0) {
+      const inboxEmails = await fetchGmail('inbox');
+      setGmailEmails(inboxEmails);
+    }
+  };
+
+  fetchEmailsOnLogin();
+}, [emailSubTab]); // Only depend on emailSubTab
   const toggleImportantEmail = (id: string) => {
     setEmails(prev => 
       prev.map(email => 
@@ -1218,26 +1234,35 @@ const moveToTrash = (id: string) => {
           <div key={email.id}>
             {/* Email List Item */}
             <div 
-              className={`flex items-center p-3 rounded-lg cursor-pointer ${
-                !email.read ? selectedBg : highlightBg
-              } ${borderColor} border`}
-              onClick={() => {
-                // Toggle selection - if already selected, deselect
-                if (selectedEmail?.id === email.id) {
-                  setSelectedEmail(null);
-                } else {
-                  setSelectedEmail(email);
-                  // Mark as read when clicked - only for local emails
-                  if (!gmailEmails.some(e => e.id === email.id)) {
-                    setEmails(prev => 
-                      prev.map(e => 
-                        e.id === email.id ? {...e, read: true} : e
-                      )
-                    );
-                  }
-                }
-              }}
-            >
+  className={`flex items-center p-3 rounded-lg cursor-pointer ${
+    email.read 
+      ? `${highlightBg} ${borderColor} border` 
+      : `${selectedBg} border-l-4 border-l-blue-500`
+  }`}
+  onClick={() => {
+    // Only mark as read if it's currently unread
+    if (!email.read) {
+      // For Gmail emails, we can't update the server status in this simple example
+      // For local emails, mark as read
+      if (!gmailEmails.some(e => e.id === email.id)) {
+        setEmails(prev => 
+          prev.map(e => 
+            e.id === email.id ? {...e, read: true} : e
+          )
+        );
+      }
+      // For Gmail emails, just update local state
+      else {
+        setGmailEmails(prev => 
+          prev.map(e => 
+            e.id === email.id ? {...e, read: true} : e
+          )
+        );
+      }
+    }
+    setSelectedEmail(email);
+  }}
+>
               <div className="flex items-center space-x-4 w-full">
                 <div className="flex space-x-2">
                   <button 
@@ -1273,19 +1298,21 @@ const moveToTrash = (id: string) => {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <h3 className={`font-medium truncate ${textColor}`}>
-                      {email.folder === 'sent' ? email.to : email.from}
-                    </h3>
-                    <p className={`text-xs ${mutedText}`}>
-                      {new Date(email.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                    </p>
-                  </div>
-                  <p className={`truncate ${textColor}`}>{email.subject}</p>
-                  <p className={`text-sm truncate ${mutedText}`}>
-                    {email.body.split('\n')[0].substring(0, 100)}
-                  </p>
-                </div>
+  <div className="flex items-center justify-between">
+    <h3 className={`truncate ${textColor} ${!email.read ? 'font-bold' : 'font-normal'}`}>
+      {email.folder === 'sent' ? email.to : email.from}
+    </h3>
+    <p className={`text-xs ${mutedText} ${!email.read ? 'font-bold' : 'font-normal'}`}>
+      {new Date(email.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+    </p>
+  </div>
+  <p className={`truncate ${textColor} ${!email.read ? 'font-bold' : ''}`}>
+    {email.subject}
+  </p>
+  <p className={`text-sm truncate ${mutedText} ${!email.read ? 'font-medium' : ''}`}>
+    {email.body.split('\n')[0].substring(0, 100)}
+  </p>
+</div>
               </div>
             </div>
 

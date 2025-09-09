@@ -124,6 +124,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   const [isLoading, setIsLoading] = useState(true);
   const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords);
   const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({});
+  const [clientToDelete, setClientToDelete] = useState<{ monthIndex: number; clientId: string } | null>(null);
 
   const calculateTotals = () => {
   const monthlySipTarget = Math.max(0, records[0]?.sipTarget || 0);
@@ -154,7 +155,17 @@ const handleClientChange = async (monthIndex: number, clientId: string, field: k
       const updatedClients = record.clients.map(client => 
         client.id === clientId ? { ...client, [field]: value } : client
       );
-      return { ...record, clients: updatedClients };
+      
+      // Calculate new totals from clients
+      const newSipAchieved = updatedClients.reduce((sum, client) => sum + (client.sipAmount || 0), 0);
+      const newLumpsumAchieved = updatedClients.reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0);
+      
+      return { 
+        ...record, 
+        clients: updatedClients,
+        sipAchieved: newSipAchieved,
+        lumpsumAchieved: newLumpsumAchieved
+      };
     }
     return record;
   });
@@ -183,12 +194,32 @@ const addNewClient = async (monthIndex: number) => {
   await saveToFirestore(updatedRecords);
 };
 
-const removeClient = async (monthIndex: number, clientId: string) => {
+const confirmDeleteClient = (monthIndex: number, clientId: string) => {
+  setClientToDelete({ monthIndex, clientId });
+};
+
+const cancelDeleteClient = () => {
+  setClientToDelete(null);
+};
+
+const removeClient = async () => {
+  if (!clientToDelete) return;
+  
+  const { monthIndex, clientId } = clientToDelete;
+  
   const updatedRecords = records.map(record => {
     if (record.monthIndex === monthIndex) {
+      const updatedClients = record.clients.filter(client => client.id !== clientId);
+      
+      // Recalculate totals after removing client
+      const newSipAchieved = updatedClients.reduce((sum, client) => sum + (client.sipAmount || 0), 0);
+      const newLumpsumAchieved = updatedClients.reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0);
+      
       return { 
         ...record, 
-        clients: record.clients.filter(client => client.id !== clientId) 
+        clients: updatedClients,
+        sipAchieved: newSipAchieved,
+        lumpsumAchieved: newLumpsumAchieved
       };
     }
     return record;
@@ -196,6 +227,12 @@ const removeClient = async (monthIndex: number, clientId: string) => {
   
   setRecords(updatedRecords);
   await saveToFirestore(updatedRecords);
+  setClientToDelete(null);
+  
+  toast({
+    title: "Client Deleted",
+    description: "The client has been successfully removed.",
+  });
 };
 
 const handleUpdateAchievedValue = async (monthIndex: number, field: 'sipAchieved' | 'lumpsumAchieved', value: number) => {
@@ -357,6 +394,28 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
 
   return (
        <div className={`space-y-4 ${bgColor} ${textColor}`}>
+      {/* Confirmation Dialog */}
+      {clientToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md bg-white dark:bg-gray-300">
+            <CardHeader>
+              <CardTitle>Confirm Deletion</CardTitle>
+              <CardDescription>
+                Are you sure you want to delete this client? This action cannot be undone.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={cancelDeleteClient}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={removeClient}>
+                Delete
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       <Card className={`${cardBg} ${borderColor}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
@@ -588,227 +647,231 @@ const handleUpdateTargetValue = async (field: 'sipTarget' | 'lumpsumTarget', val
               </thead>
               <tbody className="divide-y divide-border">
   {records.map((record) => (
-    <tr 
-  key={record.month}
-  className={`border-b ${borderColor} ${
-    record.isEditable ? (theme === 'dark' ? 'bg-white text-black' : 'bg-blue-50') : ''
-  }`}
->
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleMonthExpansion(record.monthIndex);
-            }}
-            className="p-1 mr-2"
-          >
-            {expandedMonths[record.monthIndex] ? 
-              <ChevronUp className="h-4 w-4" /> : 
-              <ChevronDown className="h-4 w-4" />
-            }
-          </Button>
-          <span>
-            {record.month}
-            {record.isEditable && <span className="ml-2 text-xs text-blue-500 dark:text-blue-400">(Current)</span>}
-          </span>
-        </div>
-      </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        {formatCurrency(record.sipTarget)}
-      </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className="flex items-center">
-          {record.isEditable && isEditingMonthly ? (
-            <Input
-              type="number"
-              value={record.sipAchieved}
-              onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'sipAchieved', Number(e.target.value))}
-              className={`w-24 ${inputBg} ${borderColor}`}
-            />
-          ) : (
-            <>
-              {formatCurrency(record.sipAchieved)}
-              {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
-            </>
-          )}
-          {record.sipAchieved >= record.sipTarget && record.sipTarget > 0 && (
-            <Star className="h-4 w-4 ml-1 text-green-500" />
-          )}
-        </div>
-      </td>
-      <td className={`px-4 py-2 whitespace-nowrap ${
-        record.sipAchieved >= record.sipTarget ? 'text-green-500' : 'text-red-500'
-      }`}>
-        {formatCurrency(record.sipAchieved - record.sipTarget)}
-      </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        {formatCurrency(record.lumpsumTarget)}
-      </td>
-      <td className="px-4 py-2 whitespace-nowrap">
-        <div className="flex items-center">
-          {record.isEditable && isEditingMonthly ? (
-            <Input
-              type="number"
-              value={record.lumpsumAchieved}
-              onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'lumpsumAchieved', Number(e.target.value))}
-              className={`w-24 ${inputBg} ${borderColor}`}
-            />
-          ) : (
-            <>
-              {formatCurrency(record.lumpsumAchieved)}
-              {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
-            </>
-          )}
-          {record.lumpsumAchieved >= record.lumpsumTarget && record.lumpsumTarget > 0 && (
-            <Star className="h-4 w-4 ml-1 text-green-500" />
-          )}
-        </div>
-      </td>
-      <td className={`px-4 py-2 whitespace-nowrap ${
-        record.lumpsumAchieved >= record.lumpsumTarget ? 'text-green-500' : 'text-red-500'
-      }`}>
-        {formatCurrency(record.lumpsumAchieved - record.lumpsumTarget)}
-      </td>
-    </tr>
+    <>
+      <tr 
+        key={record.month}
+        className={`border-b ${borderColor} ${
+          record.isEditable ? (theme === 'dark' ? 'bg-white text-black' : 'bg-blue-50') : ''
+        }`}
+      >
+        <td className="px-4 py-2 whitespace-nowrap">
+          <div className="flex items-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleMonthExpansion(record.monthIndex);
+              }}
+              className="p-1 mr-2"
+            >
+              {expandedMonths[record.monthIndex] ? 
+                <ChevronUp className="h-4 w-4" /> : 
+                <ChevronDown className="h-4 w-4" />
+              }
+            </Button>
+            <span>
+              {record.month}
+              {record.isEditable && <span className="ml-2 text-xs text-blue-500 dark:text-blue-400">(Current)</span>}
+            </span>
+          </div>
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">
+          {formatCurrency(record.sipTarget)}
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">
+          <div className="flex items-center">
+            {record.isEditable && isEditingMonthly ? (
+              <Input
+                type="number"
+                value={record.sipAchieved}
+                onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'sipAchieved', Number(e.target.value))}
+                className={`w-24 ${inputBg} ${borderColor}`}
+              />
+            ) : (
+              <>
+                {formatCurrency(record.sipAchieved)}
+                {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
+              </>
+            )}
+            {record.sipAchieved >= record.sipTarget && record.sipTarget > 0 && (
+              <Star className="h-4 w-4 ml-1 text-green-500" />
+            )}
+          </div>
+        </td>
+        <td className={`px-4 py-2 whitespace-nowrap ${
+          record.sipAchieved >= record.sipTarget ? 'text-green-500' : 'text-red-500'
+        }`}>
+          {formatCurrency(record.sipAchieved - record.sipTarget)}
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">
+          {formatCurrency(record.lumpsumTarget)}
+        </td>
+        <td className="px-4 py-2 whitespace-nowrap">
+          <div className="flex items-center">
+            {record.isEditable && isEditingMonthly ? (
+              <Input
+                type="number"
+                value={record.lumpsumAchieved}
+                onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'lumpsumAchieved', Number(e.target.value))}
+                className={`w-24 ${inputBg} ${borderColor}`}
+              />
+            ) : (
+              <>
+                {formatCurrency(record.lumpsumAchieved)}
+                {!record.isEditable && <Lock className="h-3 w-3 ml-1 text-muted-foreground dark:text-gray-400" />}
+              </>
+            )}
+            {record.lumpsumAchieved >= record.lumpsumTarget && record.lumpsumTarget > 0 && (
+              <Star className="h-4 w-4 ml-1 text-green-500" />
+            )}
+          </div>
+        </td>
+        <td className={`px-4 py-2 whitespace-nowrap ${
+          record.lumpsumAchieved >= record.lumpsumTarget ? 'text-green-500' : 'text-red-500'
+        }`}>
+          {formatCurrency(record.lumpsumAchieved - record.lumpsumTarget)}
+        </td>
+      </tr>
+      
+      {/* Client Details Section - Appears directly below the month row with proper card styling */}
+      {expandedMonths[record.monthIndex] && (
+        <tr key={`client-${record.monthIndex}`}>
+          <td colSpan={7} className="px-0 py-2">
+            <Card className={`${cardBg} ${borderColor} mx-4`}>
+              <CardContent className="p-4">
+                <h3 className="text-lg font-semibold mb-4">Client Investments for {record.month} {currentYear}</h3>
+                
+                {isEditingMonthly && (
+                  <div className="mb-4">
+                    <Button 
+                      onClick={() => addNewClient(record.monthIndex)}
+                      variant="outline"
+                      size="sm"
+                      className="gap-1"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add Client
+                    </Button>
+                  </div>
+                )}
+                
+                {(!record.clients || record.clients.length === 0) ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>No clients added for this month</p>
+                    {isEditingMonthly && (
+                      <Button 
+                        onClick={() => addNewClient(record.monthIndex)}
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                      >
+                        Add First Client
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Client</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">SIP Amount</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Lumpsum Amount</th>
+                          {isEditingMonthly && (
+                            <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(record.clients || []).map((client) => (
+                          <tr key={client.id}>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isEditingMonthly ? (
+                                <Input
+                                  value={client.name}
+                                  onChange={(e) => handleClientChange(record.monthIndex, client.id, 'name', e.target.value)}
+                                />
+                              ) : (
+                                client.name
+                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isEditingMonthly ? (
+                                <Input
+                                  type="number"
+                                  value={client.sipAmount || 0}
+                                  onChange={(e) => handleClientChange(record.monthIndex, client.id, 'sipAmount', Number(e.target.value))}
+                                  className="w-24"
+                                />
+                              ) : (
+                                formatCurrency(client.sipAmount || 0)
+                              )}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              {isEditingMonthly ? (
+                                <Input
+                                  type="number"
+                                  value={client.lumpsumAmount || 0}
+                                  onChange={(e) => handleClientChange(record.monthIndex, client.id, 'lumpsumAmount', Number(e.target.value))}
+                                  className="w-24"
+                                />
+                              ) : (
+                                formatCurrency(client.lumpsumAmount || 0)
+                              )}
+                            </td>
+                            {isEditingMonthly && (
+                              <td className="px-4 py-3 whitespace-nowrap">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => confirmDeleteClient(record.monthIndex, client.id)}
+                                  className="text-red-500 hover:text-red-700"
+                                >
+                                  <Trash className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                
+                <div className="mt-4 p-4 rounded-lg bg-muted">
+                  <h4 className="font-medium mb-2">Summary for {record.month}:</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total SIP</p>
+                      <p className="font-medium">
+                        {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0), 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Lumpsum</p>
+                      <p className="font-medium">
+                        {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Investment</p>
+                      <p className="font-medium">
+                        {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0) + (client.lumpsumAmount || 0), 0))}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </td>
+        </tr>
+      )}
+    </>
   ))}
 </tbody>
             </table>
           </div>
-
-       {/* Client Details Section */}
-{records.map((record) => {
-  if (!expandedMonths[record.monthIndex]) return null;
-  
-  return (
-    <div key={`client-${record.monthIndex}`} className="mt-6 border-t pt-6">
-      <h3 className="text-lg font-semibold mb-4">Client Investments for {record.month} {currentYear}</h3>
-      
-      {isEditingMonthly && (
-        <div className="mb-4">
-          <Button 
-            onClick={() => addNewClient(record.monthIndex)}
-            variant="outline"
-            size="sm"
-            className="gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add Client
-          </Button>
-        </div>
-      )}
-      
-      {(!record.clients || record.clients.length === 0) ? (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>No clients added for this month</p>
-          {isEditingMonthly && (
-            <Button 
-              onClick={() => addNewClient(record.monthIndex)}
-              variant="outline"
-              size="sm"
-              className="mt-2"
-            >
-              Add First Client
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border">
-            <thead className="bg-muted">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Client</th>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">SIP Amount</th>
-                <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Lumpsum Amount</th>
-                {isEditingMonthly && (
-                  <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {(record.clients || []).map((client) => (
-                <tr key={client.id}>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {isEditingMonthly ? (
-                      <Input
-                        value={client.name}
-                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'name', e.target.value)}
-                      />
-                    ) : (
-                      client.name
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {isEditingMonthly ? (
-                      <Input
-                        type="number"
-                        value={client.sipAmount || 0}
-                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'sipAmount', Number(e.target.value))}
-                        className="w-24"
-                      />
-                    ) : (
-                      formatCurrency(client.sipAmount || 0)
-                    )}
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {isEditingMonthly ? (
-                      <Input
-                        type="number"
-                        value={client.lumpsumAmount || 0}
-                        onChange={(e) => handleClientChange(record.monthIndex, client.id, 'lumpsumAmount', Number(e.target.value))}
-                        className="w-24"
-                      />
-                    ) : (
-                      formatCurrency(client.lumpsumAmount || 0)
-                    )}
-                  </td>
-                  {isEditingMonthly && (
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeClient(record.monthIndex, client.id)}
-                        className="text-red-500 hover:text-red-700"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      
-      <div className="mt-4 p-4 rounded-lg bg-muted">
-        <h4 className="font-medium mb-2">Summary for {record.month}:</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">Total SIP</p>
-            <p className="font-medium">
-              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0), 0))}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Total Lumpsum</p>
-            <p className="font-medium">
-              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0))}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Total Investment</p>
-            <p className="font-medium">
-              {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0) + (client.lumpsumAmount || 0), 0))}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-})}
         </CardContent>
       </Card>
     </div>
