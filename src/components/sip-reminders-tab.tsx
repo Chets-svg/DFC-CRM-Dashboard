@@ -126,7 +126,7 @@ const AddSIPReminderForm = ({ theme, clients, onSIPAdded }: AddSIPReminderFormPr
     nextDate: '',
     status: 'active',
     // Step-up fields
-    stepUpAmount: 0,
+    stepUpAmount: null,
     stepUpFrequency: '1 year'
   });
 
@@ -153,46 +153,54 @@ const AddSIPReminderForm = ({ theme, clients, onSIPAdded }: AddSIPReminderFormPr
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      if (!newSIPReminder.clientId || newSIPReminder.amount <= 0) {
-        throw new Error('Please select a client and enter a valid amount');
-      }
-
-      const reminderData = {
-        ...newSIPReminder,
-        nextDate: calculateNextDate(newSIPReminder.startDate, newSIPReminder.frequency),
-        stepUpNextDate: showStepUp && newSIPReminder.stepUpAmount && newSIPReminder.stepUpAmount > 0
-          ? calculateStepUpNextDate(newSIPReminder.startDate, newSIPReminder.stepUpFrequency || '1 year')
-          : undefined,
-        createdAt: new Date().toISOString()
-      };
-
-      await addDocument(SIP_REMINDERS_COLLECTION, reminderData);
-      
-      // Reset form
-      setNewSIPReminder({
-        clientId: '',
-        clientName: '',
-        amount: 0,
-        frequency: 'Monthly',
-        startDate: new Date().toISOString().split('T')[0],
-        nextDate: '',
-        status: 'active',
-        stepUpAmount: 0,
-        stepUpFrequency: '1 year'
-      });
-      setShowStepUp(false);
-      
-      onSIPAdded();
-      toast.success('SIP Reminder added successfully');
-    } catch (error: any) {
-      console.error('Error adding SIP reminder:', error);
-      toast.error(error.message || 'Error adding SIP reminder');
+  e.preventDefault();
+  
+  try {
+    if (!newSIPReminder.clientId || newSIPReminder.amount <= 0) {
+      throw new Error('Please select a client and enter a valid amount');
     }
-  };
 
+    // Prepare the base reminder data
+    const reminderData: any = {
+      ...newSIPReminder,
+      nextDate: calculateNextDate(newSIPReminder.startDate, newSIPReminder.frequency),
+      createdAt: new Date().toISOString()
+    };
+
+    // Only add stepUpNextDate if step-up is enabled and valid
+    if (showStepUp && newSIPReminder.stepUpAmount && newSIPReminder.stepUpAmount > 0) {
+      reminderData.stepUpNextDate = calculateStepUpNextDate(
+        newSIPReminder.startDate, 
+        newSIPReminder.stepUpFrequency || '1 year'
+      );
+    } else {
+      // Explicitly set to null instead of undefined
+      reminderData.stepUpNextDate = null;
+    }
+
+    await addDocument(SIP_REMINDERS_COLLECTION, reminderData);
+    
+    // Reset form
+    setNewSIPReminder({
+      clientId: '',
+      clientName: '',
+      amount: 0,
+      frequency: 'Monthly',
+      startDate: new Date().toISOString().split('T')[0],
+      nextDate: '',
+      status: 'active',
+      stepUpAmount: 0,
+      stepUpFrequency: '1 year'
+    });
+    setShowStepUp(false);
+    
+    onSIPAdded();
+    toast.success('SIP Reminder added successfully');
+  } catch (error: any) {
+    console.error('Error adding SIP reminder:', error);
+    toast.error(error.message || 'Error adding SIP reminder');
+  }
+};
   return (
     <div className="max-h-[80vh] overflow-y-auto p-1">
       <Card className={`mt-1 ${cardBg} ${borderColor}`}>
@@ -347,10 +355,10 @@ const AddSIPReminderForm = ({ theme, clients, onSIPAdded }: AddSIPReminderFormPr
                       <Input
                         type="number"
                         id="stepUpAmount"
-                        value={newSIPReminder.stepUpAmount || ''}
+                        value={newSIPReminder.stepUpAmount !== undefined ? newSIPReminder.stepUpAmount : ''}
                         onChange={(e) => setNewSIPReminder(prev => ({
                           ...prev,
-                          stepUpAmount: parseFloat(e.target.value) || 0
+                          stepUpAmount: e.target.value ? parseFloat(e.target.value) : undefined
                         }))}
                         className={`${inputBg} ${borderColor}`}
                         min="0"
@@ -469,6 +477,24 @@ export default function SIPRemindersTab({
       return sortDirection === 'asc' ? comparison : -comparison;
     });
   }, [sipReminders, sortBy, sortDirection]);
+
+  // Get upcoming SIPs (within next 15 days)
+  const upcomingSips = useMemo(() => {
+    const today = new Date();
+    const fifteenDaysFromNow = new Date();
+    fifteenDaysFromNow.setDate(today.getDate() + 15);
+    
+    return sipReminders
+      .filter(reminder => {
+        // Only active SIPs
+        if (reminder.status !== 'active') return false;
+        
+        // Check if nextDate is within 15 days
+        const nextDate = new Date(reminder.nextDate);
+        return nextDate >= today && nextDate <= fifteenDaysFromNow;
+      })
+      .sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime());
+  }, [sipReminders]);
 
   const toggleSipStatus = async (id: string) => {
     const reminder = sipReminders.find(r => r.id === id);
@@ -773,16 +799,17 @@ export default function SIPRemindersTab({
         <CardHeader>
           <CardTitle>Upcoming SIPs</CardTitle>
           <CardDescription className={mutedText}>
-            Next 5 upcoming SIP payments
+            Due in next 15 days
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {sortedSipReminders
-              .filter(r => r.status === 'active')
-              .sort((a, b) => new Date(a.nextDate).getTime() - new Date(b.nextDate).getTime())
-              .slice(0, 5)
-              .map(reminder => {
+            {upcomingSips.length === 0 ? (
+              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                No upcoming SIPs in the next 15 days
+              </div>
+            ) : (
+              upcomingSips.map(reminder => {
                 const client = clients.find(c => c.id === reminder.clientId);
                 return (
                   <div key={reminder.id} className={`p-3 border rounded-lg ${borderColor} ${highlightBg}`}>
@@ -844,7 +871,8 @@ export default function SIPRemindersTab({
                     </div>
                   </div>
                 );
-              })}
+              })
+            )}
           </div>
         </CardContent>
       </Card>
