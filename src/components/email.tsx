@@ -16,6 +16,7 @@ import { toast } from 'react-hot-toast'
 interface EmailComponentProps {
   theme: ThemeName;
   clients: Client[];
+  leads: Lead[]; // Add this line
   defaultRecipient?: string;
   openCompose?: boolean;
 }
@@ -97,7 +98,7 @@ const initialDrafts: Draft[] = [
   }
 ];
 
-export function EmailComponent({ theme, clients, defaultRecipient = '', openCompose = false }: EmailComponentProps) {
+export function EmailComponent({ theme, clients, leads, defaultRecipient = '', openCompose = false }: EmailComponentProps) {
   const [initialized, setInitialized] = useState(false);
   const [composeManuallyClosed, setComposeManuallyClosed] = useState(false)
   useEffect(() => {
@@ -258,28 +259,28 @@ const handleRecipientChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   const [emails, setEmails] = useState<Email[]>([])
 
   const filteredEmails = emails.filter(email => {
-  // Check if email is from OR to a client
-  const isClientEmail = clients.some(client => {
-    const clientEmail = client.email.toLowerCase();
+  // Check if email is from OR to a client OR a lead
+  const isClientOrLeadEmail = [...clients, ...leads].some(person => {
+    const personEmail = person.email.toLowerCase();
     return (
-      email.from.toLowerCase().includes(clientEmail) || 
-      (email.to && email.to.toLowerCase().includes(clientEmail))
+      email.from.toLowerCase().includes(personEmail) || 
+      (email.to && email.to.toLowerCase().includes(personEmail))
     );
   });
 
-  if (!isClientEmail) return false;
+  if (!isClientOrLeadEmail) return false;
 
-  // For sent folder, show all client emails where we are the sender
+  // For sent folder, show all client/lead emails where we are the sender
   if (emailSubTab === 'sent') {
-    return clients.some(client => 
-      email.from.toLowerCase().includes(client.email.toLowerCase())
+    return [...clients, ...leads].some(person => 
+      email.from.toLowerCase().includes(person.email.toLowerCase())
     );
   }
 
   // For inbox, show emails where we are the recipient
   if (emailSubTab === 'inbox') {
-    return clients.some(client => 
-      email.to && email.to.toLowerCase().includes(client.email.toLowerCase())
+    return [...clients, ...leads].some(person => 
+      email.to && email.to.toLowerCase().includes(person.email.toLowerCase())
     );
   }
 
@@ -430,15 +431,15 @@ window.addEventListener('message', (event) => {
       return []
     }
 
-    // Get client emails for filtering
-    const clientEmails = clients.map(c => c.email.toLowerCase())
+    // Get BOTH client AND lead emails for filtering
+    const allContactEmails = [...clients, ...leads].map(c => c.email.toLowerCase())
 
     // Different query for inbox vs sent
     let query = ''
     if (folder === 'inbox') {
-      query = clientEmails.map(email => `from:${email}`).join(' OR ')
+      query = allContactEmails.map(email => `from:${email}`).join(' OR ')
     } else if (folder === 'sent') {
-      query = clientEmails.map(email => `to:${email}`).join(' OR ')
+      query = allContactEmails.map(email => `to:${email}`).join(' OR ')
     }
 
     // Step 1: List messages with query
@@ -836,8 +837,11 @@ const moveToTrash = (id: string) => {
         </Tabs>
 
         {/* Email Sidebar Content */}
+
+        
         {activeTab === 'email' && (
   <>
+  
     <Button
       className={`w-full rounded-full mb-5 ${getButtonClasses(theme, 'outline')}`}
       onClick={() => login()}
@@ -869,6 +873,8 @@ const moveToTrash = (id: string) => {
               <Plus className="mr-2 h-4 w-4" />
               Compose
             </Button>
+
+            
             
             <nav className="space-y-1">
               <Button
@@ -1174,6 +1180,25 @@ const moveToTrash = (id: string) => {
                     >
                       Promotions
                     </button>
+
+                    <Button
+                    className={`w-half rounded-full ${getButtonClasses(theme)} mt-4`} 
+          variant="outline" 
+          onClick={async () => {
+            if (emailSubTab === 'inbox') {
+              const inboxEmails = await fetchGmail('inbox');
+              setGmailEmails(inboxEmails);
+            } else if (emailSubTab === 'sent') {
+              const sentEmails = await fetchGmail('sent');
+              setGmailEmails(sentEmails);
+            }
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Refresh Emails
+        </Button>
                   </div>
                 )}
                 
@@ -1226,43 +1251,50 @@ const moveToTrash = (id: string) => {
         )}
 
                 {/* Email List */}
-              <div className={`flex-1 overflow-auto ${cardBg}`}>
+              {/* Email List - Fixed to properly show unread emails and added refresh button */}
+<div className={`flex-1 overflow-auto ${cardBg}`}>
   <div className="p-4">
+    {/* Refresh Button */}
+    <div className="flex justify-end mb-2">
+     
+    </div>
+
     {[...getFilteredEmails(), ...gmailEmails].length > 0 ? (
       <div className="space-y-2">
         {[...getFilteredEmails(), ...gmailEmails].map(email => (
           <div key={email.id}>
-            {/* Email List Item */}
+            {/* Email List Item - Fixed to properly show unread emails */}
             <div 
-  className={`flex items-center p-3 rounded-lg cursor-pointer ${
-    email.read 
-      ? `${highlightBg} ${borderColor} border` 
-      : `${selectedBg} border-l-4 border-l-blue-500`
-  }`}
-  onClick={() => {
-    // Only mark as read if it's currently unread
-    if (!email.read) {
-      // For Gmail emails, we can't update the server status in this simple example
-      // For local emails, mark as read
-      if (!gmailEmails.some(e => e.id === email.id)) {
-        setEmails(prev => 
-          prev.map(e => 
-            e.id === email.id ? {...e, read: true} : e
-          )
-        );
-      }
-      // For Gmail emails, just update local state
-      else {
-        setGmailEmails(prev => 
-          prev.map(e => 
-            e.id === email.id ? {...e, read: true} : e
-          )
-        );
-      }
-    }
-    setSelectedEmail(email);
-  }}
->
+              className={`flex items-center p-3 rounded-lg cursor-pointer ${
+                !email.read 
+                  ? `bg-blue-50 border-l-4 border-l-blue-500 dark:bg-blue-900/30`  // Unread: blue background + border
+                  : `${highlightBg} ${borderColor} border`                        // Read: normal background
+              }`}
+              onClick={() => {
+                // Toggle email selection - if same email clicked, close it
+                if (selectedEmail?.id === email.id) {
+                  setSelectedEmail(null);
+                } else {
+                  // Mark as read when opening
+                  if (!email.read) {
+                    if (!gmailEmails.some(e => e.id === email.id)) {
+                      setEmails(prev => 
+                        prev.map(e => 
+                          e.id === email.id ? {...e, read: true} : e
+                        )
+                      );
+                    } else {
+                      setGmailEmails(prev => 
+                        prev.map(e => 
+                          e.id === email.id ? {...e, read: true} : e
+                        )
+                      );
+                    }
+                  }
+                  setSelectedEmail(email);
+                }
+              }}
+            >
               <div className="flex items-center space-x-4 w-full">
                 <div className="flex space-x-2">
                   <button 
@@ -1298,25 +1330,25 @@ const moveToTrash = (id: string) => {
                 </div>
                 
                 <div className="flex-1 min-w-0">
-  <div className="flex items-center justify-between">
-    <h3 className={`truncate ${textColor} ${!email.read ? 'font-bold' : 'font-normal'}`}>
-      {email.folder === 'sent' ? email.to : email.from}
-    </h3>
-    <p className={`text-xs ${mutedText} ${!email.read ? 'font-bold' : 'font-normal'}`}>
-      {new Date(email.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-    </p>
-  </div>
-  <p className={`truncate ${textColor} ${!email.read ? 'font-bold' : ''}`}>
-    {email.subject}
-  </p>
-  <p className={`text-sm truncate ${mutedText} ${!email.read ? 'font-medium' : ''}`}>
-    {email.body.split('\n')[0].substring(0, 100)}
-  </p>
-</div>
+                  <div className="flex items-center justify-between">
+                    <h3 className={`truncate ${textColor} ${!email.read ? 'font-bold text-blue-600 dark:text-blue-300' : 'font-normal'}`}>
+                      {email.folder === 'sent' ? email.to : email.from}
+                    </h3>
+                    <p className={`text-xs ${!email.read ? 'font-bold text-blue-600 dark:text-blue-300' : mutedText}`}>
+                      {new Date(email.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                    </p>
+                  </div>
+                  <p className={`truncate ${textColor} ${!email.read ? 'font-bold' : ''}`}>
+                    {email.subject}
+                  </p>
+                  <p className={`text-sm truncate ${!email.read ? 'font-medium text-gray-700 dark:text-gray-300' : mutedText}`}>
+                    {email.body.split('\n')[0].substring(0, 100)}
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Expanded Email View - appears below clicked email */}
+            {/* Expanded Email View */}
             {selectedEmail?.id === email.id && (
               <div className={`mt-2 mb-4 ${cardBg} rounded-lg p-4 ${borderColor} border`}>
                 <div className="mb-4">
@@ -1334,9 +1366,9 @@ const moveToTrash = (id: string) => {
                   </div>
                 </div>
                 <div
-  className={`prose max-w-none ${textColor}`}
-  dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
-/>
+                  className={`prose max-w-none ${textColor}`}
+                  dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
+                />
 
                 <div className="flex space-x-2 mt-4">
                   {!gmailEmails.some(e => e.id === email.id) && (
@@ -1364,10 +1396,8 @@ const moveToTrash = (id: string) => {
                     className="rounded-full"
                     onClick={() => {
                       if (gmailEmails.some(e => e.id === email.id)) {
-                        // For Gmail emails, just close the view
                         setSelectedEmail(null);
                       } else {
-                        // For local emails, move to trash
                         moveToTrash(selectedEmail.id);
                       }
                     }}
@@ -1385,10 +1415,14 @@ const moveToTrash = (id: string) => {
       <div className={`text-center py-12 ${mutedText}`}>
         <Mailbox className="mx-auto h-12 w-12" />
         <p>No client emails found in {emailCategory} category</p>
+        
       </div>
     )}
   </div>
-</div>                {/* Email Actions */}
+</div>
+
+
+             {/* Email Actions */}
                 {selectedEmail && (
                   <div className={`border-t ${borderColor} p-4 ${cardBg}`}>
                     <div className="flex space-x-2">

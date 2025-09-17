@@ -54,11 +54,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from 'react-hot-toast';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type ClientSortField = 'createdAt' | 'name' | 'products';
 type ViewMode = 'grid' | 'list';
+type ClientTab = 'mutual-funds' | 'other';
 
 interface ClientsTabProps {
   theme: ThemeName;
@@ -78,7 +79,8 @@ interface ClientsTabProps {
   setEditingClient: (client: Client | null) => void;
   editingClient: Client | null;
   onDeleteClient: (id: string) => void;
-  userId: string; // Add userId prop
+  userId: string;
+  setClients: (clients: Client[]) => void; // Add this prop to update client list
 }
 
 export default function ClientsTab({
@@ -99,9 +101,11 @@ export default function ClientsTab({
   setEditingClient,
   editingClient,
   onDeleteClient,
-  userId // Destructure userId
+  userId,
+  setClients // Destructure the new prop
 }: ClientsTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [activeClientTab, setActiveClientTab] = useState<ClientTab>('mutual-funds');
   const [deleteConfirmation, setDeleteConfirmation] = useState<{clientId: string | null, clientName: string}>({clientId: null, clientName: ''});
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -160,26 +164,47 @@ export default function ClientsTab({
     return 'mutualFund';
   };
 
-  const filteredClients = [...clients].filter(client => 
-    client.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.phone?.includes(searchTerm) ||
-    client.can?.includes(searchTerm)
-  ).sort((a, b) => {
-    let comparison = 0;
-    
-    if (clientSortField === 'createdAt') {
-      comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-    } else if (clientSortField === 'name') {
-      comparison = (a.name || '').localeCompare(b.name || '');
-    } else if (clientSortField === 'products') {
-      const productA = getClientPrimaryProduct(a);
-      const productB = getClientPrimaryProduct(b);
-      comparison = productA.localeCompare(productB);
-    }
-    
-    return clientSortDirection === 'asc' ? comparison : -comparison;
-  });
+  // Segregate clients based on primary product
+  const segregateClients = () => {
+    const mutualFundClients: Client[] = [];
+    const otherClients: Client[] = [];
+
+    clients.forEach(client => {
+      const primaryProduct = getClientPrimaryProduct(client);
+      if (primaryProduct === 'mutualFund') {
+        mutualFundClients.push(client);
+      } else {
+        otherClients.push(client);
+      }
+    });
+
+    return { mutualFundClients, otherClients };
+  };
+
+  const { mutualFundClients, otherClients } = segregateClients();
+
+  const filteredClients = [...(activeClientTab === 'mutual-funds' ? mutualFundClients : otherClients)]
+    .filter(client => 
+      client.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.phone?.includes(searchTerm) ||
+      client.can?.includes(searchTerm)
+    )
+    .sort((a, b) => {
+      let comparison = 0;
+      
+      if (clientSortField === 'createdAt') {
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      } else if (clientSortField === 'name') {
+        comparison = (a.name || '').localeCompare(b.name || '');
+      } else if (clientSortField === 'products') {
+        const productA = getClientPrimaryProduct(a);
+        const productB = getClientPrimaryProduct(b);
+        comparison = productA.localeCompare(productB);
+      }
+      
+      return clientSortDirection === 'asc' ? comparison : -comparison;
+    });
 
   const getProductBadges = (client: Client) => {
     const badges = [];
@@ -253,15 +278,29 @@ export default function ClientsTab({
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
+  // Updated delete function with actual Firebase deletion
+  const handleDeleteConfirm = async () => {
     if (deletePassword === 'Rosh@1309') {
       if (deleteConfirmation.clientId) {
-        onDeleteClient(deleteConfirmation.clientId);
-        setIsDeleteDialogOpen(false);
-        setDeleteConfirmation({ clientId: null, clientName: '' });
-        setDeletePassword('');
-        setDeleteError('');
-        showAlert('Client deleted successfully');
+        try {
+          // Delete client document from Firestore
+          await deleteDoc(doc(db, 'clients', deleteConfirmation.clientId));
+          
+          // Update local state to remove the client
+          const updatedClients = clients.filter(client => client.id !== deleteConfirmation.clientId);
+          setClients(updatedClients);
+          
+          // Close dialog and reset state
+          setIsDeleteDialogOpen(false);
+          setDeleteConfirmation({ clientId: null, clientName: '' });
+          setDeletePassword('');
+          setDeleteError('');
+          
+          showAlert('Client deleted successfully');
+        } catch (error) {
+          console.error('Error deleting client:', error);
+          showAlert('Error deleting client. Please try again.');
+        }
       }
     } else {
       setDeleteError('Incorrect password');
@@ -354,6 +393,30 @@ export default function ClientsTab({
               </Button>
             </div>
           </div>
+        </div>
+        
+        {/* Client Tabs */}
+        <div className="flex border-b border-gray-200 mt-4">
+          <button
+            className={`py-2 px-4 font-medium text-sm ${
+              activeClientTab === 'mutual-funds'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setActiveClientTab('mutual-funds')}
+          >
+            Mutual Funds Clients ({mutualFundClients.length})
+          </button>
+          <button
+            className={`py-2 px-4 font-medium text-sm ${
+              activeClientTab === 'other'
+                ? 'border-b-2 border-blue-500 text-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setActiveClientTab('other')}
+          >
+            Other Clients ({otherClients.length})
+          </button>
         </div>
       </CardHeader>
       

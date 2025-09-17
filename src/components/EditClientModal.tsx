@@ -40,7 +40,7 @@ export function EditClientModal({
   const [editedClient, setEditedClient] = useState<Client>(client);
   const currentTheme = themes[theme] || themes['blue-smoke'];
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditedClient(prev => ({ ...prev, [name]: value }));
   };
@@ -78,6 +78,7 @@ export function EditClientModal({
             <h3 className="font-medium">Basic Information</h3>
             
             <div>
+              <div className="space-y-2"></div>
               <Label className="mb-1 block">Full Name *</Label>
               <Input
                 name="name"
@@ -117,18 +118,6 @@ export function EditClientModal({
                 className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
               />
             </div>
-            {/* CAN Field Added Here */}
-            <div>
-              <Label className="mb-1 block">CAN Number</Label>
-              <Input
-                name="can"
-                value={editedClient.can || ''}
-                onChange={handleInputChange}
-                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
-                placeholder="Enter CAN number"
-              />
-              <p className="text-xs text-gray-500 mt-1">Common Application Number for mutual funds</p>
-            </div>
           </div>
 
           {/* Dates Section */}
@@ -140,7 +129,7 @@ export function EditClientModal({
                 type="date"
                 name="dob"
                 value={editedClient.dob || ''}
-                onChange={(e) => handleInputChange(e)}
+                onChange={handleInputChange}
                 className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
               />
             </div>
@@ -150,7 +139,7 @@ export function EditClientModal({
                 type="date"
                 name="marriageAnniversary"
                 value={editedClient.marriageAnniversary || ''}
-                onChange={(e) => handleInputChange(e)}
+                onChange={handleInputChange}
                 className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
               />
             </div>
@@ -198,9 +187,8 @@ export function EditClientModal({
           <div className="md:col-span-2">
             <Label className="mb-1 block">Notes</Label>
             <Textarea
-              name="notes"
               value={editedClient.notes || ''}
-              onChange={handleInputChange}
+              onChange={(e) => setEditedClient(prev => ({ ...prev, notes: e.target.value }))}
               className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
               placeholder="Additional notes about the client..."
               rows={3}

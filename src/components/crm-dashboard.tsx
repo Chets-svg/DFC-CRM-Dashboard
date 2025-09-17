@@ -574,6 +574,8 @@ const [kycs, setKycs] = useState<KYC[]>([]);
 const [isAdding, setIsAdding] = useState(false)
 const [editingId, setEditingId] = useState<string | null>(null)
 const [clientSortField, setClientSortField] = useState<ClientSortField>('createdAt');
+
+
 const [clientSortDirection, setClientSortDirection] = useState<'asc' | 'desc'>('desc');
 const showAlert = useCallback((message: string) => {
   setAlertMessage(message);
@@ -1568,105 +1570,73 @@ if (themeLoading) {
     </Button>
     
     {/* Quick Links Dropdown - Hover Version with Fixed Colors */}
-  <div className="relative group">
+ {/* Quick Links Dropdown - Floating Icon Version */}
+<div className="fixed right-4 bottom-4 z-50">
+  <div className="group relative">
+    {/* Floating Icon Button */}
     <Button 
-      variant="ghost" 
-      size="icon" 
-      className="ml-2 hover:bg-transparent"
-      onMouseEnter={(e) => e.preventDefault()}
+      variant="default"
+      size="icon"
+      className={`
+        w-12 h-12 rounded-full shadow-lg
+        ${theme === 'dark' 
+          ? 'bg-blue-600 hover:bg-blue-700' 
+          : 'bg-blue-500 hover:bg-blue-600'}
+        text-white transition-all duration-300
+      `}
     >
-      <MoreVertical className="h-5 w-5" />
+      <MoreVertical className="h-6 w-6" />
     </Button>
     
-    {/* Dropdown Content */}
-    <div className={`
-      absolute right-0 top-full mt-1 w-56
-      ${themes[theme].cardBg} ${themes[theme].borderColor}
-      border rounded-md shadow-lg
-      opacity-0 invisible group-hover:opacity-100 group-hover:visible
-      transition-opacity duration-200 ease-in-out
-      z-50
-    `}>
-      <div className="p-1">
-        <div className={`px-2 py-1.5 text-sm font-semibold ${themes[theme].textColor}`}>Quick Links</div>
-        <div className={`h-px ${themes[theme].borderColor} mx-2`}></div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://dhanamfinser.themfbox.com/', '_blank')}
-        >
-          DFS Themebox
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://www.cvlkra.com/', '_blank')}
-        >
-          CVL KRA Portal
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://edge360.camsonline.com/signin', '_blank')}
-        >
-          Edge360 Portal
-        </div>
-         <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://mfs.kfintech.com/dit/login', '_blank')}
-        >
-          Kfintech Portal
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://www.mfuonline.com/', '_blank')}
-        >
-          MF Utilities Portal
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://app.mintpro.in/home', '_blank')}
-        >
-          Turtlemint Pro
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://www.njindiaonline.in/pdesk/login.fin?cmdAction=login', '_blank')}
-        >
-          NJ Partner Desk
-        </div>
-        <div 
-          className={`px-2 py-1.5 text-sm rounded cursor-pointer
-            ${theme === 'dark' ? 
-              'hover:bg-gray-700 text-gray-200 hover:text-white' : 
-              'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}`}
-          onClick={() => window.open('https://www.incometax.gov.in/iec/foportal/', '_blank')}
-        >
-          Income Tax
-        </div>
-              </div>
+   {/* Expandable Dropdown Menu */}
+<div className={`
+  absolute right-0 bottom-full mb-2
+  w-56
+  ${themes[theme].cardBg} ${themes[theme].borderColor}
+  border rounded-lg shadow-xl
+  opacity-0 invisible group-hover:opacity-100 group-hover:visible
+  transition-all duration-300 ease-in-out
+  transform group-hover:translate-y-0 translate-y-2
+  z-50
+`}>
+  <div className="p-2">
+    <div className={`px-3 py-2 text-sm font-semibold ${themes[theme].textColor}`}>
+      Quick Links
+    </div>
+    <div className={`h-px ${themes[theme].borderColor} mx-2 my-1`}></div>
+    {[
+      { name: 'DFS Themebox', url: 'https://dhanamfinser.themfbox.com/' },
+      { name: 'CVL KRA Portal', url: 'https://www.cvlkra.com/' },
+      { name: 'Edge360 Portal', url: 'https://edge360.camsonline.com/signin' },
+      { name: 'Kfintech Portal', url: 'https://mfs.kfintech.com/dit/login' },
+      { name: 'MF Utilities Portal', url: 'https://www.mfuonline.com/' },
+      { name: 'Turtlemint Pro', url: 'https://app.mintpro.in/home' },
+      { name: 'NJ Partner Desk', url: 'https://www.njindiaonline.in/pdesk/login.fin?cmdAction=login' },
+      { name: 'Income Tax', url: 'https://www.incometax.gov.in/iec/foportal/' },
+      { name: 'Care Health Insurance', url: 'https://faveo.careinsurance.com/NewFaveo/#auth/login' }
+    ].map((link, index) => (
+      <div 
+        key={index}
+        className={`
+          px-3 py-2 text-sm rounded cursor-pointer flex items-center
+          transition-colors duration-200
+          ${theme === 'dark' 
+            ? 'hover:bg-gray-700 text-gray-200 hover:text-white' 
+            : 'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}
+        `}
+        onClick={() => window.open(link.url, '_blank')}
+      >
+        <ExternalLink className="h-4 w-4 mr-2" />
+        <span className="truncate">{link.name}</span>
+      </div>
+    ))}
+  </div>
+</div>
     </div>
   </div>
 </div>
 </div>
+
 
 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
@@ -2113,6 +2083,7 @@ if (themeLoading) {
   <EmailComponent 
     theme={theme} 
     clients={clients} 
+    leads={leads} // Make sure this is passed
     defaultRecipient={emailComponentProps.defaultRecipient}
     openCompose={emailComponentProps.openCompose}
   />

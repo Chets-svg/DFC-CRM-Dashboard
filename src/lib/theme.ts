@@ -1,8 +1,6 @@
-
 export type ThemeName = 'canberra' | 'wisteria' | 'apricot' | 'blue-smoke' | 'green-smoke' | 
-                'tradewind' | 'dark' | 'sunrise' | 'ocean' | 'lava' | 
-                'coral-teal' | 'orange-blue' | 'blue-pink' | 
-                'green-purple' | 'teal-orange' | 'dark-neon' | 'blue' | 'green' | 'purple';
+                'tradewind' | 'dark' | 'blue' | 'indigo' | 'pink' | 
+                'amber' | 'emerald' | 'ocean-breeze' | 'sunset' | 'forest' | 'berry';
 
 export interface ThemeColors {
   bgColor: string;
@@ -26,205 +24,28 @@ export interface ThemeColors {
   darkButtonHover?: string;
 }
 
+// Color circle mapping for theme dropdown
+export const themeColorCircles: Record<ThemeName, string> = {
+  'canberra': '#ff5e62',
+  'wisteria': '#8a2be2',
+  'apricot': '#ff7f50',
+  'blue-smoke': '#3b82f6',
+  'green-smoke': '#22c55e',
+  'tradewind': '#0d9488',
+  'dark': '#374151',
+  'blue': '#3b82f6',
+  'indigo': '#6366f1',
+  'pink': '#ec4899',
+  'amber': '#f59e0b',
+  'emerald': '#10b981',
+  'ocean-breeze': '#0ea5e9',
+  'sunset': '#fb923c',
+  'forest': '#16a34a',
+  'berry': '#c026d3'
+};
+
 export const themes: Record<ThemeName, ThemeColors> = {
- 'canberra': {
-    bgColor: 'bg-[#fff0f0]',          // Light coral background
-    textColor: 'text-[#1a1a2e]',      // Dark navy text
-    cardBg: 'bg-white',               // Pure white cards
-    borderColor: 'border-[#ffb3b3]',  // Light coral border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#6b7280]',
-    highlightBg: 'bg-[#ffd6d6]',      // Light coral highlight
-    selectedBg: 'bg-[#ff9999]',       // Medium coral selection
-    buttonBg: 'bg-[#ff5e62]',         // VIBRANT CORAL (primary)
-    buttonHover: 'hover:bg-[#ff3c41]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#1a1a2e]',      // Dark navy background
-    darkTextColor: 'text-[#e6f7ff]',  // Light teal text
-    darkCardBg: 'bg-[#16213e]',       // Darker navy cards
-    darkBorderColor: 'border-[#4cc9f0]', // Teal border
-    darkHighlightBg: 'bg-[#4cc9f0]',  // Teal highlight
-  },
-
-  // Vibrant Purple + Gold
-  'wisteria': {
-    bgColor: 'bg-[#f8f0ff]',          // Light purple background
-    textColor: 'text-[#2a0a4a]',      // Deep purple text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#e0b0ff]',  // Light purple border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#6b46c1]',
-    highlightBg: 'bg-[#e9d5ff]',
-    selectedBg: 'bg-[#d8b4fe]',
-    buttonBg: 'bg-[#8a2be2]',         // VIBRANT PURPLE (primary)
-    buttonHover: 'hover:bg-[#7b1fa2]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#2a0a4a]',      // Deep purple background
-    darkTextColor: 'text-[#ffd700]',  // Gold text
-    darkCardBg: 'bg-[#3a0a5f]',
-    darkBorderColor: 'border-[#ffd700]', // Gold border
-    darkHighlightBg: 'bg-[#ffd700]',  // Gold highlight
-  },
-
-  // Vibrant Orange + Blue
-  'apricot': {
-    bgColor: 'bg-[#fff4e6]',          // Light orange background
-    textColor: 'text-[#333333]',      // Dark gray text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#ffcc99]',  // Light orange border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#e67e22]',
-    highlightBg: 'bg-[#ffe0b3]',
-    selectedBg: 'bg-[#ffb366]',
-    buttonBg: 'bg-[#ff7f50]',         // VIBRANT CORAL (primary)
-    buttonHover: 'hover:bg-[#e67347]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#1e3a8a]',      // Navy blue background
-    darkTextColor: 'text-[#ffa500]',  // Orange text
-    darkCardBg: 'bg-[#1e40af]',
-    darkBorderColor: 'border-[#ffa500]', // Orange border
-    darkHighlightBg: 'bg-[#ffa500]',  // Orange highlight
-  },
-
-  // Vibrant Blue + Pink
-  'blue-smoke': {
-    bgColor: 'bg-[#F5FAFD]',          // Light blue background
-    textColor: 'text-[#0d3b66]',      // Dark blue text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#b3e0ff]',  // Light blue border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#3b82f6]',
-    highlightBg: 'bg-[#cce6ff]',
-    selectedBg: 'bg-[#99ccff]',
-    buttonBg: 'bg-[#3b82f6]',         // VIBRANT BLUE (primary)
-    buttonHover: 'hover:bg-[#2563eb]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#0d3b66]',      // Dark blue background
-    darkTextColor: 'text-[#ff6b6b]',  // Pink text
-    darkCardBg: 'bg-[#1e40af]',
-    darkBorderColor: 'border-[#ff6b6b]', // Pink border
-    darkHighlightBg: 'bg-[#ff6b6b]',  // Pink highlight
-  },
-
-  // Vibrant Green + Purple
-  'green-smoke': {
-    bgColor: 'bg-[#D3EFC1]',          // Light green background
-    textColor: 'text-[#14532d]',      // Dark green text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#b3ffc2]',  // Light green border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#22c55e]',
-    highlightBg: 'bg-[#ccffdd]',
-    selectedBg: 'bg-[#99ffbb]',
-    buttonBg: 'bg-[#22c55e]',         // VIBRANT GREEN (primary)
-    buttonHover: 'hover:bg-[#16a34a]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#14532d]',      // Dark green background
-    darkTextColor: 'text-[#d8b4fe]',  // Light purple text
-    darkCardBg: 'bg-[#166534]',
-    darkBorderColor: 'border-[#d8b4fe]', // Purple border
-    darkHighlightBg: 'bg-[#d8b4fe]',  // Purple highlight
-  },
-
-  // Vibrant Teal + Orange
-  'tradewind': {
-    bgColor: 'bg-[#e6fffa]',          // Light teal background
-    textColor: 'text-[#134e4a]',      // Dark teal text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#b8fff0]',  // Light teal border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#0d9488]',
-    highlightBg: 'bg-[#ccfff5]',
-    selectedBg: 'bg-[#99ffeb]',
-    buttonBg: 'bg-[#0d9488]',         // VIBRANT TEAL (primary)
-    buttonHover: 'hover:bg-[#0f766e]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#134e4a]',      // Dark teal background
-    darkTextColor: 'text-[#ffa500]',  // Orange text
-    darkCardBg: 'bg-[#115e59]',
-    darkBorderColor: 'border-[#ffa500]', // Orange border
-    darkHighlightBg: 'bg-[#ffa500]',  // Orange highlight
-  },
-
-  // High Contrast Dark + Neon Green
-  'dark Green Neon': {
-    bgColor: 'bg-[#0a0a0a]',          // Near-black background
-    textColor: 'text-[#f0f0f0]',      // Light gray text
-    cardBg: 'bg-[#1a1a1a]',           // Dark gray cards
-    borderColor: 'border-[#333333]',   // Medium gray border
-    inputBg: 'bg-[#1a1a1a]',
-    mutedText: 'text-[#a0a0a0]',
-    highlightBg: 'bg-[#333333]',
-    selectedBg: 'bg-[#00ff00]',       // NEON GREEN selection
-    buttonBg: 'bg-[#00ff00]',         // NEON GREEN (primary)
-    buttonHover: 'hover:bg-[#00cc00]',
-    buttonText: 'text-black',
-    darkBgColor: 'bg-[#0a0a0a]',
-    darkTextColor: 'text-[#f0f0f0]',
-    darkCardBg: 'bg-[#1a1a1a]',
-    darkBorderColor: 'border-[#333333]',
-    darkHighlightBg: 'bg-[#333333]'
-  },
-
-  // Additional vibrant themes
-  'sunrise': {
-    bgColor: 'bg-[#fff5f5]',          // Soft pink background
-    textColor: 'text-[#2a2a2a]',      // Dark gray text
-    cardBg: 'bg-white',               // Pure white cards
-    borderColor: 'border-[#ffcdb2]',  // Peach border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#6b7280]',
-    highlightBg: 'bg-[#ffcdb2]',      // Peach highlight
-    selectedBg: 'bg-[#ffb4a2]',       // Coral selection
-    buttonBg: 'bg-[#ff6b6b]',         // VIBRANT CORAL (primary)
-    buttonHover: 'hover:bg-[#ff5252]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#2a2a2a]',
-    darkTextColor: 'text-[#ffcdb2]',
-    darkCardBg: 'bg-[#333333]',
-    darkBorderColor: 'border-[#ff6b6b]',
-    darkHighlightBg: 'bg-[#ff6b6b]'
-  },
-
-  'ocean': {
-    bgColor: 'bg-[#04BADE]',          // Light sky blue
-    textColor: 'text-[#1e3a8a]',      // Navy text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#bfdbfe]',  // Light blue border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#4b5563]',
-    highlightBg: 'bg-[#bfdbfe]',
-    selectedBg: 'bg-[#93c5fd]',
-    buttonBg: 'bg-[#3b82f6]',         // VIBRANT BLUE (primary)
-    buttonHover: 'hover:bg-[#2563eb]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#1e3a8a]',
-    darkTextColor: 'text-[#bfdbfe]',
-    darkCardBg: 'bg-[#1e40af]',
-    darkBorderColor: 'border-[#3b82f6]',
-    darkHighlightBg: 'bg-[#3b82f6]'
-  },
-
-    'lava': {
-    bgColor: 'bg-[#fef2f2]',          // Light red
-    textColor: 'text-[#5c1a1a]',      // Dark red text
-    cardBg: 'bg-white',
-    borderColor: 'border-[#fecaca]',  // Light red border
-    inputBg: 'bg-white',
-    mutedText: 'text-[#b91c1c]',
-    highlightBg: 'bg-[#fecaca]',
-    selectedBg: 'bg-[#fca5a5]',
-    buttonBg: 'bg-[#ef4444]',         // VIBRANT RED (primary)
-    buttonHover: 'hover:bg-[#dc2626]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#5c1a1a]',
-    darkTextColor: 'text-[#fecaca]',
-    darkCardBg: 'bg-[#7f1d1d]',
-    darkBorderColor: 'border-[#ef4444]',
-    darkHighlightBg: 'bg-[#ef4444]'
-  },
-'coral-teal': {
-    name: 'Coral Teal',
+  'canberra': {
     bgColor: 'bg-[#fff0f0]',
     textColor: 'text-[#1a1a2e]',
     cardBg: 'bg-white',
@@ -241,12 +62,28 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkCardBg: 'bg-[#16213e]',
     darkBorderColor: 'border-[#4cc9f0]',
     darkHighlightBg: 'bg-[#4cc9f0]',
-    darkButtonBg: 'bg-[#4cc9f0]',
-    darkButtonHover: 'hover:bg-[#3aa8d8]'
   },
-  
-  'orange-blue': {
-    name: 'Orange Blue',
+
+  'wisteria': {
+    bgColor: 'bg-[#f8f0ff]',
+    textColor: 'text-[#2a0a4a]',
+    cardBg: 'bg-white',
+    borderColor: 'border-[#e0b0ff]',
+    inputBg: 'bg-white',
+    mutedText: 'text-[#6b46c1]',
+    highlightBg: 'bg-[#e9d5ff]',
+    selectedBg: 'bg-[#d8b4fe]',
+    buttonBg: 'bg-[#8a2be2]',
+    buttonHover: 'hover:bg-[#7b1fa2]',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-[#2a0a4a]',
+    darkTextColor: 'text-[#ffd700]',
+    darkCardBg: 'bg-[#3a0a5f]',
+    darkBorderColor: 'border-[#ffd700]',
+    darkHighlightBg: 'bg-[#ffd700]',
+  },
+
+  'apricot': {
     bgColor: 'bg-[#fff4e6]',
     textColor: 'text-[#333333]',
     cardBg: 'bg-white',
@@ -263,12 +100,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkCardBg: 'bg-[#1e40af]',
     darkBorderColor: 'border-[#ffa500]',
     darkHighlightBg: 'bg-[#ffa500]',
-    darkButtonBg: 'bg-[#ffa500]',
-    darkButtonHover: 'hover:bg-[#e69500]'
   },
-  'blue-pink': {
-    name: 'Blue Pink',
-    bgColor: 'bg-[#1da2d8]',
+
+  'blue-smoke': {
+    bgColor: 'bg-[#F5FAFD]',
     textColor: 'text-[#0d3b66]',
     cardBg: 'bg-white',
     borderColor: 'border-[#b3e0ff]',
@@ -284,12 +119,10 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkCardBg: 'bg-[#1e40af]',
     darkBorderColor: 'border-[#ff6b6b]',
     darkHighlightBg: 'bg-[#ff6b6b]',
-    darkButtonBg: 'bg-[#ff6b6b]',
-    darkButtonHover: 'hover:bg-[#e65050]'
   },
-  'green-purple': {
-    name: 'Green Purple',
-    bgColor: 'bg-[#e6ffec]',
+
+  'green-smoke': {
+    bgColor: 'bg-[#D3EFC1]',
     textColor: 'text-[#14532d]',
     cardBg: 'bg-white',
     borderColor: 'border-[#b3ffc2]',
@@ -305,11 +138,9 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkCardBg: 'bg-[#166534]',
     darkBorderColor: 'border-[#d8b4fe]',
     darkHighlightBg: 'bg-[#d8b4fe]',
-    darkButtonBg: 'bg-[#d8b4fe]',
-    darkButtonHover: 'hover:bg-[#c49af7]'
   },
-  'teal-orange': {
-    name: 'Teal Orange',
+
+  'tradewind': {
     bgColor: 'bg-[#e6fffa]',
     textColor: 'text-[#134e4a]',
     cardBg: 'bg-white',
@@ -326,23 +157,204 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkCardBg: 'bg-[#115e59]',
     darkBorderColor: 'border-[#ffa500]',
     darkHighlightBg: 'bg-[#ffa500]',
-    darkButtonBg: 'bg-[#ffa500]',
-    darkButtonHover: 'hover:bg-[#e69500]'
   },
-  dark: {
-  bgColor: 'bg-gray-900',
-  textColor: 'text-gray-100',
-  cardBg: 'bg-gray-800',
-  borderColor: 'border-gray-700',
-  inputBg: 'bg-gray-700',
-  mutedText: 'text-gray-400',
-  highlightBg: 'bg-gray-700',
-  selectedBg: 'bg-gray-600',
-  buttonBg: 'bg-blue-600',
-  buttonHover: 'hover:bg-blue-700',
-  buttonText: 'text-white'
-}
+
+  // Solid color themes
+  'blue': {
+    bgColor: 'bg-blue-50',
+    textColor: 'text-blue-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-blue-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-blue-500',
+    highlightBg: 'bg-blue-100',
+    selectedBg: 'bg-blue-200',
+    buttonBg: 'bg-blue-600',
+    buttonHover: 'hover:bg-blue-700',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-blue-900',
+    darkTextColor: 'text-blue-100',
+    darkCardBg: 'bg-blue-800',
+    darkBorderColor: 'border-blue-700',
+    darkHighlightBg: 'bg-blue-700',
+  },
+
+  'indigo': {
+    bgColor: 'bg-indigo-50',
+    textColor: 'text-indigo-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-indigo-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-indigo-500',
+    highlightBg: 'bg-indigo-100',
+    selectedBg: 'bg-indigo-200',
+    buttonBg: 'bg-indigo-600',
+    buttonHover: 'hover:bg-indigo-700',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-indigo-900',
+    darkTextColor: 'text-indigo-100',
+    darkCardBg: 'bg-indigo-800',
+    darkBorderColor: 'border-indigo-700',
+    darkHighlightBg: 'bg-indigo-700',
+  },
+
+  'pink': {
+    bgColor: 'bg-pink-50',
+    textColor: 'text-pink-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-pink-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-pink-500',
+    highlightBg: 'bg-pink-100',
+    selectedBg: 'bg-pink-200',
+    buttonBg: 'bg-pink-600',
+    buttonHover: 'hover:bg-pink-700',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-pink-900',
+    darkTextColor: 'text-pink-100',
+    darkCardBg: 'bg-pink-800',
+    darkBorderColor: 'border-pink-700',
+    darkHighlightBg: 'bg-pink-700',
+  },
+
+  'amber': {
+    bgColor: 'bg-amber-50',
+    textColor: 'text-amber-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-amber-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-amber-600',
+    highlightBg: 'bg-amber-100',
+    selectedBg: 'bg-amber-200',
+    buttonBg: 'bg-amber-500',
+    buttonHover: 'hover:bg-amber-600',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-amber-900',
+    darkTextColor: 'text-amber-100',
+    darkCardBg: 'bg-amber-800',
+    darkBorderColor: 'border-amber-700',
+    darkHighlightBg: 'bg-amber-700',
+  },
+
+  'emerald': {
+    bgColor: 'bg-emerald-50',
+    textColor: 'text-emerald-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-emerald-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-emerald-500',
+    highlightBg: 'bg-emerald-100',
+    selectedBg: 'bg-emerald-200',
+    buttonBg: 'bg-emerald-600',
+    buttonHover: 'hover:bg-emerald-700',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-emerald-900',
+    darkTextColor: 'text-emerald-100',
+    darkCardBg: 'bg-emerald-800',
+    darkBorderColor: 'border-emerald-700',
+    darkHighlightBg: 'bg-emerald-700',
+  },
+
+  'dark': {
+    bgColor: 'bg-gray-900',
+    textColor: 'text-gray-100',
+    cardBg: 'bg-gray-800',
+    borderColor: 'border-gray-700',
+    inputBg: 'bg-gray-700',
+    mutedText: 'text-gray-400',
+    highlightBg: 'bg-gray-700',
+    selectedBg: 'bg-gray-600',
+    buttonBg: 'bg-blue-600',
+    buttonHover: 'hover:bg-blue-700',
+    buttonText: 'text-white'
+  },
+
+  // Dual-tone themes
+  'ocean-breeze': {
+    bgColor: 'bg-gradient-to-br from-sky-50 to-cyan-50',
+    textColor: 'text-sky-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-sky-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-sky-500',
+    highlightBg: 'bg-sky-100',
+    selectedBg: 'bg-sky-200',
+    buttonBg: 'bg-gradient-to-r from-sky-500 to-cyan-500',
+    buttonHover: 'hover:from-sky-600 hover:to-cyan-600',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-gradient-to-br from-sky-900 to-cyan-900',
+    darkTextColor: 'text-sky-100',
+    darkCardBg: 'bg-sky-800',
+    darkBorderColor: 'border-sky-700',
+    darkHighlightBg: 'bg-sky-700',
+    darkButtonBg: 'bg-gradient-to-r from-sky-600 to-cyan-600',
+    darkButtonHover: 'hover:from-sky-700 hover:to-cyan-700'
+  },
+
+  'sunset': {
+    bgColor: 'bg-gradient-to-br from-orange-50 to-rose-50',
+    textColor: 'text-orange-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-orange-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-orange-600',
+    highlightBg: 'bg-orange-100',
+    selectedBg: 'bg-orange-200',
+    buttonBg: 'bg-gradient-to-r from-orange-500 to-rose-500',
+    buttonHover: 'hover:from-orange-600 hover:to-rose-600',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-gradient-to-br from-orange-900 to-rose-900',
+    darkTextColor: 'text-orange-100',
+    darkCardBg: 'bg-orange-800',
+    darkBorderColor: 'border-orange-700',
+    darkHighlightBg: 'bg-orange-700',
+    darkButtonBg: 'bg-gradient-to-r from-orange-600 to-rose-600',
+    darkButtonHover: 'hover:from-orange-700 hover:to-rose-700'
+  },
+
+  'forest': {
+    bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
+    textColor: 'text-green-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-green-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-green-600',
+    highlightBg: 'bg-green-100',
+    selectedBg: 'bg-green-200',
+    buttonBg: 'bg-gradient-to-r from-green-600 to-emerald-600',
+    buttonHover: 'hover:from-green-700 hover:to-emerald-700',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-gradient-to-br from-green-900 to-emerald-900',
+    darkTextColor: 'text-green-100',
+    darkCardBg: 'bg-green-800',
+    darkBorderColor: 'border-green-700',
+    darkHighlightBg: 'bg-green-700',
+    darkButtonBg: 'bg-gradient-to-r from-green-700 to-emerald-700',
+    darkButtonHover: 'hover:from-green-800 hover:to-emerald-800'
+  },
+
+  'berry': {
+    bgColor: 'bg-gradient-to-br from-pink-50 to-fuchsia-50',
+    textColor: 'text-pink-900',
+    cardBg: 'bg-white',
+    borderColor: 'border-pink-200',
+    inputBg: 'bg-white',
+    mutedText: 'text-pink-500',
+    highlightBg: 'bg-pink-100',
+    selectedBg: 'bg-pink-200',
+    buttonBg: 'bg-gradient-to-r from-pink-500 to-fuchsia-500',
+    buttonHover: 'hover:from-pink-600 hover:to-fuchsia-600',
+    buttonText: 'text-white',
+    darkBgColor: 'bg-gradient-to-br from-pink-900 to-fuchsia-900',
+    darkTextColor: 'text-pink-100',
+    darkCardBg: 'bg-pink-800',
+    darkBorderColor: 'border-pink-700',
+    darkHighlightBg: 'bg-pink-700',
+    darkButtonBg: 'bg-gradient-to-r from-pink-600 to-fuchsia-600',
+    darkButtonHover: 'hover:from-pink-700 hover:to-fuchsia-700'
+  }
 };
+
 export const getButtonClasses = (theme: ThemeName, variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
   const themeObj = themes[theme];
   

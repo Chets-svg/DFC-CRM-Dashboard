@@ -33,6 +33,8 @@ import {
 import { CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface ClientCardProps {
   client: Client;
@@ -119,18 +121,30 @@ export function ClientCard({
     setDeleteError('');
   };
 
-  const handleDeleteConfirm = () => {
-  // Replace with your actual password validation logic
-  if (deletePassword === 'Rosh@1309') { // Use environment variable in production
-    onDelete(client.id); // This should remove the client from your data
-    setIsDeleteDialogOpen(false);
-    setDeletePassword('');
-    setDeleteError('');
-    toast.success('Client deleted successfully');
-  } else {
-    setDeleteError('Incorrect password. Please try again.');
-  }
-};
+  // Updated delete function with actual Firebase deletion
+  const handleDeleteConfirm = async () => {
+    if (deletePassword === 'Rosh@1309') {
+      try {
+        // Delete client document from Firestore
+        await deleteDoc(doc(db, 'clients', client.id));
+        
+        // Call the onDelete prop to update parent state
+        onDelete(client.id);
+        
+        // Close dialog and reset state
+        setIsDeleteDialogOpen(false);
+        setDeletePassword('');
+        setDeleteError('');
+        
+        toast.success('Client deleted successfully');
+      } catch (error) {
+        console.error('Error deleting client:', error);
+        setDeleteError('Error deleting client. Please try again.');
+      }
+    } else {
+      setDeleteError('Incorrect password. Please try again.');
+    }
+  };
 
   return (    
     <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow`}>
@@ -503,59 +517,59 @@ export function ClientCard({
 
       {/* Delete Confirmation Modal */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-  <DialogContent className="sm:max-w-md bg-white">
-    <DialogHeader>
-      <DialogTitle className="flex items-center gap-2">
-        <Trash2 className="h-5 w-5 text-red-500" />
-        Delete Client
-      </DialogTitle>
-      <DialogDescription>
-        This action cannot be undone. Please confirm by entering the password.
-      </DialogDescription>
-    </DialogHeader>
-    <div className="py-4">
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="delete-password" className="text-right">
-            Password
-          </Label>
-          <Input
-            id="delete-password"
-            type="password"
-            value={deletePassword}
-            onChange={(e) => setDeletePassword(e.target.value)}
-            className="mt-1"
-            placeholder="Enter password to confirm"
-            onKeyDown={(e) => e.key === 'Enter' && handleDeleteConfirm()}
-          />
-          {deleteError && (
-            <p className="text-sm text-red-500 mt-1">{deleteError}</p>
-          )}
-        </div>
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <p className="text-sm text-red-700">
-            <span className="font-medium">Warning:</span> Deleting this client will permanently remove all associated data including SIP reminders and investment records.
-          </p>
-        </div>
-      </div>
-    </div>
-    <DialogFooter className="gap-2 sm:justify-end">
-      <Button
-        variant="outline"
-        onClick={() => setIsDeleteDialogOpen(false)}
-        className="px-4"
-      >
-        Cancel
-      </Button>
-      <Button
-        variant="destructive"
-        onClick={handleDeleteConfirm}
-        className="px-4 bg-red-600 hover:bg-red-700"
-      >
-        <Trash2 className="mr-2 h-4 w-4" />
-        Confirm Delete
-      </Button>
-    </DialogFooter>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-500" />
+              Delete Client
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. Please confirm by entering the password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="delete-password" className="text-right">
+                  Password
+                </Label>
+                <Input
+                  id="delete-password"
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  className="mt-1"
+                  placeholder="Enter password to confirm"
+                  onKeyDown={(e) => e.key === 'Enter' && handleDeleteConfirm()}
+                />
+                {deleteError && (
+                  <p className="text-sm text-red-500 mt-1">{deleteError}</p>
+                )}
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">Warning:</span> Deleting this client will permanently remove all associated data including SIP reminders and investment records.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="px-4"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+              className="px-4 bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Confirm Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

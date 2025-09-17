@@ -5,7 +5,6 @@ import { ThemeName, themes } from '@/lib/theme';
 import { useAuth } from '@/context/auth-context';
 import { getUserThemePreference, saveUserThemePreference } from '@/lib/firebase-config';
 
-
 type ThemeContextType = {
   theme: ThemeName;
   setTheme: (theme: ThemeName) => void;
