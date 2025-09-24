@@ -78,7 +78,6 @@ export function EditClientModal({
             <h3 className="font-medium">Basic Information</h3>
             
             <div>
-              <div className="space-y-2"></div>
               <Label className="mb-1 block">Full Name *</Label>
               <Input
                 name="name"
@@ -107,6 +106,16 @@ export function EditClientModal({
                 onChange={handleInputChange}
                 className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
                 required
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block">CAN Number</Label>
+              <Input
+                name="can"
+                value={editedClient.can || ''}
+                onChange={handleInputChange}
+                className={`${currentTheme.inputBg} ${currentTheme.borderColor}`}
+                placeholder="Enter CAN number"
               />
             </div>
             <div>
