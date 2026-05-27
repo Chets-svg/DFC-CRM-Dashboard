@@ -1,6 +1,5 @@
-export type ThemeName = 'canberra' | 'wisteria' | 'apricot' | 'blue-smoke' | 'green-smoke' | 
-                'tradewind' | 'dark' | 'blue' | 'indigo' | 'pink' | 
-                'amber' | 'emerald' | 'ocean-breeze' | 'sunset' | 'forest' | 'berry';
+export type ThemeName = 'canberra' | 'wisteria' | 'apricot' | 'blue-smoke' | 
+                'dark' | 'blue' | 'indigo';
 
 export interface ThemeColors {
   bgColor: string;
@@ -30,18 +29,9 @@ export const themeColorCircles: Record<ThemeName, string> = {
   'wisteria': '#8a2be2',
   'apricot': '#ff7f50',
   'blue-smoke': '#3b82f6',
-  'green-smoke': '#22c55e',
-  'tradewind': '#0d9488',
   'dark': '#374151',
   'blue': '#3b82f6',
-  'indigo': '#6366f1',
-  'pink': '#ec4899',
-  'amber': '#f59e0b',
-  'emerald': '#10b981',
-  'ocean-breeze': '#0ea5e9',
-  'sunset': '#fb923c',
-  'forest': '#16a34a',
-  'berry': '#c026d3'
+  'indigo': '#6366f1'
 };
 
 export const themes: Record<ThemeName, ThemeColors> = {
@@ -121,44 +111,6 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkHighlightBg: 'bg-[#ff6b6b]',
   },
 
-  'green-smoke': {
-    bgColor: 'bg-[#D3EFC1]',
-    textColor: 'text-[#14532d]',
-    cardBg: 'bg-white',
-    borderColor: 'border-[#b3ffc2]',
-    inputBg: 'bg-white',
-    mutedText: 'text-[#22c55e]',
-    highlightBg: 'bg-[#ccffdd]',
-    selectedBg: 'bg-[#99ffbb]',
-    buttonBg: 'bg-[#22c55e]',
-    buttonHover: 'hover:bg-[#16a34a]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#14532d]',
-    darkTextColor: 'text-[#d8b4fe]',
-    darkCardBg: 'bg-[#166534]',
-    darkBorderColor: 'border-[#d8b4fe]',
-    darkHighlightBg: 'bg-[#d8b4fe]',
-  },
-
-  'tradewind': {
-    bgColor: 'bg-[#e6fffa]',
-    textColor: 'text-[#134e4a]',
-    cardBg: 'bg-white',
-    borderColor: 'border-[#b8fff0]',
-    inputBg: 'bg-white',
-    mutedText: 'text-[#0d9488]',
-    highlightBg: 'bg-[#ccfff5]',
-    selectedBg: 'bg-[#99ffeb]',
-    buttonBg: 'bg-[#0d9488]',
-    buttonHover: 'hover:bg-[#0f766e]',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-[#134e4a]',
-    darkTextColor: 'text-[#ffa500]',
-    darkCardBg: 'bg-[#115e59]',
-    darkBorderColor: 'border-[#ffa500]',
-    darkHighlightBg: 'bg-[#ffa500]',
-  },
-
   // Solid color themes
   'blue': {
     bgColor: 'bg-blue-50',
@@ -198,63 +150,6 @@ export const themes: Record<ThemeName, ThemeColors> = {
     darkHighlightBg: 'bg-indigo-700',
   },
 
-  'pink': {
-    bgColor: 'bg-pink-50',
-    textColor: 'text-pink-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-pink-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-pink-500',
-    highlightBg: 'bg-pink-100',
-    selectedBg: 'bg-pink-200',
-    buttonBg: 'bg-pink-600',
-    buttonHover: 'hover:bg-pink-700',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-pink-900',
-    darkTextColor: 'text-pink-100',
-    darkCardBg: 'bg-pink-800',
-    darkBorderColor: 'border-pink-700',
-    darkHighlightBg: 'bg-pink-700',
-  },
-
-  'amber': {
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-amber-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-amber-600',
-    highlightBg: 'bg-amber-100',
-    selectedBg: 'bg-amber-200',
-    buttonBg: 'bg-amber-500',
-    buttonHover: 'hover:bg-amber-600',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-amber-900',
-    darkTextColor: 'text-amber-100',
-    darkCardBg: 'bg-amber-800',
-    darkBorderColor: 'border-amber-700',
-    darkHighlightBg: 'bg-amber-700',
-  },
-
-  'emerald': {
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-emerald-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-emerald-500',
-    highlightBg: 'bg-emerald-100',
-    selectedBg: 'bg-emerald-200',
-    buttonBg: 'bg-emerald-600',
-    buttonHover: 'hover:bg-emerald-700',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-emerald-900',
-    darkTextColor: 'text-emerald-100',
-    darkCardBg: 'bg-emerald-800',
-    darkBorderColor: 'border-emerald-700',
-    darkHighlightBg: 'bg-emerald-700',
-  },
-
   'dark': {
     bgColor: 'bg-gray-900',
     textColor: 'text-gray-100',
@@ -267,91 +162,6 @@ export const themes: Record<ThemeName, ThemeColors> = {
     buttonBg: 'bg-blue-600',
     buttonHover: 'hover:bg-blue-700',
     buttonText: 'text-white'
-  },
-
-  // Dual-tone themes
-  'ocean-breeze': {
-    bgColor: 'bg-gradient-to-br from-sky-50 to-cyan-50',
-    textColor: 'text-sky-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-sky-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-sky-500',
-    highlightBg: 'bg-sky-100',
-    selectedBg: 'bg-sky-200',
-    buttonBg: 'bg-gradient-to-r from-sky-500 to-cyan-500',
-    buttonHover: 'hover:from-sky-600 hover:to-cyan-600',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-gradient-to-br from-sky-900 to-cyan-900',
-    darkTextColor: 'text-sky-100',
-    darkCardBg: 'bg-sky-800',
-    darkBorderColor: 'border-sky-700',
-    darkHighlightBg: 'bg-sky-700',
-    darkButtonBg: 'bg-gradient-to-r from-sky-600 to-cyan-600',
-    darkButtonHover: 'hover:from-sky-700 hover:to-cyan-700'
-  },
-
-  'sunset': {
-    bgColor: 'bg-gradient-to-br from-orange-50 to-rose-50',
-    textColor: 'text-orange-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-orange-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-orange-600',
-    highlightBg: 'bg-orange-100',
-    selectedBg: 'bg-orange-200',
-    buttonBg: 'bg-gradient-to-r from-orange-500 to-rose-500',
-    buttonHover: 'hover:from-orange-600 hover:to-rose-600',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-gradient-to-br from-orange-900 to-rose-900',
-    darkTextColor: 'text-orange-100',
-    darkCardBg: 'bg-orange-800',
-    darkBorderColor: 'border-orange-700',
-    darkHighlightBg: 'bg-orange-700',
-    darkButtonBg: 'bg-gradient-to-r from-orange-600 to-rose-600',
-    darkButtonHover: 'hover:from-orange-700 hover:to-rose-700'
-  },
-
-  'forest': {
-    bgColor: 'bg-gradient-to-br from-green-50 to-emerald-50',
-    textColor: 'text-green-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-green-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-green-600',
-    highlightBg: 'bg-green-100',
-    selectedBg: 'bg-green-200',
-    buttonBg: 'bg-gradient-to-r from-green-600 to-emerald-600',
-    buttonHover: 'hover:from-green-700 hover:to-emerald-700',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-gradient-to-br from-green-900 to-emerald-900',
-    darkTextColor: 'text-green-100',
-    darkCardBg: 'bg-green-800',
-    darkBorderColor: 'border-green-700',
-    darkHighlightBg: 'bg-green-700',
-    darkButtonBg: 'bg-gradient-to-r from-green-700 to-emerald-700',
-    darkButtonHover: 'hover:from-green-800 hover:to-emerald-800'
-  },
-
-  'berry': {
-    bgColor: 'bg-gradient-to-br from-pink-50 to-fuchsia-50',
-    textColor: 'text-pink-900',
-    cardBg: 'bg-white',
-    borderColor: 'border-pink-200',
-    inputBg: 'bg-white',
-    mutedText: 'text-pink-500',
-    highlightBg: 'bg-pink-100',
-    selectedBg: 'bg-pink-200',
-    buttonBg: 'bg-gradient-to-r from-pink-500 to-fuchsia-500',
-    buttonHover: 'hover:from-pink-600 hover:to-fuchsia-600',
-    buttonText: 'text-white',
-    darkBgColor: 'bg-gradient-to-br from-pink-900 to-fuchsia-900',
-    darkTextColor: 'text-pink-100',
-    darkCardBg: 'bg-pink-800',
-    darkBorderColor: 'border-pink-700',
-    darkHighlightBg: 'bg-pink-700',
-    darkButtonBg: 'bg-gradient-to-r from-pink-600 to-fuchsia-600',
-    darkButtonHover: 'hover:from-pink-700 hover:to-fuchsia-700'
   }
 };
 

@@ -16,7 +16,9 @@ import {
   ChevronRight,
   Home,
   Plus,
-  Trash2
+  Trash2,
+  Snowflake,
+  Unlock
 } from "lucide-react";
 import { Client } from '@/types/client';
 import { SIPReminder } from '@/types/sip-reminder';
@@ -33,7 +35,8 @@ import {
 import { CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { doc, deleteDoc } from 'firebase/firestore';
+import { Textarea } from "@/components/ui/textarea";
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface ClientCardProps {
@@ -44,6 +47,7 @@ interface ClientCardProps {
   onWhatsApp: () => void;
   onViewDetails: () => void;
   onDelete: (clientId: string) => void;
+  onFreeze: () => void;
   sipReminders: SIPReminder[];
   investments: any[];
   onNavigateToSIP: () => void;
@@ -58,6 +62,7 @@ export function ClientCard({
   onWhatsApp,
   onViewDetails,
   onDelete,
+  onFreeze,
   sipReminders,
   investments,
   onNavigateToSIP,
@@ -69,6 +74,13 @@ export function ClientCard({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  
+  // Freeze state
+  const [isFreezeDialogOpen, setIsFreezeDialogOpen] = useState(false);
+  const [freezeReason, setFreezeReason] = useState('');
+  const [freezeLoading, setFreezeLoading] = useState(false);
+
+  const isFrozen = client.isFrozen || false;
 
   const getInitials = (name: string) => 
     name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -121,21 +133,14 @@ export function ClientCard({
     setDeleteError('');
   };
 
-  // Updated delete function with actual Firebase deletion
   const handleDeleteConfirm = async () => {
     if (deletePassword === 'Rosh@1309') {
       try {
-        // Delete client document from Firestore
         await deleteDoc(doc(db, 'clients', client.id));
-        
-        // Call the onDelete prop to update parent state
         onDelete(client.id);
-        
-        // Close dialog and reset state
         setIsDeleteDialogOpen(false);
         setDeletePassword('');
         setDeleteError('');
-        
         toast.success('Client deleted successfully');
       } catch (error) {
         console.error('Error deleting client:', error);
@@ -146,26 +151,87 @@ export function ClientCard({
     }
   };
 
+  const handleFreezeClick = () => {
+    setIsFreezeDialogOpen(true);
+    setFreezeReason('');
+  };
+
+  const handleFreezeConfirm = async () => {
+    if (isFrozen) {
+      // Unfreezing - no reason needed
+    } else {
+      // Freezing - reason is required
+      if (!freezeReason.trim()) {
+        toast.error('Please provide a reason for freezing this client');
+        return;
+      }
+    }
+
+    setFreezeLoading(true);
+    
+    try {
+      const clientRef = doc(db, 'clients', client.id);
+      const updateData: any = {
+        isFrozen: !isFrozen,
+        frozenAt: !isFrozen ? new Date().toISOString() : null,
+        freezeReason: !isFrozen ? freezeReason.trim() : null,
+        unfrozenAt: isFrozen ? new Date().toISOString() : null
+      };
+
+      await updateDoc(clientRef, updateData);
+      
+      setIsFreezeDialogOpen(false);
+      setFreezeReason('');
+      
+      onFreeze();
+      
+      toast.success(
+        isFrozen 
+          ? 'Client unfrozen successfully' 
+          : 'Client frozen successfully'
+      );
+    } catch (error) {
+      console.error('Error updating client freeze status:', error);
+      toast.error('Error updating client status. Please try again.');
+    } finally {
+      setFreezeLoading(false);
+    }
+  };
+
   return (    
-    <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow`}>
+    <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow ${
+      isFrozen ? 'opacity-60 grayscale-[30%]' : ''
+    }`}>
       <div className={`px-3 py-2 flex justify-between items-center ${
-        theme === 'dark' 
-          ? currentTheme.darkBgColor 
-            ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
-            : `bg-gradient-to-r from-gray-700 to-gray-600`
-          : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`
+        isFrozen 
+          ? 'bg-gradient-to-r from-slate-500 to-slate-400'
+          : theme === 'dark' 
+            ? currentTheme.darkBgColor 
+              ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
+              : `bg-gradient-to-r from-gray-700 to-gray-600`
+            : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`
       }`}>
         <div className="min-w-0">
-          <h2 className="text-white font-medium truncate">{client.name}</h2>
+          <h2 className="text-white font-medium truncate flex items-center gap-2">
+            {client.name}
+            {isFrozen && (
+              <Snowflake className="h-3.5 w-3.5 text-blue-200" />
+            )}
+          </h2>
           <p className="text-blue-100 text-xs">Added: {formatDate(client.createdAt)}</p>
         </div>
         <div className="flex items-center gap-1">
-          {client.products.sip && (
-            <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5">
-              {hasUpcomingSIP ? 'SIP' : 'SIP'}
+          {isFrozen && (
+            <Badge className="bg-slate-200 text-slate-700 text-xs px-1.5 py-0.5">
+              Frozen
             </Badge>
           )}
-          {client.riskProfile && (
+          {client.products.sip && !isFrozen && (
+            <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5">
+              SIP
+            </Badge>
+          )}
+          {client.riskProfile && !isFrozen && (
             <Badge className={`
               ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
                 client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' : 
@@ -181,18 +247,23 @@ export function ClientCard({
       <div className="p-3">
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <Avatar className="h-10 w-10 border border-blue-300">
-              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm">
+            <Avatar className={`h-10 w-10 border ${isFrozen ? 'border-slate-300 grayscale' : 'border-blue-300'}`}>
+              <AvatarFallback className={`${isFrozen ? 'bg-gray-400' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold text-sm`}>
                 {getInitials(client.name)}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-1 -right-1 flex">
-              {isBirthdayThisMonth && (
+              {isFrozen && (
+                <div className="bg-slate-500 rounded-full p-0.5" title="Frozen">
+                  <Snowflake className="h-2.5 w-2.5 text-white" />
+                </div>
+              )}
+              {isBirthdayThisMonth && !isFrozen && (
                 <div className="bg-pink-500 rounded-full p-0.5">
                   <CalendarDays className="h-2.5 w-2.5 text-white" />
                 </div>
               )}
-              {isAnniversaryThisMonth && (
+              {isAnniversaryThisMonth && !isFrozen && (
                 <div className="bg-purple-500 rounded-full p-0.5">
                   <Heart className="h-2.5 w-2.5 text-white" />
                 </div>
@@ -242,12 +313,18 @@ export function ClientCard({
                   </div>
                 </div>
               )}
+              
+              {isFrozen && client.freezeReason && (
+                <div className="mt-1 p-1.5 bg-slate-100 rounded text-xs text-slate-600 italic">
+                  <span className="font-medium">Reason:</span> {client.freezeReason}
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100">
-          {client.products.sip && (
+          {client.products.sip && !isFrozen && (
             <div className="space-y-0.5">
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <User className="w-2.5 h-2.5" /> SIP
@@ -276,7 +353,11 @@ export function ClientCard({
               .map(([key]) => (
                 <Badge 
                   key={key} 
-                  className="text-blue-600 bg-blue-50 border border-blue-100 text-xs px-1.5 py-0.5 capitalize"
+                  className={`text-xs px-1.5 py-0.5 capitalize ${
+                    isFrozen 
+                      ? 'text-slate-500 bg-slate-100 border border-slate-200'
+                      : 'text-blue-600 bg-blue-50 border border-blue-100'
+                  }`}
                 >
                   {key.replace(/([A-Z])/g, ' $1').split(' ')[0]}
                 </Badge>
@@ -285,20 +366,41 @@ export function ClientCard({
         </div>
 
         <div className="pt-3 mt-2 border-t border-gray-100">
-          <div className="grid grid-cols-5 gap-1.5">
+          <div className="grid grid-cols-6 gap-1.5">
+            {/* Freeze/Unfreeze Button - Now matches other buttons exactly */}
             <Button 
               size="sm" 
               variant="outline" 
-              className="h-8 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 p-1" 
+              className={`h-8 p-1 ${
+                isFrozen 
+                  ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
+                  : 'text-cyan-600 border-cyan-200 bg-cyan-50 hover:bg-cyan-100'
+              }`}
+              onClick={handleFreezeClick}
+              title={isFrozen ? 'Unfreeze Client' : 'Freeze Client'}
+            >
+              {isFrozen ? (
+                <Unlock className="w-3.5 h-3.5" />
+              ) : (
+                <Snowflake className="w-3.5 h-3.5" />
+              )}
+            </Button>
+            
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className={`h-8 p-1 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`} 
               onClick={onEmail}
+              disabled={isFrozen}
             >
               <Mail className="w-3.5 h-3.5" />
             </Button>
             <Button 
               size="sm" 
               variant="outline" 
-              className="h-8 border-green-200 bg-green-50 hover:bg-green-100 text-green-600 p-1" 
+              className={`h-8 p-1 text-green-600 border-green-200 bg-green-50 hover:bg-green-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`} 
               onClick={onWhatsApp}
+              disabled={isFrozen}
             >
               <MessageSquare className="w-3.5 h-3.5" /> 
             </Button>
@@ -306,7 +408,8 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={onEdit}
-              className="h-8 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 p-1"
+              className={`h-8 p-1 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+              disabled={isFrozen}
             >
               <Edit className="h-3.5 w-3.5" />
             </Button>
@@ -314,7 +417,7 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={handleViewDetails}
-              className="h-8 text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 p-1"
+              className="h-8 p-1 text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100"
             >
               <User className="h-3.5 w-3.5" />
             </Button>
@@ -322,7 +425,7 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={handleDeleteClick}
-              className="h-8 text-red-600 border-red-200 bg-red-50 hover:bg-red-100 p-1"
+              className="h-8 p-1 text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -336,13 +439,18 @@ export function ClientCard({
           <div className="relative">
             <CardHeader className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center bg-blue-500 shadow`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow ${isFrozen ? 'bg-gray-400' : 'bg-blue-500'}`}>
                   <span className="text-white font-bold text-lg">
                     {getInitials(client.name)}
                   </span>
                 </div>
                 <div>
-                  <CardTitle className="text-xl">{client.name}</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    {client.name}
+                    {isFrozen && (
+                      <Badge className="text-xs bg-slate-200 text-slate-600">Frozen</Badge>
+                    )}
+                  </CardTitle>
                   <p className={`text-sm ${currentTheme.mutedText}`}>
                     Client since {formatDate(client.createdAt)}
                   </p>
@@ -351,6 +459,25 @@ export function ClientCard({
             </CardHeader>
             
             <CardContent className="p-4 grid grid-cols-1 gap-4">
+              {isFrozen && (
+                <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <Snowflake className="h-4 w-4" />
+                    <span className="font-medium">Client Frozen</span>
+                  </div>
+                  {client.freezeReason && (
+                    <p className="text-sm text-slate-600 mt-1 italic">
+                      "{client.freezeReason}"
+                    </p>
+                  )}
+                  {client.frozenAt && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Frozen on: {formatDate(client.frozenAt)}
+                    </p>
+                  )}
+                </div>
+              )}
+              
               <div className="space-y-3">
                 <h3 className="font-medium">Contact Information</h3>
                 <div className="space-y-2">
@@ -379,17 +506,13 @@ export function ClientCard({
                   {client.dob && (
                     <div>
                       <p className="text-xs font-medium text-gray-500">Birthday</p>
-                      <p className="text-sm">
-                        {formatDate(client.dob)}
-                      </p>
+                      <p className="text-sm">{formatDate(client.dob)}</p>
                     </div>
                   )}
                   {client.marriageAnniversary && (
                     <div>
                       <p className="text-xs font-medium text-gray-500">Anniversary</p>
-                      <p className="text-sm">
-                        {formatDate(client.marriageAnniversary)}
-                      </p>
+                      <p className="text-sm">{formatDate(client.marriageAnniversary)}</p>
                     </div>
                   )}
                 </div>
@@ -418,6 +541,7 @@ export function ClientCard({
                           <span 
                             key={productKey} 
                             className={`px-2 py-1 rounded-full text-xs ${
+                              isFrozen ? 'bg-slate-100 text-slate-600' :
                               productKey === 'sip' ? 'bg-blue-100 text-blue-800' :
                               productKey === 'mutualFund' ? 'bg-purple-100 text-purple-800' :
                               productKey === 'lumpsum' ? 'bg-green-100 text-green-800' :
@@ -436,7 +560,7 @@ export function ClientCard({
                 </div>
               </div>
               
-              {client.products.sip && (
+              {client.products.sip && !isFrozen && (
                 <div className="space-y-3">
                   <h3 className="font-medium">SIP Details</h3>
                   {upcomingSIPs.length > 0 ? (
@@ -507,6 +631,7 @@ export function ClientCard({
                   onEdit();
                 }}
                 className="h-8"
+                disabled={isFrozen}
               >
                 Edit
               </Button>
@@ -530,9 +655,7 @@ export function ClientCard({
           <div className="py-4">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="delete-password" className="text-right">
-                  Password
-                </Label>
+                <Label htmlFor="delete-password">Password</Label>
                 <Input
                   id="delete-password"
                   type="password"
@@ -568,6 +691,102 @@ export function ClientCard({
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Confirm Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Freeze Confirmation Modal */}
+      <Dialog open={isFreezeDialogOpen} onOpenChange={setIsFreezeDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isFrozen ? (
+                <>
+                  <Unlock className="h-5 w-5 text-green-500" />
+                  Unfreeze Client
+                </>
+              ) : (
+                <>
+                  <Snowflake className="h-5 w-5 text-cyan-500" />
+                  Freeze Client
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {isFrozen
+                ? `You are about to unfreeze "${client.name}". This will restore the client to active status.`
+                : `You are about to freeze "${client.name}". This client will be marked as inactive.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="space-y-4">
+              {!isFrozen && (
+                <div>
+                  <Label htmlFor="freeze-reason">
+                    Reason for Freezing <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="freeze-reason"
+                    value={freezeReason}
+                    onChange={(e) => setFreezeReason(e.target.value)}
+                    className="mt-1"
+                    placeholder="e.g., Client requested to stop investments, Exited from mutual funds, etc."
+                    rows={3}
+                  />
+                </div>
+              )}
+              
+              <div className={`rounded-lg p-3 ${isFrozen ? 'bg-green-50 border border-green-200' : 'bg-cyan-50 border border-cyan-200'}`}>
+                <p className={`text-sm ${isFrozen ? 'text-green-700' : 'text-cyan-700'}`}>
+                  {isFrozen ? (
+                    <>
+                      <span className="font-medium">Note:</span> Unfreezing will restore full access to the client profile and enable all actions.
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium">Note:</span> Frozen clients will be visually marked and their actions will be limited. You can unfreeze them at any time.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              variant="outline"
+              onClick={() => setIsFreezeDialogOpen(false)}
+              className="px-4"
+              disabled={freezeLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFreezeConfirm}
+              disabled={freezeLoading}
+              className={`px-4 ${
+                isFrozen 
+                  ? 'bg-green-600 hover:bg-green-700 text-white' 
+                  : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+              }`}
+            >
+              {freezeLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  Processing...
+                </div>
+              ) : isFrozen ? (
+                <>
+                  <Unlock className="mr-2 h-4 w-4" />
+                  Confirm Unfreeze
+                </>
+              ) : (
+                <>
+                  <Snowflake className="mr-2 h-4 w-4" />
+                  Confirm Freeze
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
