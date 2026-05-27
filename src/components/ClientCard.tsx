@@ -157,20 +157,18 @@ export function ClientCard({
   };
 
   const handleFreezeConfirm = async () => {
-    if (isFrozen) {
-      // Unfreezing - no reason needed
-    } else {
-      // Freezing - reason is required
-      if (!freezeReason.trim()) {
-        toast.error('Please provide a reason for freezing this client');
-        return;
-      }
+    // Validate reason when freezing
+    if (!isFrozen && !freezeReason.trim()) {
+      toast.error('Please provide a reason for freezing this client');
+      return;
     }
 
     setFreezeLoading(true);
     
     try {
       const clientRef = doc(db, 'clients', client.id);
+      
+      // Prepare update data
       const updateData: any = {
         isFrozen: !isFrozen,
         frozenAt: !isFrozen ? new Date().toISOString() : null,
@@ -178,18 +176,25 @@ export function ClientCard({
         unfrozenAt: isFrozen ? new Date().toISOString() : null
       };
 
+      // Update Firestore
       await updateDoc(clientRef, updateData);
       
+      // Close dialog and reset state
       setIsFreezeDialogOpen(false);
       setFreezeReason('');
       
-      onFreeze();
-      
+      // Show success toast
       toast.success(
         isFrozen 
           ? 'Client unfrozen successfully' 
           : 'Client frozen successfully'
       );
+      
+      // Call the onFreeze callback to refresh parent state
+      if (onFreeze) {
+        onFreeze();
+      }
+      
     } catch (error) {
       console.error('Error updating client freeze status:', error);
       toast.error('Error updating client status. Please try again.');
@@ -199,17 +204,14 @@ export function ClientCard({
   };
 
   return (    
-    <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow ${
-      isFrozen ? 'opacity-60 grayscale-[30%]' : ''
-    }`}>
+    <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow`}>
+      {/* Header - Keep theme-based styling for all cards */}
       <div className={`px-3 py-2 flex justify-between items-center ${
-        isFrozen 
-          ? 'bg-gradient-to-r from-slate-500 to-slate-400'
-          : theme === 'dark' 
-            ? currentTheme.darkBgColor 
-              ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
-              : `bg-gradient-to-r from-gray-700 to-gray-600`
-            : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`
+        theme === 'dark' 
+          ? currentTheme.darkBgColor 
+            ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
+            : `bg-gradient-to-r from-gray-700 to-gray-600`
+          : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`
       }`}>
         <div className="min-w-0">
           <h2 className="text-white font-medium truncate flex items-center gap-2">
@@ -222,16 +224,17 @@ export function ClientCard({
         </div>
         <div className="flex items-center gap-1">
           {isFrozen && (
-            <Badge className="bg-slate-200 text-slate-700 text-xs px-1.5 py-0.5">
+            <Badge className="bg-white/30 text-white text-xs px-1.5 py-0.5 flex items-center gap-1">
+              <Snowflake className="h-3 w-3" />
               Frozen
             </Badge>
           )}
-          {client.products.sip && !isFrozen && (
+          {client.products.sip && (
             <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5">
               SIP
             </Badge>
           )}
-          {client.riskProfile && !isFrozen && (
+          {client.riskProfile && (
             <Badge className={`
               ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
                 client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' : 
@@ -247,8 +250,8 @@ export function ClientCard({
       <div className="p-3">
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <Avatar className={`h-10 w-10 border ${isFrozen ? 'border-slate-300 grayscale' : 'border-blue-300'}`}>
-              <AvatarFallback className={`${isFrozen ? 'bg-gray-400' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold text-sm`}>
+            <Avatar className={`h-10 w-10 border ${isFrozen ? 'border-slate-400' : 'border-blue-300'}`}>
+              <AvatarFallback className={`${isFrozen ? 'bg-gradient-to-r from-slate-400 to-slate-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold text-sm`}>
                 {getInitials(client.name)}
               </AvatarFallback>
             </Avatar>
@@ -324,7 +327,7 @@ export function ClientCard({
         </div>
 
         <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100">
-          {client.products.sip && !isFrozen && (
+          {client.products.sip && (
             <div className="space-y-0.5">
               <p className="text-xs text-gray-500 flex items-center gap-1">
                 <User className="w-2.5 h-2.5" /> SIP
@@ -355,7 +358,7 @@ export function ClientCard({
                   key={key} 
                   className={`text-xs px-1.5 py-0.5 capitalize ${
                     isFrozen 
-                      ? 'text-slate-500 bg-slate-100 border border-slate-200'
+                      ? 'text-slate-600 bg-slate-100 border border-slate-200'
                       : 'text-blue-600 bg-blue-50 border border-blue-100'
                   }`}
                 >
@@ -367,7 +370,6 @@ export function ClientCard({
 
         <div className="pt-3 mt-2 border-t border-gray-100">
           <div className="grid grid-cols-6 gap-1.5">
-            {/* Freeze/Unfreeze Button - Now matches other buttons exactly */}
             <Button 
               size="sm" 
               variant="outline" 
@@ -439,7 +441,7 @@ export function ClientCard({
           <div className="relative">
             <CardHeader className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow ${isFrozen ? 'bg-gray-400' : 'bg-blue-500'}`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow ${isFrozen ? 'bg-gradient-to-r from-slate-400 to-slate-500' : 'bg-blue-500'}`}>
                   <span className="text-white font-bold text-lg">
                     {getInitials(client.name)}
                   </span>
@@ -448,7 +450,10 @@ export function ClientCard({
                   <CardTitle className="text-xl flex items-center gap-2">
                     {client.name}
                     {isFrozen && (
-                      <Badge className="text-xs bg-slate-200 text-slate-600">Frozen</Badge>
+                      <Badge className="text-xs bg-slate-200 text-slate-600 flex items-center gap-1">
+                        <Snowflake className="h-3 w-3" />
+                        Frozen
+                      </Badge>
                     )}
                   </CardTitle>
                   <p className={`text-sm ${currentTheme.mutedText}`}>

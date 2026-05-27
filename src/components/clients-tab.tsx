@@ -34,7 +34,8 @@ import {
   Calendar,
   CreditCard,
   Trash2,
-  Copy
+  Copy,
+  Snowflake
 } from "lucide-react";
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -59,7 +60,7 @@ import { db } from '@/lib/firebase';
 
 type ClientSortField = 'createdAt' | 'name' | 'products';
 type ViewMode = 'grid' | 'list';
-type ClientTab = 'mutual-funds' | 'other';
+type ClientTab = 'mutual-funds' | 'other' | 'frozen';
 
 interface ClientsTabProps {
   theme: ThemeName;
@@ -80,7 +81,8 @@ interface ClientsTabProps {
   editingClient: Client | null;
   onDeleteClient: (id: string) => void;
   userId: string;
-  setClients: (clients: Client[]) => void; // Add this prop to update client list
+  setClients: (clients: Client[]) => void;
+  onRefreshClients?: () => void;
 }
 
 export default function ClientsTab({
@@ -102,7 +104,8 @@ export default function ClientsTab({
   editingClient,
   onDeleteClient,
   userId,
-  setClients // Destructure the new prop
+  setClients,
+  onRefreshClients
 }: ClientsTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeClientTab, setActiveClientTab] = useState<ClientTab>('mutual-funds');
@@ -154,7 +157,7 @@ export default function ClientsTab({
   };
 
   const getClientPrimaryProduct = (client: Client) => {
-    if (client.products.mutualFund || client.products.sutalFund || client.products.lumpsum) {
+    if (client.products.mutualFund || client.products.sip || client.products.lumpsum) {
       return 'mutualFund';
     }
     if (client.products.healthInsurance) return 'healthInsurance';
@@ -164,12 +167,19 @@ export default function ClientsTab({
     return 'mutualFund';
   };
 
-  // Segregate clients based on primary product
+  // Segregate clients based on primary product and frozen status
   const segregateClients = () => {
     const mutualFundClients: Client[] = [];
     const otherClients: Client[] = [];
+    const frozenClients: Client[] = [];
 
     clients.forEach(client => {
+      // Check if client is frozen
+      if (client.isFrozen) {
+        frozenClients.push(client);
+        return;
+      }
+
       const primaryProduct = getClientPrimaryProduct(client);
       if (primaryProduct === 'mutualFund') {
         mutualFundClients.push(client);
@@ -178,12 +188,26 @@ export default function ClientsTab({
       }
     });
 
-    return { mutualFundClients, otherClients };
+    return { mutualFundClients, otherClients, frozenClients };
   };
 
-  const { mutualFundClients, otherClients } = segregateClients();
+  const { mutualFundClients, otherClients, frozenClients } = segregateClients();
 
-  const filteredClients = [...(activeClientTab === 'mutual-funds' ? mutualFundClients : otherClients)]
+  // Get clients based on active tab
+  const getActiveClients = () => {
+    switch (activeClientTab) {
+      case 'mutual-funds':
+        return mutualFundClients;
+      case 'other':
+        return otherClients;
+      case 'frozen':
+        return frozenClients;
+      default:
+        return mutualFundClients;
+    }
+  };
+
+  const filteredClients = getActiveClients()
     .filter(client => 
       client.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
       client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -313,6 +337,13 @@ export default function ClientsTab({
     }
   };
 
+  const handleFreezeUpdate = () => {
+    // Refresh clients from parent component
+    if (onRefreshClients) {
+      onRefreshClients();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -398,64 +429,92 @@ export default function ClientsTab({
         {/* Client Tabs */}
         <div className="flex border-b border-gray-200 mt-4">
           <button
-            className={`py-2 px-4 font-medium text-sm ${
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
               activeClientTab === 'mutual-funds'
                 ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setActiveClientTab('mutual-funds')}
           >
-            Mutual Funds Clients ({mutualFundClients.length})
+            Mutual Funds Clients
+            <Badge variant="secondary" className="ml-1">
+              {mutualFundClients.length}
+            </Badge>
           </button>
           <button
-            className={`py-2 px-4 font-medium text-sm ${
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
               activeClientTab === 'other'
                 ? 'border-b-2 border-blue-500 text-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setActiveClientTab('other')}
           >
-            Other Clients ({otherClients.length})
+            Other Clients
+            <Badge variant="secondary" className="ml-1">
+              {otherClients.length}
+            </Badge>
+          </button>
+          <button
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
+              activeClientTab === 'frozen'
+                ? 'border-b-2 border-cyan-500 text-cyan-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+            onClick={() => setActiveClientTab('frozen')}
+          >
+            <Snowflake className="h-4 w-4" />
+            Frozen Clients
+            <Badge variant="secondary" className="ml-1 bg-slate-200 text-slate-700">
+              {frozenClients.length}
+            </Badge>
           </button>
         </div>
       </CardHeader>
       
       <CardContent>
         {viewMode === 'grid' ? (
-          // Grid View (existing card view)
+          // Grid View
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredClients.map(client => (
-              <ClientCard
-                key={client.id}
-                client={client}
-                theme={theme}
-                onEdit={() => setEditingClient(client)}
-                onEmail={() => {
-                  setActiveTab("email");
-                  setEmailComponentProps({
-                    defaultRecipient: client.email,
-                    openCompose: true
-                  });
-                }}
-                onWhatsApp={() => {
-                  window.open(
-                    `https://api.whatsapp.com/send/?phone=91${client.phone}&text=${encodeURIComponent(
-                      `Hi ${client.name}, this is from Dhanam Financial Services. Let's connect!`
-                    )}&type=phone_number&app_absent=0`,
-                    '_blank'
-                  );
-                }}
-                onViewDetails={() => {
-                  // You can implement view details functionality here if needed
-                  console.log("View details for:", client.name);
-                }}
-                onDelete={() => handleDeleteClick(client.id, client.name || '')}
-                sipReminders={sipReminders.filter(r => r.clientId === client.id)}
-                investments={investments.filter(i => i.clientId === client.id)}
-                onNavigateToSIP={() => setActiveTab('sip')}
-                onNavigateToInvestments={() => setActiveTab('investment-tracker')}
-              />
-            ))}
+            {filteredClients.length === 0 ? (
+              <div className="col-span-full text-center py-8 text-gray-500">
+                {activeClientTab === 'frozen' 
+                  ? 'No frozen clients found.'
+                  : 'No clients found. Try adjusting your search.'}
+              </div>
+            ) : (
+              filteredClients.map(client => (
+                <ClientCard
+                  key={client.id}
+                  client={client}
+                  theme={theme}
+                  onEdit={() => setEditingClient(client)}
+                  onEmail={() => {
+                    setActiveTab("email");
+                    setEmailComponentProps({
+                      defaultRecipient: client.email,
+                      openCompose: true
+                    });
+                  }}
+                  onWhatsApp={() => {
+                    window.open(
+                      `https://api.whatsapp.com/send/?phone=91${client.phone}&text=${encodeURIComponent(
+                        `Hi ${client.name}, this is from Dhanam Financial Services. Let's connect!`
+                      )}&type=phone_number&app_absent=0`,
+                      '_blank'
+                    );
+                  }}
+                  onViewDetails={() => {
+                    console.log("View details for:", client.name);
+                  }}
+                  onDelete={() => handleDeleteClick(client.id, client.name || '')}
+                  onFreeze={handleFreezeUpdate}
+                  sipReminders={sipReminders.filter(r => r.clientId === client.id)}
+                  investments={investments.filter(i => i.clientId === client.id)}
+                  onNavigateToSIP={() => setActiveTab('sip')}
+                  onNavigateToInvestments={() => setActiveTab('investment-tracker')}
+                />
+              ))
+            )}
           </div>
         ) : (
           // List View
@@ -470,34 +529,44 @@ export default function ClientsTab({
             
             {filteredClients.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                No clients found. Try adjusting your search.
+                {activeClientTab === 'frozen' 
+                  ? 'No frozen clients found.'
+                  : 'No clients found. Try adjusting your search.'}
               </div>
             ) : (
               <div className="divide-y">
                 {filteredClients.map(client => {
                   const { totalInvestment, sipAmount, hasSIP } = getClientInvestmentData(client.id);
                   const { isBirthdayThisMonth, isAnniversaryThisMonth } = getClientDateStatus(client);
+                  const isFrozen = client.isFrozen || false;
                   
                   return (
                     <div 
                       key={client.id} 
-                      className={`grid grid-cols-12 gap-4 px-4 py-3 hover:${currentTheme.highlightBg} transition-colors`}
+                      className={`grid grid-cols-12 gap-4 px-4 py-3 hover:${currentTheme.highlightBg} transition-colors ${
+                        isFrozen ? 'bg-slate-50 opacity-70' : ''
+                      }`}
                     >
                       {/* Client Info */}
                       <div className="col-span-3 flex items-center">
                         <div className="relative">
-                          <Avatar className="h-10 w-10 mr-3">
-                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold">
+                          <Avatar className={`h-10 w-10 mr-3 ${isFrozen ? 'grayscale' : ''}`}>
+                            <AvatarFallback className={`${isFrozen ? 'bg-gray-400' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold`}>
                               {getInitials(client.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="absolute -bottom-1 -right-1 flex">
-                            {isBirthdayThisMonth && (
+                            {isFrozen && (
+                              <div className="bg-slate-500 rounded-full p-0.5" title="Frozen">
+                                <Snowflake className="h-2.5 w-2.5 text-white" />
+                              </div>
+                            )}
+                            {isBirthdayThisMonth && !isFrozen && (
                               <div className="bg-pink-500 rounded-full p-0.5">
                                 <CalendarDays className="h-2.5 w-2.5 text-white" />
                               </div>
                             )}
-                            {isAnniversaryThisMonth && (
+                            {isAnniversaryThisMonth && !isFrozen && (
                               <div className="bg-purple-500 rounded-full p-0.5">
                                 <Heart className="h-2.5 w-2.5 text-white" />
                               </div>
@@ -507,7 +576,12 @@ export default function ClientsTab({
                         <div>
                           <div className="font-medium flex items-center">
                             {client.name}
-                            {client.riskProfile && (
+                            {isFrozen && (
+                              <Badge className="ml-2 text-xs bg-slate-200 text-slate-600">
+                                Frozen
+                              </Badge>
+                            )}
+                            {client.riskProfile && !isFrozen && (
                               <Badge className={`
                                 ml-2 text-xs px-1.5 py-0.5
                                 ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
@@ -544,6 +618,11 @@ export default function ClientsTab({
                               </div>
                             </div>
                           )}
+                          {isFrozen && client.freezeReason && (
+                            <div className="mt-1 p-1 bg-slate-100 rounded text-xs text-slate-600 italic">
+                              <span className="font-medium">Reason:</span> {client.freezeReason}
+                            </div>
+                          )}
                         </div>
                       </div>
                       
@@ -551,12 +630,12 @@ export default function ClientsTab({
                       <div className="col-span-2 flex items-center">
                         <div className="flex flex-wrap gap-1">
                           {getProductBadges(client).slice(0, 2).map((product, index) => (
-                            <Badge key={index} variant="secondary" className="text-xs">
+                            <Badge key={index} variant="secondary" className={`text-xs ${isFrozen ? 'bg-slate-100 text-slate-600' : ''}`}>
                               {product}
                             </Badge>
                           ))}
                           {getProductBadges(client).length > 2 && (
-                            <Badge variant="secondary" className="text-xs">
+                            <Badge variant="secondary" className={`text-xs ${isFrozen ? 'bg-slate-100 text-slate-600' : ''}`}>
                               +{getProductBadges(client).length - 2}
                             </Badge>
                           )}
@@ -566,7 +645,7 @@ export default function ClientsTab({
                       {/* Investment */}
                       <div className="col-span-2 flex items-center">
                         <div>
-                          {hasSIP && (
+                          {hasSIP && !isFrozen && (
                             <div className="text-sm">
                               <span className="text-gray-500">SIP: </span>
                               <span className="font-medium">{formatCurrency(sipAmount)}</span>
@@ -595,6 +674,7 @@ export default function ClientsTab({
                           onClick={() => setEditingClient(client)}
                           title="Edit Client"
                           className="h-8 px-2"
+                          disabled={isFrozen}
                         >
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -611,6 +691,7 @@ export default function ClientsTab({
                           }}
                           title="Send Email"
                           className="h-8 px-2"
+                          disabled={isFrozen}
                         >
                           <MailIcon className="h-4 w-4" />
                         </Button>
@@ -628,6 +709,7 @@ export default function ClientsTab({
                           }}
                           title="Send WhatsApp Message"
                           className="h-8 px-2"
+                          disabled={isFrozen}
                         >
                           <MessageSquare className="h-4 w-4" />
                         </Button>
@@ -638,6 +720,7 @@ export default function ClientsTab({
                           onClick={() => setActiveTab('sip')}
                           title="View SIP Details"
                           className="h-8 px-2"
+                          disabled={isFrozen}
                         >
                           <CreditCard className="h-4 w-4" />
                         </Button>
@@ -680,7 +763,7 @@ export default function ClientsTab({
           />
         )}
 
-        {/* Delete Confirmation Dialog - Matching your grid view exactly */}
+        {/* Delete Confirmation Dialog */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent className="sm:max-w-md bg-white">
             <DialogHeader>
