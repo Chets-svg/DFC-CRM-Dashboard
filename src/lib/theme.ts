@@ -1,5 +1,5 @@
 export type ThemeName = 'canberra' | 'wisteria' | 'apricot' | 'blue-smoke' | 
-                'dark' | 'blue' | 'indigo';
+                'dark' | 'blue' | 'indigo'|'neon';
 
 export interface ThemeColors {
   bgColor: string;
@@ -31,7 +31,8 @@ export const themeColorCircles: Record<ThemeName, string> = {
   'blue-smoke': '#3b82f6',
   'dark': '#374151',
   'blue': '#3b82f6',
-  'indigo': '#6366f1'
+  'indigo': '#6366f1',
+  'neon': '#22d3ee'
 };
 
 export const themes: Record<ThemeName, ThemeColors> = {
@@ -162,11 +163,47 @@ export const themes: Record<ThemeName, ThemeColors> = {
     buttonBg: 'bg-blue-600',
     buttonHover: 'hover:bg-blue-700',
     buttonText: 'text-white'
+  },
+
+'neon': {
+    bgColor: 'bg-slate-950',
+    textColor: 'text-cyan-100',
+    cardBg: 'bg-slate-900',
+    borderColor: 'border-cyan-500/20',
+    inputBg: 'bg-slate-800',
+    mutedText: 'text-slate-400',
+    highlightBg: 'bg-cyan-500/10',
+    selectedBg: 'bg-cyan-500/20',
+    buttonBg: 'bg-cyan-500',
+    buttonHover: 'hover:bg-cyan-400',
+    buttonText: 'text-slate-950',
   }
 };
 
 export const getButtonClasses = (theme: ThemeName, variant: 'primary' | 'secondary' | 'danger' | 'success' | 'outline' | 'ghost' | 'link' = 'primary') => {
   const themeObj = themes[theme];
+
+  
+
+   // Handle neon theme separately for glow effects
+  if (theme === 'neon') {
+    switch (variant) {
+      case 'danger':
+        return 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(248,113,113,0.3)] hover:shadow-[0_0_25px_rgba(248,113,113,0.5)]';
+      case 'success':
+        return 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_15px_rgba(74,222,128,0.3)] hover:shadow-[0_0_25px_rgba(74,222,128,0.5)]';
+      case 'secondary':
+        return 'bg-fuchsia-600 hover:bg-fuchsia-500 text-white shadow-[0_0_15px_rgba(232,121,249,0.3)] hover:shadow-[0_0_25px_rgba(232,121,249,0.5)]';
+      case 'outline':
+        return 'border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)]';
+      case 'ghost':
+        return 'text-cyan-300 hover:bg-cyan-500/10 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]';
+      case 'link':
+        return 'text-cyan-400 hover:text-cyan-300 hover:underline drop-shadow-[0_0_6px_rgba(0,255,255,0.4)]';
+      default: // primary
+        return 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold shadow-[0_0_15px_rgba(0,255,255,0.3)] hover:shadow-[0_0_25px_rgba(0,255,255,0.5)]';
+    }
+  }
   
   switch (variant) {
     case 'danger':
@@ -185,3 +222,7 @@ export const getButtonClasses = (theme: ThemeName, variant: 'primary' | 'seconda
       return `${themeObj.buttonBg} hover:${themeObj.buttonHover} ${themeObj.buttonText}`;
   }
 };
+export const isNeon = (theme: ThemeName): boolean => {
+  return theme === 'neon';
+};
+

@@ -15,3 +15,156 @@
     /* Other dark mode variables */
   }
 }
+
+/* ==================== NEON THEME STYLES ==================== */
+@layer components {
+
+  /* Neon grid background */
+  .neon-grid-bg {
+    background-image: 
+      linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Neon Calendar Overrides */
+  .neon-calendar {
+    background: transparent !important;
+    border: 1px solid rgba(0, 255, 255, 0.2) !important;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0, 255, 255, 0.05);
+  }
+
+  .neon-calendar .react-calendar__navigation {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+  }
+
+  .neon-calendar .react-calendar__navigation button {
+    color: #22d3ee !important;
+    font-weight: 600;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.4);
+  }
+
+  .neon-calendar .react-calendar__navigation button:hover {
+    background: rgba(0, 255, 255, 0.1) !important;
+    border-radius: 4px;
+  }
+
+  .neon-calendar .react-calendar__navigation button:disabled {
+    color: #475569 !important;
+    text-shadow: none;
+  }
+
+  .neon-calendar .react-calendar__month-view__weekdays__weekday {
+    color: #e879f9 !important;
+    text-shadow: 0 0 6px rgba(232, 121, 249, 0.3);
+    font-weight: 600;
+  }
+
+  .neon-calendar .react-calendar__month-view__weekdays__weekday abbr {
+    text-decoration: none !important;
+  }
+
+  .neon-calendar .react-calendar__tile {
+    color: #cbd5e1 !important;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+  }
+
+  .neon-calendar .react-calendar__tile:hover {
+    background: rgba(0, 255, 255, 0.1) !important;
+    color: #22d3ee !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+  }
+
+  .neon-calendar .react-calendar__tile--now {
+    background: rgba(0, 255, 255, 0.15) !important;
+    color: #22d3ee !important;
+    font-weight: 700;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+  }
+
+  .neon-calendar .react-calendar__tile--active {
+    background: rgba(232, 121, 249, 0.2) !important;
+    color: #e879f9 !important;
+    box-shadow: 0 0 15px rgba(232, 121, 249, 0.3);
+    border: 1px solid rgba(232, 121, 249, 0.4);
+  }
+
+  .neon-calendar .react-calendar__tile--neighboringMonth {
+    color: #475569 !important;
+  }
+
+  .neon-calendar .react-calendar__month-view__days__day--neighboringMonth {
+    color: #475569 !important;
+  }
+
+  /* Neon Scrollbar */
+  .neon-grid-bg ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .neon-grid-bg ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+
+  .neon-grid-bg ::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 255, 0.2);
+    border-radius: 4px;
+  }
+
+  .neon-grid-bg ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 255, 255, 0.4);
+  }
+
+  /* Neon Focus Ring Override */
+  .neon-grid-bg *:focus-visible {
+    outline: 2px solid rgba(0, 255, 255, 0.5);
+    outline-offset: 2px;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+  }
+
+} /* End @layer components */
+
+/* Keyframes MUST stay outside @layer components so they compile correctly */
+@keyframes neonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes neonGlow {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.2), 0 0 10px rgba(0, 255, 255, 0.1);
+  }
+  50% { 
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.3), 0 0 20px rgba(0, 255, 255, 0.2), 0 0 30px rgba(0, 255, 255, 0.1);
+  }
+}
+
+@keyframes neonFlicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 7px rgba(0, 255, 255, 0.5), 0 0 10px rgba(0, 255, 255, 0.3), 0 0 21px rgba(0, 255, 255, 0.2);
+  }
+  20%, 24%, 55% {
+    opacity: 0.8;
+    text-shadow: none;
+  }
+}
+
+/* Animation utility classes go in utilities layer */
+@layer utilities {
+  .animate-neon-pulse {
+    animation: neonPulse 2s ease-in-out infinite;
+  }
+
+  .animate-neon-glow {
+    animation: neonGlow 2s ease-in-out infinite;
+  }
+
+  .animate-neon-flicker {
+    animation: neonFlicker 3s infinite;
+  }
+}

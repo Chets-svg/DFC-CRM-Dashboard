@@ -23,7 +23,7 @@ import {
 import { Client } from '@/types/client';
 import { SIPReminder } from '@/types/sip-reminder';
 import { toast } from 'react-hot-toast';
-import { ThemeName, themes } from '@/lib/theme';
+import { ThemeName, themes, isNeon } from '@/lib/theme';
 import { 
   Dialog, 
   DialogContent, 
@@ -69,13 +69,13 @@ export function ClientCard({
   onNavigateToInvestments
 }: ClientCardProps) {
   const currentTheme = themes[theme] || themes['blue-smoke'];
+  const neon = isNeon(theme);
   const [copied, setCopied] = useState(false);
   const [isViewDetailsOpen, setIsViewDetailsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
   
-  // Freeze state
   const [isFreezeDialogOpen, setIsFreezeDialogOpen] = useState(false);
   const [freezeReason, setFreezeReason] = useState('');
   const [freezeLoading, setFreezeLoading] = useState(false);
@@ -157,7 +157,6 @@ export function ClientCard({
   };
 
   const handleFreezeConfirm = async () => {
-    // Validate reason when freezing
     if (!isFrozen && !freezeReason.trim()) {
       toast.error('Please provide a reason for freezing this client');
       return;
@@ -168,7 +167,6 @@ export function ClientCard({
     try {
       const clientRef = doc(db, 'clients', client.id);
       
-      // Prepare update data
       const updateData: any = {
         isFrozen: !isFrozen,
         frozenAt: !isFrozen ? new Date().toISOString() : null,
@@ -176,21 +174,17 @@ export function ClientCard({
         unfrozenAt: isFrozen ? new Date().toISOString() : null
       };
 
-      // Update Firestore
       await updateDoc(clientRef, updateData);
       
-      // Close dialog and reset state
       setIsFreezeDialogOpen(false);
       setFreezeReason('');
       
-      // Show success toast
       toast.success(
         isFrozen 
           ? 'Client unfrozen successfully' 
           : 'Client frozen successfully'
       );
       
-      // Call the onFreeze callback to refresh parent state
       if (onFreeze) {
         onFreeze();
       }
@@ -203,16 +197,135 @@ export function ClientCard({
     }
   };
 
-  return (    
-    <div className={`bg-white rounded-xl shadow-sm border ${currentTheme.borderColor} overflow-hidden hover:shadow-md transition-shadow`}>
-      {/* Header - Keep theme-based styling for all cards */}
-      <div className={`px-3 py-2 flex justify-between items-center ${
-        theme === 'dark' 
-          ? currentTheme.darkBgColor 
-            ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
-            : `bg-gradient-to-r from-gray-700 to-gray-600`
-          : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`
-      }`}>
+  // ── Neon helper classes ──
+  const neonCardOuter = neon
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)] hover:shadow-[0_0_30px_rgba(0,255,255,0.12)] hover:border-cyan-400/30'
+    : `bg-white ${currentTheme.borderColor}`;
+
+  const neonHeaderBg = neon
+    ? 'bg-gradient-to-r from-cyan-900/80 to-fuchsia-900/60'
+    : theme === 'dark'
+      ? currentTheme.darkBgColor
+        ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
+        : 'bg-gradient-to-r from-gray-700 to-gray-600'
+      : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`;
+
+  const neonAvatarBg = isFrozen
+    ? 'from-slate-400 to-slate-500'
+    : neon
+      ? 'from-cyan-500 to-fuchsia-600'
+      : 'from-blue-500 to-indigo-600';
+
+  const neonAvatarBorder = isFrozen
+    ? 'border-slate-400'
+    : neon
+      ? 'border-cyan-400'
+      : 'border-blue-300';
+
+  const neonInputCls = neon
+    ? 'bg-cyan-950/30 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-600/50 focus:border-cyan-400 focus:ring-cyan-500/20'
+    : '';
+
+  const neonLabelCls = neon ? 'text-cyan-300/80' : '';
+
+  const neonMutedText = neon ? 'text-cyan-500/60' : currentTheme.mutedText;
+
+  const neonSectionTitle = neon
+    ? 'text-cyan-400 font-semibold tracking-wide uppercase text-xs'
+    : 'font-medium';
+
+  const neonHighlightBg = neon ? 'bg-cyan-950/30' : currentTheme.highlightBg;
+
+  // Action button base classes
+  const actionBtn = (color: string, neonColor: string) => {
+    if (neon) {
+      return `h-8 p-1 text-${neonColor}-400 border-${neonColor}-500/30 bg-${neonColor}-950/30 hover:bg-${neonColor}-500/10 hover:border-${neonColor}-400 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]`;
+    }
+    return `h-8 p-1 text-${color}-600 border-${color}-200 bg-${color}-50 hover:bg-${color}-100`;
+  };
+
+  // Product badge neon colors
+  const productBadgeCls = (key: string) => {
+    if (isFrozen) return 'text-slate-600 bg-slate-100 border border-slate-200';
+    if (!neon) {
+      return key === 'sip' ? 'text-blue-600 bg-blue-50 border border-blue-100' :
+        key === 'mutualFund' ? 'text-purple-600 bg-purple-50 border border-purple-100' :
+        key === 'lumpsum' ? 'text-green-600 bg-green-50 border border-green-100' :
+        'text-blue-600 bg-blue-50 border border-blue-100';
+    }
+    return key === 'sip' ? 'text-cyan-300 bg-cyan-950/40 border border-cyan-500/30' :
+      key === 'mutualFund' ? 'text-fuchsia-300 bg-fuchsia-950/40 border border-fuchsia-500/30' :
+      key === 'lumpsum' ? 'text-green-300 bg-green-950/40 border border-green-500/30' :
+      key === 'healthInsurance' ? 'text-teal-300 bg-teal-950/40 border border-teal-500/30' :
+      key === 'lifeInsurance' ? 'text-indigo-300 bg-indigo-950/40 border border-indigo-500/30' :
+      key === 'taxation' ? 'text-amber-300 bg-amber-950/40 border border-amber-500/30' :
+      key === 'nps' ? 'text-pink-300 bg-pink-950/40 border border-pink-500/30' :
+      'text-cyan-300 bg-cyan-950/40 border border-cyan-500/30';
+  };
+
+  // Product detail badge in modal
+  const productDetailBadgeCls = (key: string) => {
+    if (isFrozen) return 'bg-slate-100 text-slate-600';
+    if (neon) {
+      return key === 'sip' ? 'bg-cyan-950/50 text-cyan-300' :
+        key === 'mutualFund' ? 'bg-fuchsia-950/50 text-fuchsia-300' :
+        key === 'lumpsum' ? 'bg-green-950/50 text-green-300' :
+        key === 'healthInsurance' ? 'bg-teal-950/50 text-teal-300' :
+        key === 'lifeInsurance' ? 'bg-indigo-950/50 text-indigo-300' :
+        key === 'taxation' ? 'bg-amber-950/50 text-amber-300' :
+        key === 'nps' ? 'bg-pink-950/50 text-pink-300' :
+        'bg-gray-800 text-gray-300';
+    }
+    return key === 'sip' ? 'bg-blue-100 text-blue-800' :
+      key === 'mutualFund' ? 'bg-purple-100 text-purple-800' :
+      key === 'lumpsum' ? 'bg-green-100 text-green-800' :
+      key === 'healthInsurance' ? 'bg-teal-100 text-teal-800' :
+      key === 'lifeInsurance' ? 'bg-indigo-100 text-indigo-800' :
+      key === 'taxation' ? 'bg-orange-100 text-orange-800' :
+      key === 'nps' ? 'bg-pink-100 text-pink-800' :
+      'bg-gray-100 text-gray-800';
+  };
+
+  // Risk profile badge
+  const riskBadgeCls = () => {
+    if (neon) {
+      return client.riskProfile === 'conservative' ? 'bg-cyan-950/50 text-cyan-300 border border-cyan-500/30' :
+        client.riskProfile === 'moderate' ? 'bg-green-950/50 text-green-300 border border-green-500/30' :
+        'bg-amber-950/50 text-amber-300 border border-amber-500/30';
+    }
+    return client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' :
+      client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' :
+      'bg-amber-100 text-amber-800';
+  };
+
+  // SIP status badge
+  const sipStatusBadgeCls = (status: string) => {
+    if (neon) {
+      return status === 'active' ? 'bg-green-950/50 text-green-300 border border-green-500/30' :
+        status === 'paused' ? 'bg-amber-950/50 text-amber-300 border border-amber-500/30' :
+        'bg-gray-800 text-gray-400 border border-gray-600';
+    }
+    return status === 'active' ? 'bg-green-100 text-green-800' :
+      status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+      'bg-gray-100 text-gray-800';
+  };
+
+  // Dialog content classes
+  const dialogCls = neon
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
+    : `${currentTheme.cardBg} ${currentTheme.borderColor} border`;
+
+  const dangerDialogCls = neon
+    ? 'bg-gray-950 border-red-500/20 shadow-[0_0_40px_rgba(255,0,0,0.06)]'
+    : 'bg-white';
+
+  const freezeDialogCls = neon
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
+    : 'bg-white';
+      return (    
+    <div className={`rounded-xl shadow-sm border overflow-hidden transition-shadow ${neonCardOuter}`}>
+      {/* Header */}
+      <div className={`px-3 py-2 flex justify-between items-center ${neonHeaderBg}`}>
         <div className="min-w-0">
           <h2 className="text-white font-medium truncate flex items-center gap-2">
             {client.name}
@@ -220,55 +333,56 @@ export function ClientCard({
               <Snowflake className="h-3.5 w-3.5 text-blue-200" />
             )}
           </h2>
-          <p className="text-blue-100 text-xs">Added: {formatDate(client.createdAt)}</p>
+          <p className={`${neon ? 'text-cyan-200/70' : 'text-blue-100'} text-xs`}>
+            Added: {formatDate(client.createdAt)}
+          </p>
         </div>
         <div className="flex items-center gap-1">
           {isFrozen && (
-            <Badge className="bg-white/30 text-white text-xs px-1.5 py-0.5 flex items-center gap-1">
+            <Badge className={`text-xs px-1.5 py-0.5 flex items-center gap-1 ${
+              neon ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-white/30 text-white'
+            }`}>
               <Snowflake className="h-3 w-3" />
               Frozen
             </Badge>
           )}
           {client.products.sip && (
-            <Badge className="bg-white/20 text-white text-xs px-1.5 py-0.5">
+            <Badge className={`text-xs px-1.5 py-0.5 ${
+              neon ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30' : 'bg-white/20 text-white'
+            }`}>
               SIP
             </Badge>
           )}
           {client.riskProfile && (
-            <Badge className={`
-              ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
-                client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' : 
-                'bg-amber-100 text-amber-800'}
-              text-xs px-1.5 py-0.5
-            `}>
+            <Badge className={`${riskBadgeCls()} text-xs px-1.5 py-0.5`}>
               {client.riskProfile.charAt(0)}
             </Badge>
           )}
         </div>
       </div>
 
-      <div className="p-3">
+      <div className={`p-3 ${neon ? 'bg-gray-950' : ''}`}>
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
-            <Avatar className={`h-10 w-10 border ${isFrozen ? 'border-slate-400' : 'border-blue-300'}`}>
-              <AvatarFallback className={`${isFrozen ? 'bg-gradient-to-r from-slate-400 to-slate-500' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold text-sm`}>
+            <Avatar className={`h-10 w-10 border ${neonAvatarBorder}`}>
+              <AvatarFallback className={`bg-gradient-to-r ${neonAvatarBg} text-white font-bold text-sm`}>
                 {getInitials(client.name)}
               </AvatarFallback>
             </Avatar>
             <div className="absolute -bottom-1 -right-1 flex">
               {isFrozen && (
-                <div className="bg-slate-500 rounded-full p-0.5" title="Frozen">
-                  <Snowflake className="h-2.5 w-2.5 text-white" />
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-cyan-500/30' : 'bg-slate-500'}`} title="Frozen">
+                  <Snowflake className={`h-2.5 w-2.5 ${neon ? 'text-cyan-300' : 'text-white'}`} />
                 </div>
               )}
               {isBirthdayThisMonth && !isFrozen && (
-                <div className="bg-pink-500 rounded-full p-0.5">
-                  <CalendarDays className="h-2.5 w-2.5 text-white" />
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-fuchsia-500/30' : 'bg-pink-500'}`}>
+                  <CalendarDays className={`h-2.5 w-2.5 ${neon ? 'text-fuchsia-300' : 'text-white'}`} />
                 </div>
               )}
               {isAnniversaryThisMonth && !isFrozen && (
-                <div className="bg-purple-500 rounded-full p-0.5">
-                  <Heart className="h-2.5 w-2.5 text-white" />
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-pink-500/30' : 'bg-purple-500'}`}>
+                  <Heart className={`h-2.5 w-2.5 ${neon ? 'text-pink-300' : 'text-white'}`} />
                 </div>
               )}
             </div>
@@ -276,25 +390,25 @@ export function ClientCard({
 
           <div className="flex-1 min-w-0">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5 text-gray-600">
-                <Mail className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              <div className={`flex items-center gap-1.5 ${neon ? 'text-cyan-200/80' : 'text-gray-600'}`}>
+                <Mail className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                 <span className="text-sm truncate">{client.email || 'No email'}</span>
               </div>
-              <div className="flex items-center gap-1.5 text-gray-600">
-                <Phone className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+              <div className={`flex items-center gap-1.5 ${neon ? 'text-cyan-200/80' : 'text-gray-600'}`}>
+                <Phone className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                 <span className="text-sm">{client.phone || 'No phone'}</span>
               </div>
               
               <div className="flex flex-wrap gap-2 text-xs mt-1">
                 {client.dob && (
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <CalendarDays className="w-3 h-3 text-blue-500" />
+                  <div className={`flex items-center gap-1 ${neon ? 'text-cyan-500/70' : 'text-gray-500'}`}>
+                    <CalendarDays className={`w-3 h-3 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                     <span>DOB: {formatDate(client.dob)}</span>
                   </div>
                 )}
                 {client.marriageAnniversary && (
-                  <div className="flex items-center gap-1 text-gray-500">
-                    <Heart className="w-3 h-3 text-pink-500" />
+                  <div className={`flex items-center gap-1 ${neon ? 'text-pink-500/70' : 'text-gray-500'}`}>
+                    <Heart className={`w-3 h-3 ${neon ? 'text-pink-400' : 'text-pink-500'}`} />
                     <span>Anniv: {formatDate(client.marriageAnniversary)}</span>
                   </div>
                 )}
@@ -302,13 +416,17 @@ export function ClientCard({
 
               {client.can && (
                 <div className="flex items-center gap-1.5 pt-1">
-                  <span className="text-xs font-medium text-gray-500">CAN:</span>
-                  <div className="flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5">
-                    <span className="font-mono text-xs">{client.can}</span>
+                  <span className={`text-xs font-medium ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>CAN:</span>
+                  <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                    neon ? 'bg-cyan-950/40 border border-cyan-500/20' : 'bg-gray-100'
+                  }`}>
+                    <span className={`font-mono text-xs ${neon ? 'text-cyan-300' : ''}`}>{client.can}</span>
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      className="h-5 w-5 p-0 text-gray-600 hover:bg-gray-200"
+                      className={`h-5 w-5 p-0 ${
+                        neon ? 'text-cyan-400 hover:bg-cyan-500/10' : 'text-gray-600 hover:bg-gray-200'
+                      }`}
                       onClick={handleCopyCAN}
                     >
                       <Copy className="h-2.5 w-2.5" />
@@ -318,7 +436,9 @@ export function ClientCard({
               )}
               
               {isFrozen && client.freezeReason && (
-                <div className="mt-1 p-1.5 bg-slate-100 rounded text-xs text-slate-600 italic">
+                <div className={`mt-1 p-1.5 rounded text-xs italic ${
+                  neon ? 'bg-cyan-950/30 border border-cyan-500/15 text-cyan-400/70' : 'bg-slate-100 text-slate-600'
+                }`}>
                   <span className="font-medium">Reason:</span> {client.freezeReason}
                 </div>
               )}
@@ -326,13 +446,13 @@ export function ClientCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 mt-3 pt-2 border-t border-gray-100">
+        <div className={`grid grid-cols-2 gap-2 mt-3 pt-2 border-t ${neon ? 'border-cyan-500/10' : 'border-gray-100'}`}>
           {client.products.sip && (
             <div className="space-y-0.5">
-              <p className="text-xs text-gray-500 flex items-center gap-1">
+              <p className={`text-xs flex items-center gap-1 ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>
                 <User className="w-2.5 h-2.5" /> SIP
               </p>
-              <p className="font-medium">
+              <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>
                 {upcomingSIPs.length > 0 
                   ? `₹${upcomingSIPs.reduce((sum, sip) => sum + sip.amount, 0).toLocaleString()}` 
                   : 'None'}
@@ -340,8 +460,8 @@ export function ClientCard({
             </div>
           )}
           <div className="space-y-0.5">
-            <p className="text-xs text-gray-500">Investment</p>
-            <p className="font-medium">
+            <p className={`text-xs ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>Investment</p>
+            <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>
               {totalInvestment > 0 
                 ? `₹${totalInvestment.toLocaleString()}` 
                 : 'None'}
@@ -356,11 +476,7 @@ export function ClientCard({
               .map(([key]) => (
                 <Badge 
                   key={key} 
-                  className={`text-xs px-1.5 py-0.5 capitalize ${
-                    isFrozen 
-                      ? 'text-slate-600 bg-slate-100 border border-slate-200'
-                      : 'text-blue-600 bg-blue-50 border border-blue-100'
-                  }`}
+                  className={`text-xs px-1.5 py-0.5 capitalize ${productBadgeCls(key)}`}
                 >
                   {key.replace(/([A-Z])/g, ' $1').split(' ')[0]}
                 </Badge>
@@ -368,15 +484,19 @@ export function ClientCard({
           </div>
         </div>
 
-        <div className="pt-3 mt-2 border-t border-gray-100">
+        <div className={`pt-3 mt-2 border-t ${neon ? 'border-cyan-500/10' : 'border-gray-100'}`}>
           <div className="grid grid-cols-6 gap-1.5">
             <Button 
               size="sm" 
               variant="outline" 
-              className={`h-8 p-1 ${
-                isFrozen 
-                  ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
-                  : 'text-cyan-600 border-cyan-200 bg-cyan-50 hover:bg-cyan-100'
+              className={`rounded-lg ${
+                isFrozen
+                  ? neon
+                    ? 'text-green-400 border-green-500/30 bg-green-950/30 hover:bg-green-500/10 hover:border-green-400 hover:shadow-[0_0_10px_rgba(74,222,128,0.15)]'
+                    : 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
+                  : neon
+                    ? 'text-cyan-400 border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]'
+                    : 'text-cyan-600 border-cyan-200 bg-cyan-50 hover:bg-cyan-100'
               }`}
               onClick={handleFreezeClick}
               title={isFrozen ? 'Unfreeze Client' : 'Freeze Client'}
@@ -391,43 +511,67 @@ export function ClientCard({
             <Button 
               size="sm" 
               variant="outline" 
-              className={`h-8 p-1 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`} 
+              className={`rounded-lg ${
+                neon
+                  ? 'text-fuchsia-400 border-fuchsia-500/30 bg-fuchsia-950/30 hover:bg-fuchsia-500/10 hover:border-fuchsia-400'
+                  : 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
+              } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={onEmail}
               disabled={isFrozen}
             >
               <Mail className="w-3.5 h-3.5" />
             </Button>
+
             <Button 
               size="sm" 
               variant="outline" 
-              className={`h-8 p-1 text-green-600 border-green-200 bg-green-50 hover:bg-green-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`} 
+              className={`rounded-lg ${
+                neon
+                  ? 'text-green-400 border-green-500/30 bg-green-950/30 hover:bg-green-500/10 hover:border-green-400'
+                  : 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
+              } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={onWhatsApp}
               disabled={isFrozen}
             >
               <MessageSquare className="w-3.5 h-3.5" /> 
             </Button>
+
             <Button 
               variant="outline" 
               size="sm" 
               onClick={onEdit}
-              className={`h-8 p-1 text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
+              className={`rounded-lg ${
+                neon
+                  ? 'text-amber-400 border-amber-500/30 bg-amber-950/30 hover:bg-amber-500/10 hover:border-amber-400'
+                  : 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
+              } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isFrozen}
             >
               <Edit className="h-3.5 w-3.5" />
             </Button>
+
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleViewDetails}
-              className="h-8 p-1 text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100"
+              className={`rounded-lg ${
+                neon
+                  ? 'text-indigo-400 border-indigo-500/30 bg-indigo-950/30 hover:bg-indigo-500/10 hover:border-indigo-400'
+                  : 'text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
+              }`}
             >
               <User className="h-3.5 w-3.5" />
             </Button>
+
             <Button 
               variant="outline" 
               size="sm" 
               onClick={handleDeleteClick}
-              className="h-8 p-1 text-red-600 border-red-200 bg-red-50 hover:bg-red-100"
+              className={`rounded-lg ${
+                neon
+                  ? 'text-red-400 border-red-500/30 bg-red-950/30 hover:bg-red-500/10 hover:border-red-400 hover:shadow-[0_0_10px_rgba(255,0,0,0.15)]'
+                  : 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100'
+              }`}
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -435,28 +579,36 @@ export function ClientCard({
         </div>
       </div>
 
-      {/* View Details Modal */}
+      {/* ── View Details Modal ── */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
-        <DialogContent className={`${currentTheme.cardBg} ${currentTheme.borderColor} border max-w-md p-0`}>
+        <DialogContent className={`${dialogCls} max-w-md p-0`}>
           <div className="relative">
             <CardHeader className="p-4">
               <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow ${isFrozen ? 'bg-gradient-to-r from-slate-400 to-slate-500' : 'bg-blue-500'}`}>
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shadow ${
+                  isFrozen
+                    ? 'bg-gradient-to-r from-slate-400 to-slate-500'
+                    : neon
+                      ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-600'
+                      : 'bg-blue-500'
+                }`}>
                   <span className="text-white font-bold text-lg">
                     {getInitials(client.name)}
                   </span>
                 </div>
                 <div>
-                  <CardTitle className="text-xl flex items-center gap-2">
+                  <CardTitle className={`text-xl flex items-center gap-2 ${neon ? 'text-cyan-200' : ''}`}>
                     {client.name}
                     {isFrozen && (
-                      <Badge className="text-xs bg-slate-200 text-slate-600 flex items-center gap-1">
+                      <Badge className={`text-xs flex items-center gap-1 ${
+                        neon ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30' : 'bg-slate-200 text-slate-600'
+                      }`}>
                         <Snowflake className="h-3 w-3" />
                         Frozen
                       </Badge>
                     )}
                   </CardTitle>
-                  <p className={`text-sm ${currentTheme.mutedText}`}>
+                  <p className={`text-sm ${neonMutedText}`}>
                     Client since {formatDate(client.createdAt)}
                   </p>
                 </div>
@@ -465,39 +617,41 @@ export function ClientCard({
             
             <CardContent className="p-4 grid grid-cols-1 gap-4">
               {isFrozen && (
-                <div className="p-3 bg-slate-100 rounded-lg border border-slate-200">
-                  <div className="flex items-center gap-2 text-slate-700">
+                <div className={`p-3 rounded-lg border ${
+                  neon ? 'bg-cyan-950/30 border-cyan-500/20' : 'bg-slate-100 border-slate-200'
+                }`}>
+                  <div className={`flex items-center gap-2 ${neon ? 'text-cyan-300' : 'text-slate-700'}`}>
                     <Snowflake className="h-4 w-4" />
                     <span className="font-medium">Client Frozen</span>
                   </div>
                   {client.freezeReason && (
-                    <p className="text-sm text-slate-600 mt-1 italic">
+                    <p className={`text-sm mt-1 italic ${neon ? 'text-cyan-400/70' : 'text-slate-600'}`}>
                       "{client.freezeReason}"
                     </p>
                   )}
                   {client.frozenAt && (
-                    <p className="text-xs text-slate-500 mt-1">
+                    <p className={`text-xs mt-1 ${neon ? 'text-cyan-500/50' : 'text-slate-500'}`}>
                       Frozen on: {formatDate(client.frozenAt)}
                     </p>
                   )}
                 </div>
               )}
               
-              <div className="space-y-3">
-                <h3 className="font-medium">Contact Information</h3>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-cyan-950/20 border border-cyan-500/10' : ''}`}>
+                <h3 className={neonSectionTitle}>Contact Information</h3>
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
+                  <div className={`flex items-center gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
+                    <Mail className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                     <span>{client.email}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
+                  <div className={`flex items-center gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
+                    <Phone className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                     <span>{client.phone}</span>
                   </div>
                   {client.address && (
-                    <div className="flex items-start gap-2">
+                    <div className={`flex items-start gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
                       <span className="mt-0.5">
-                        <Home className="h-4 w-4" />
+                        <Home className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                       </span>
                       <span>{client.address}</span>
                     </div>
@@ -505,57 +659,47 @@ export function ClientCard({
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <h3 className="font-medium">Personal Dates</h3>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-fuchsia-950/20 border border-fuchsia-500/10' : ''}`}>
+                <h3 className={neon ? 'text-fuchsia-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
+                  Personal Dates
+                </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {client.dob && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500">Birthday</p>
-                      <p className="text-sm">{formatDate(client.dob)}</p>
+                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-500/60' : 'text-gray-500'}`}>Birthday</p>
+                      <p className={`text-sm ${neon ? 'text-cyan-200' : ''}`}>{formatDate(client.dob)}</p>
                     </div>
                   )}
                   {client.marriageAnniversary && (
                     <div>
-                      <p className="text-xs font-medium text-gray-500">Anniversary</p>
-                      <p className="text-sm">{formatDate(client.marriageAnniversary)}</p>
+                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-500/60' : 'text-gray-500'}`}>Anniversary</p>
+                      <p className={`text-sm ${neon ? 'text-cyan-200' : ''}`}>{formatDate(client.marriageAnniversary)}</p>
                     </div>
                   )}
                 </div>
               </div>
               
-              <div className="space-y-3">
-                <h3 className="font-medium">Investment Profile</h3>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-green-950/20 border border-green-500/10' : ''}`}>
+                <h3 className={neon ? 'text-green-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
+                  Investment Profile
+                </h3>
                 <div className="space-y-2">
-                  <p>
+                  <p className={neon ? 'text-cyan-200/80' : ''}>
                     <span className="font-medium">Risk:</span> 
-                    <span className={`capitalize ml-2 px-2 py-1 rounded-full text-xs ${
-                      client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' :
-                      client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>
+                    <span className={`capitalize ml-2 px-2 py-1 rounded-full text-xs ${riskBadgeCls()}`}>
                       {client.riskProfile}
                     </span>
                   </p>
                   
                   <div className="mt-2">
-                    <h4 className="font-medium text-sm mb-2">Products:</h4>
+                    <h4 className={`font-medium text-sm mb-2 ${neon ? 'text-cyan-300' : ''}`}>Products:</h4>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(client.products)
                         .filter(([_, isSelected]) => isSelected)
                         .map(([productKey]) => (
                           <span 
                             key={productKey} 
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              isFrozen ? 'bg-slate-100 text-slate-600' :
-                              productKey === 'sip' ? 'bg-blue-100 text-blue-800' :
-                              productKey === 'mutualFund' ? 'bg-purple-100 text-purple-800' :
-                              productKey === 'lumpsum' ? 'bg-green-100 text-green-800' :
-                              productKey === 'healthInsurance' ? 'bg-teal-100 text-teal-800' :
-                              productKey === 'lifeInsurance' ? 'bg-indigo-100 text-indigo-800' :
-                              productKey === 'taxation' ? 'bg-orange-100 text-orange-800' :
-                              productKey === 'nps' ? 'bg-pink-100 text-pink-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}
+                            className={`px-2 py-1 rounded-full text-xs ${productDetailBadgeCls(productKey)}`}
                           >
                             {getProductDisplayName(productKey)}
                           </span>
@@ -566,27 +710,25 @@ export function ClientCard({
               </div>
               
               {client.products.sip && !isFrozen && (
-                <div className="space-y-3">
-                  <h3 className="font-medium">SIP Details</h3>
+                <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-amber-950/20 border border-amber-500/10' : ''}`}>
+                  <h3 className={neon ? 'text-amber-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
+                    SIP Details
+                  </h3>
                   {upcomingSIPs.length > 0 ? (
                     <div className="space-y-2">
                       {upcomingSIPs.map((sip, index) => (
                         <div 
                           key={index} 
-                          className={`p-2 rounded ${currentTheme.highlightBg}`}
+                          className={`p-2 rounded ${neonHighlightBg}`}
                         >
                           <div className="flex justify-between">
                             <div>
-                              <p className="font-medium">{formatCurrency(sip.amount)}</p>
-                              <p className="text-sm text-gray-500">
+                              <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>{formatCurrency(sip.amount)}</p>
+                              <p className={`text-sm ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>
                                 {sip.frequency} • Next: {formatDate(sip.nextDate)}
                               </p>
                             </div>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              sip.status === 'active' ? 'bg-green-100 text-green-800' :
-                              sip.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
+                            <span className={`px-2 py-1 text-xs rounded-full ${sipStatusBadgeCls(sip.status)}`}>
                               {sip.status}
                             </span>
                           </div>
@@ -594,8 +736,8 @@ export function ClientCard({
                       ))}
                     </div>
                   ) : (
-                    <div className={`p-2 rounded ${currentTheme.highlightBg}`}>
-                      <p className="text-sm">No active SIPs found</p>
+                    <div className={`p-2 rounded ${neonHighlightBg}`}>
+                      <p className={`text-sm ${neon ? 'text-cyan-500/60' : ''}`}>No active SIPs found</p>
                     </div>
                   )}
                   <Button 
@@ -605,7 +747,11 @@ export function ClientCard({
                       setIsViewDetailsOpen(false);
                       onNavigateToSIP();
                     }}
-                    className="mt-2 h-8"
+                    className={`mt-2 h-8 rounded-lg ${
+                      neon
+                        ? 'border-amber-500/30 text-amber-400 bg-amber-950/30 hover:bg-amber-500/10 hover:border-amber-400'
+                        : ''
+                    }`}
                   >
                     <Plus className="mr-1 h-4 w-4" /> Add SIP
                   </Button>
@@ -613,9 +759,11 @@ export function ClientCard({
               )}
               
               <div>
-                <h3 className="font-medium mb-2">Notes</h3>
-                <div className={`p-2 rounded ${currentTheme.highlightBg}`}>
-                  {client.notes || "No notes available."}
+                <h3 className={`mb-2 ${neonSectionTitle}`}>Notes</h3>
+                <div className={`p-2 rounded ${neonHighlightBg}`}>
+                  <span className={neon ? 'text-cyan-200/80' : ''}>
+                    {client.notes || "No notes available."}
+                  </span>
                 </div>
               </div>
             </CardContent>
@@ -625,7 +773,9 @@ export function ClientCard({
                 variant="outline" 
                 size="sm"
                 onClick={() => setIsViewDetailsOpen(false)}
-                className="h-8"
+                className={`h-8 rounded-lg ${
+                  neon ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' : ''
+                }`}
               >
                 Close
               </Button>
@@ -635,7 +785,11 @@ export function ClientCard({
                   setIsViewDetailsOpen(false);
                   onEdit();
                 }}
-                className="h-8"
+                className={`h-8 rounded-lg ${
+                  neon
+                    ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 font-semibold shadow-[0_0_15px_rgba(0,255,255,0.25)]'
+                    : ''
+                }`}
                 disabled={isFrozen}
               >
                 Edit
@@ -645,28 +799,28 @@ export function ClientCard({
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Confirmation Modal ── */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-white">
+        <DialogContent className={`sm:max-w-md ${dangerDialogCls}`}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={`flex items-center gap-2 ${neon ? 'text-red-400' : ''}`}>
               <Trash2 className="h-5 w-5 text-red-500" />
               Delete Client
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className={neon ? 'text-red-400/60' : ''}>
               This action cannot be undone. Please confirm by entering the password.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
             <div className="space-y-4">
               <div>
-                <Label htmlFor="delete-password">Password</Label>
+                <Label htmlFor="delete-password" className={neon ? 'text-red-300/80' : ''}>Password</Label>
                 <Input
                   id="delete-password"
                   type="password"
                   value={deletePassword}
                   onChange={(e) => setDeletePassword(e.target.value)}
-                  className="mt-1"
+                  className={`mt-1 ${neonInputCls}`}
                   placeholder="Enter password to confirm"
                   onKeyDown={(e) => e.key === 'Enter' && handleDeleteConfirm()}
                 />
@@ -674,8 +828,12 @@ export function ClientCard({
                   <p className="text-sm text-red-500 mt-1">{deleteError}</p>
                 )}
               </div>
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700">
+              <div className={`rounded-lg p-3 ${
+                neon
+                  ? 'bg-red-950/30 border border-red-500/20'
+                  : 'bg-red-50 border border-red-200'
+              }`}>
+                <p className={`text-sm ${neon ? 'text-red-300/80' : 'text-red-700'}`}>
                   <span className="font-medium">Warning:</span> Deleting this client will permanently remove all associated data including SIP reminders and investment records.
                 </p>
               </div>
@@ -685,14 +843,20 @@ export function ClientCard({
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
-              className="px-4"
+              className={`px-4 rounded-lg ${
+                neon ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400' : ''
+              }`}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteConfirm}
-              className="px-4 bg-red-600 hover:bg-red-700"
+              className={`px-4 rounded-lg ${
+                neon
+                  ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.3)]'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Confirm Delete
@@ -701,11 +865,11 @@ export function ClientCard({
         </DialogContent>
       </Dialog>
 
-      {/* Freeze Confirmation Modal */}
+      {/* ── Freeze Confirmation Modal ── */}
       <Dialog open={isFreezeDialogOpen} onOpenChange={setIsFreezeDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-white">
+        <DialogContent className={`sm:max-w-md ${freezeDialogCls}`}>
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className={`flex items-center gap-2 ${neon ? (isFrozen ? 'text-green-400' : 'text-cyan-400') : ''}`}>
               {isFrozen ? (
                 <>
                   <Unlock className="h-5 w-5 text-green-500" />
@@ -718,7 +882,7 @@ export function ClientCard({
                 </>
               )}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className={neon ? 'text-cyan-500/60' : ''}>
               {isFrozen
                 ? `You are about to unfreeze "${client.name}". This will restore the client to active status.`
                 : `You are about to freeze "${client.name}". This client will be marked as inactive.`
@@ -729,22 +893,34 @@ export function ClientCard({
             <div className="space-y-4">
               {!isFrozen && (
                 <div>
-                  <Label htmlFor="freeze-reason">
+                  <Label htmlFor="freeze-reason" className={neon ? 'text-cyan-300/80' : ''}>
                     Reason for Freezing <span className="text-red-500">*</span>
                   </Label>
                   <Textarea
                     id="freeze-reason"
                     value={freezeReason}
                     onChange={(e) => setFreezeReason(e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 ${neonInputCls}`}
                     placeholder="e.g., Client requested to stop investments, Exited from mutual funds, etc."
                     rows={3}
                   />
                 </div>
               )}
               
-              <div className={`rounded-lg p-3 ${isFrozen ? 'bg-green-50 border border-green-200' : 'bg-cyan-50 border border-cyan-200'}`}>
-                <p className={`text-sm ${isFrozen ? 'text-green-700' : 'text-cyan-700'}`}>
+              <div className={`rounded-lg p-3 ${
+                isFrozen
+                  ? neon
+                    ? 'bg-green-950/30 border border-green-500/20'
+                    : 'bg-green-50 border border-green-200'
+                  : neon
+                    ? 'bg-cyan-950/30 border border-cyan-500/20'
+                    : 'bg-cyan-50 border border-cyan-200'
+              }`}>
+                <p className={`text-sm ${
+                  isFrozen
+                    ? neon ? 'text-green-300/80' : 'text-green-700'
+                    : neon ? 'text-cyan-300/80' : 'text-cyan-700'
+                }`}>
                   {isFrozen ? (
                     <>
                       <span className="font-medium">Note:</span> Unfreezing will restore full access to the client profile and enable all actions.
@@ -762,7 +938,9 @@ export function ClientCard({
             <Button
               variant="outline"
               onClick={() => setIsFreezeDialogOpen(false)}
-              className="px-4"
+              className={`px-4 rounded-lg ${
+                neon ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' : ''
+              }`}
               disabled={freezeLoading}
             >
               Cancel
@@ -770,10 +948,14 @@ export function ClientCard({
             <Button
               onClick={handleFreezeConfirm}
               disabled={freezeLoading}
-              className={`px-4 ${
-                isFrozen 
-                  ? 'bg-green-600 hover:bg-green-700 text-white' 
-                  : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+              className={`px-4 rounded-lg ${
+                isFrozen
+                  ? neon
+                    ? 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_15px_rgba(74,222,128,0.3)]'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
+                  : neon
+                    ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 font-semibold shadow-[0_0_15px_rgba(0,255,255,0.3)]'
+                    : 'bg-cyan-600 hover:bg-cyan-700 text-white'
               }`}
             >
               {freezeLoading ? (

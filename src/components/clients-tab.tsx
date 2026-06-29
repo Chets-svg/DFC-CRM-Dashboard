@@ -359,15 +359,16 @@ export default function ClientsTab({
           <CardTitle>Client Management</CardTitle>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-64">
-              <Input
-                placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            </div>
+  <div className="relative w-full md:w-64">
+    <Input
+      placeholder="Search clients..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="pl-8 rounded-full"
+    />
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+  </div>
+
             
             <div className="flex gap-2">
               <Button 
@@ -390,7 +391,7 @@ export default function ClientsTab({
             
             <Button 
               onClick={() => setActiveTab("leads")}
-              className={getButtonClasses(theme)}
+              className={`${getButtonClasses(theme)} rounded-full`}
             >
               <Plus className="mr-2 h-4 w-4" /> Add Lead
             </Button>
@@ -400,29 +401,28 @@ export default function ClientsTab({
                 value={clientSortField}
                 onValueChange={(value) => setClientSortField(value as ClientSortField)}
               >
-                <SelectTrigger className={`w-[180px] ${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`w-[180px] rounded-full ${inputBg} ${borderColor}`}>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
                 <SelectContent className={`${cardBg} ${borderColor}`}>
-                  <SelectItem value="createdAt">Date Created</SelectItem>
-                  <SelectItem value="name">Name</SelectItem>
-                  <SelectItem value="products">Primary Product</SelectItem>
+  <SelectItem value="createdAt" className={`${textColor}`}>Date Created</SelectItem>
+<SelectItem value="name" className={`${textColor}`}>Name</SelectItem>
+<SelectItem value="products" className={`${textColor}`}>Primary Product</SelectItem>
                 </SelectContent>
               </Select>
 
               <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setClientSortDirection(clientSortDirection === 'asc' ? 'desc' : 'asc')}
-                className="p-2"
-              >
-                {clientSortDirection === 'asc' ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+  variant="ghost"
+  size="sm"
+  onClick={() => setClientSortDirection(clientSortDirection === 'asc' ? 'desc' : 'asc')}
+  className="p-2 rounded-full"
+>
+  {clientSortDirection === 'asc' ? (
+    <ChevronUp className="h-4 w-4" />
+  ) : (
+    <ChevronDown className="h-4 w-4" />
+  )}
+</Button>            </div>
           </div>
         </div>
         

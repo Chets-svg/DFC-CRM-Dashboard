@@ -19,7 +19,8 @@ import {
   ThemeName, 
   ThemeColors, 
   themes, 
-  getButtonClasses 
+  getButtonClasses,
+  isNeon 
 } from '@/lib/theme'
 import { db } from '@/lib/firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where } from 'firebase/firestore';
@@ -29,20 +30,12 @@ interface EnhancedTaskTabProps {
   theme: ThemeName;
 }
 
-// Set your desired theme here
-const theme: ThemeName = 'blue-smoke'; 
 const formatIndianDate = (dateString: string) => {
   const date = new Date(dateString);
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
-};
-
-const statusClasses = {
-  'Not Started': 'bg-gray-100 text-gray-800',
-  'In Progress': 'bg-blue-100 text-blue-800',
-  'Completed': 'bg-green-100 text-green-800'
 };
   
 type Priority = 'High' | 'Medium' | 'Low'
@@ -60,21 +53,18 @@ interface Task {
   starred: boolean
   notes?: string
 }
-interface EnhancedTaskTabProps {
-  theme: ThemeName;
-}
+
 export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
   const { user } = useAuth();
   const currentTheme = themes[theme] || themes['blue-smoke'];
   const TASKS_COLLECTION = 'tasks';
+  const neon = isNeon(theme);
   
-  // Destructure theme colors
   const {
     bgColor,
     textColor,
     cardBg,
     borderColor,
-    
     inputBg,
     mutedText,
     highlightBg,
@@ -84,9 +74,9 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
     buttonText
   } = currentTheme  
   
- const [tasks, setTasks] = useState<Task[]>([]);
- const [loading, setLoading] = useState<boolean>(true);
-   const [error, setError] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [newTask, setNewTask] = useState<Omit<Task, 'id'>>({
     title: '',
     description: '',
@@ -109,7 +99,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'starred' | 'today' | 'overdue'>('all')
   const [newCategory, setNewCategory] = useState('')
 
-useEffect(() => {
+  useEffect(() => {
     if (!user?.uid) {
       setLoading(false);
       return;
@@ -151,12 +141,8 @@ useEffect(() => {
     }
   }, [user?.uid]);
 
-  // Firestore CRUD operations
-   const addTaskToFirestore = async (taskData: Omit<Task, 'id'>) => {
-    if (!user?.uid) {
-      throw new Error('User not authenticated');
-    }
-
+  const addTaskToFirestore = async (taskData: Omit<Task, 'id'>) => {
+    if (!user?.uid) throw new Error('User not authenticated');
     try {
       const docRef = await addDoc(collection(db, TASKS_COLLECTION), {
         ...taskData,
@@ -193,14 +179,9 @@ useEffect(() => {
       setError('Task title is required');
       return;
     }
-
     try {
       setLoading(true);
-      await addTaskToFirestore({
-        ...newTask,
-        userId: user?.uid || ''
-      });
-      
+      await addTaskToFirestore({ ...newTask, userId: user?.uid || '' });
       setNewTask({
         title: '',
         description: '',
@@ -218,25 +199,24 @@ useEffect(() => {
     }
   };
   
-  // Helper functions
   const isOverdue = (dueDate: string) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dueDate) < today;
-};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return new Date(dueDate) < today;
+  };
 
-const isDueToday = (dueDate: string) => {
-  const today = new Date().toISOString().split('T')[0];
-  return dueDate === today;
-};
+  const isDueToday = (dueDate: string) => {
+    const today = new Date().toISOString().split('T')[0];
+    return dueDate === today;
+  };
 
-const isDueSoon = (dueDate: string) => {
-  const today = new Date();
-  const due = new Date(dueDate);
-  const diffTime = due.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays <= 3 && diffDays > 0;
-};
+  const isDueSoon = (dueDate: string) => {
+    const today = new Date();
+    const due = new Date(dueDate);
+    const diffTime = due.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 3 && diffDays > 0;
+  };
 
   const startEditing = (task: Task) => {
     setEditingTaskId(task.id)
@@ -261,9 +241,7 @@ const isDueSoon = (dueDate: string) => {
   const updateTaskStatus = async (taskId: string, newStatus: Status) => {
     try {
       await updateTaskInFirestore(taskId, { status: newStatus });
-      setTasks(tasks.map(task => 
-        task.id === taskId ? {...task, status: newStatus} : task
-      ));
+      setTasks(tasks.map(task => task.id === taskId ? {...task, status: newStatus} : task));
     } catch (error) {
       console.error('Error updating task status:', error);
     }
@@ -272,13 +250,10 @@ const isDueSoon = (dueDate: string) => {
   const toggleStar = async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    
     const newStarred = !task.starred;
     try {
       await updateTaskInFirestore(id, { starred: newStarred });
-      setTasks(tasks.map(task => 
-        task.id === id ? {...task, starred: newStarred} : task
-      ));
+      setTasks(tasks.map(task => task.id === id ? {...task, starred: newStarred} : task));
     } catch (error) {
       console.error('Error toggling star:', error);
     }
@@ -286,12 +261,9 @@ const isDueSoon = (dueDate: string) => {
 
   const saveEdit = async () => {
     if (!editTaskData || !editingTaskId) return;
-    
     try {
       await updateTaskInFirestore(editingTaskId, editTaskData);
-      setTasks(tasks.map(task => 
-        task.id === editingTaskId ? editTaskData : task
-      ));
+      setTasks(tasks.map(task => task.id === editingTaskId ? editTaskData : task));
       setEditingTaskId(null);
       setEditTaskData(null);
     } catch (error) {
@@ -311,12 +283,8 @@ const isDueSoon = (dueDate: string) => {
 
   const handleBulkStatusChange = async (status: Status) => {
     try {
-      await Promise.all(
-        selectedTasks.map(id => updateTaskInFirestore(id, { status }))
-      );
-      setTasks(tasks.map(task => 
-        selectedTasks.includes(task.id) ? {...task, status} : task
-      ));
+      await Promise.all(selectedTasks.map(id => updateTaskInFirestore(id, { status })));
+      setTasks(tasks.map(task => selectedTasks.includes(task.id) ? {...task, status} : task));
     } catch (error) {
       console.error('Error during bulk status change:', error);
     }
@@ -324,56 +292,32 @@ const isDueSoon = (dueDate: string) => {
 
   const addCategory = () => {
     if (!newCategory || newTask.categories.includes(newCategory as Category)) return
-    setNewTask({
-      ...newTask,
-      categories: [...newTask.categories, newCategory as Category]
-    })
+    setNewTask({ ...newTask, categories: [...newTask.categories, newCategory as Category] })
     setNewCategory('')
   }
 
   const removeCategory = (category: Category) => {
-    setNewTask({
-      ...newTask,
-      categories: newTask.categories.filter(c => c !== category)
-    })
+    setNewTask({ ...newTask, categories: newTask.categories.filter(c => c !== category) })
   }
 
   const toggleStatus = async (id: string) => {
-  try {
-    // Find the task to get current status
-    const taskToUpdate = tasks.find(task => task.id === id);
-    if (!taskToUpdate) return;
-
-    // Determine new status
-    let newStatus: Status;
-    switch(taskToUpdate.status) {
-      case 'Not Started': 
-        newStatus = 'In Progress';
-        break;
-      case 'In Progress': 
-        newStatus = 'Completed';
-        break;
-      case 'Completed': 
-        newStatus = 'Not Started'; // Optional: cycle back to start
-        break;
-      default:
-        newStatus = 'Not Started';
+    try {
+      const taskToUpdate = tasks.find(task => task.id === id);
+      if (!taskToUpdate) return;
+      let newStatus: Status;
+      switch(taskToUpdate.status) {
+        case 'Not Started': newStatus = 'In Progress'; break;
+        case 'In Progress': newStatus = 'Completed'; break;
+        case 'Completed': newStatus = 'Not Started'; break;
+        default: newStatus = 'Not Started';
+      }
+      await updateTaskInFirestore(id, { status: newStatus });
+      setTasks(tasks.map(task => task.id === id ? {...task, status: newStatus} : task));
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      setError('Failed to update task status');
     }
-
-    // Update in Firestore first
-    await updateTaskInFirestore(id, { status: newStatus });
-
-    // Then update local state
-    setTasks(tasks.map(task => 
-      task.id === id ? {...task, status: newStatus} : task
-    ));
-
-  } catch (error) {
-    console.error('Error updating task status:', error);
-    // Optionally show error to user
-    setError('Failed to update task status');
-  }
-};
+  };
 
   const toggleSelectAll = useCallback(() => {
     if (selectedTasks.length === tasks.length) {
@@ -383,19 +327,12 @@ const isDueSoon = (dueDate: string) => {
     }
   }, [tasks, selectedTasks]);
 
-  // Toggle selection for a single task
   const toggleTaskSelection = useCallback((taskId: string) => {
-    setSelectedTasks(prev => 
-      prev.includes(taskId) 
-        ? prev.filter(id => id !== taskId) 
-        : [...prev, taskId]
-    );
+    setSelectedTasks(prev => prev.includes(taskId) ? prev.filter(id => id !== taskId) : [...prev, taskId]);
   }, []);
 
-  // Delete selected tasks
   const deleteSelectedTasks = useCallback(async () => {
     if (selectedTasks.length === 0) return;
-    
     try {
       setLoading(true);
       await Promise.all(selectedTasks.map(taskId => deleteTaskFromFirestore(taskId)));
@@ -407,43 +344,39 @@ const isDueSoon = (dueDate: string) => {
     }
   }, [selectedTasks]);
 
-
-  // Filter and sort tasks
   const filteredTasks = tasks.filter(task => {
     const priorityMatch = filterPriority === 'All' || task.priority === filterPriority
     const statusMatch = filterStatus === 'All' || task.status === filterStatus
     const categoryMatch = filterCategory === 'All' || task.categories.includes(filterCategory)
-    const searchMatch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                       task.description.toLowerCase().includes(searchQuery.toLowerCase())
-    
+    const searchMatch = task.title.toLowerCase().includes(searchQuery.toLowerCase()) || task.description.toLowerCase().includes(searchQuery.toLowerCase())
     let tabMatch = true
     if (activeTab === 'starred') tabMatch = task.starred
     if (activeTab === 'today') tabMatch = isDueToday(task.dueDate)
     if (activeTab === 'overdue') tabMatch = isOverdue(task.dueDate)
-
     return priorityMatch && statusMatch && categoryMatch && searchMatch && tabMatch
   })
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortField === 'priority') {
       const priorityOrder = { High: 3, Medium: 2, Low: 1 }
-      return sortDirection === 'asc' 
-        ? priorityOrder[a.priority] - priorityOrder[b.priority]
-        : priorityOrder[b.priority] - priorityOrder[a.priority]
+      return sortDirection === 'asc' ? priorityOrder[a.priority] - priorityOrder[b.priority] : priorityOrder[b.priority] - priorityOrder[a.priority]
     } else if (sortField === 'status') {
       const statusOrder = { 'Not Started': 1, 'In Progress': 2, 'Completed': 3 }
-      return sortDirection === 'asc'
-        ? statusOrder[a.status] - statusOrder[b.status]
-        : statusOrder[b.status] - statusOrder[a.status]
+      return sortDirection === 'asc' ? statusOrder[a.status] - statusOrder[b.status] : statusOrder[b.status] - statusOrder[a.status]
     } else {
-      return sortDirection === 'asc'
-        ? new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-        : new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
+      return sortDirection === 'asc' ? new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime() : new Date(b.dueDate).getTime() - new Date(a.dueDate).getTime()
     }
   })
 
-  // UI helpers
+  // Neon-aware UI helpers
   const getPriorityColor = (priority: Priority) => {
+    if (neon) {
+      switch (priority) {
+        case 'High': return 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-[0_0_8px_rgba(255,0,0,0.15)]'
+        case 'Medium': return 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.15)]'
+        case 'Low': return 'bg-green-500/20 text-green-400 border border-green-500/40 shadow-[0_0_8px_rgba(74,222,128,0.15)]'
+      }
+    }
     switch (priority) {
       case 'High': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
       case 'Medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
@@ -452,6 +385,13 @@ const isDueSoon = (dueDate: string) => {
   }
 
   const getStatusColor = (status: Status) => {
+    if (neon) {
+      switch (status) {
+        case 'Not Started': return 'bg-slate-500/20 text-slate-400 border border-slate-500/40 shadow-[0_0_8px_rgba(148,163,184,0.15)]'
+        case 'In Progress': return 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,255,255,0.15)]'
+        case 'Completed': return 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/40 shadow-[0_0_8px_rgba(232,121,249,0.15)]'
+      }
+    }
     switch (status) {
       case 'Not Started': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
       case 'In Progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
@@ -460,6 +400,12 @@ const isDueSoon = (dueDate: string) => {
   }
 
   const getDueDateColor = (dueDate: string) => {
+    if (neon) {
+      if (isOverdue(dueDate)) return 'text-red-400 font-bold drop-shadow-[0_0_4px_rgba(255,0,0,0.5)]'
+      if (isDueToday(dueDate)) return 'text-cyan-400 font-bold drop-shadow-[0_0_4px_rgba(0,255,255,0.5)]'
+      if (isDueSoon(dueDate)) return 'text-amber-400 font-bold drop-shadow-[0_0_4px_rgba(251,191,36,0.5)]'
+      return 'text-slate-400'
+    }
     if (isOverdue(dueDate)) return 'text-red-700 dark:text-red-500 font-bold'
     if (isDueToday(dueDate)) return 'text-blue-700 dark:text-blue-500 font-bold'
     if (isDueSoon(dueDate)) return 'text-green-700 dark:text-green-500 font-bold'
@@ -467,18 +413,19 @@ const isDueSoon = (dueDate: string) => {
   }
 
   const allCategories: Category[] = ['Work', 'Personal', 'Urgent', 'Follow Up', 'Meeting']
- const renderTasks = (filteredTasks: Task[]) => (
+  
+  const renderTasks = (filteredTasks: Task[]) => (
     <div className="space-y-4">
       {filteredTasks.map(task => (
-        <Card key={task.id} className={`${cardBg} ${borderColor}`}>
+        <Card key={task.id} className={`${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
-              <span>{task.title}</span>
+              <span className={neon ? 'drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>{task.title}</span>
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost">
+                <Button size="icon" variant="ghost" onClick={() => toggleStar(task.id)}>
                   {task.starred ? '⭐' : '☆'}
                 </Button>
-                <Button size="icon" variant="destructive" onClick={() => deleteTask(task.id)}>
+                <Button size="icon" variant="destructive" onClick={() => handleDeleteTask(task.id)}>
                   <Trash className="h-4 w-4" />
                 </Button>
               </div>
@@ -486,9 +433,11 @@ const isDueSoon = (dueDate: string) => {
           </CardHeader>
           <CardContent>
             <p className="text-sm">{task.description}</p>
-            <p className="text-xs">Priority: {task.priority}</p>
-            <p className="text-xs">Status: {task.status}</p>
-            <p className="text-xs">Due: {task.dueDate || 'N/A'}</p>
+            <div className="flex gap-2 mt-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>{task.priority}</span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>{task.status}</span>
+            </div>
+            <p className="text-xs mt-2">Due: <span className={getDueDateColor(task.dueDate)}>{formatIndianDate(task.dueDate)}</span></p>
           </CardContent>
         </Card>
       ))}
@@ -496,12 +445,12 @@ const isDueSoon = (dueDate: string) => {
   );
 
   if (loading) {
-    return <div className="p-4">Loading tasks...</div>;
+    return <div className={`p-4 ${neon ? 'text-cyan-400 drop-shadow-[0_0_8px_rgba(0,255,255,0.5)]' : ''}`}>Loading tasks...</div>;
   }
 
   if (error) {
     return (
-      <div className="p-4 text-red-500 bg-red-50 rounded">
+      <div className={`p-4 rounded ${neon ? 'text-red-400 bg-red-500/10 border border-red-500/30 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'text-red-500 bg-red-50'}`}>
         Error: {error}
       </div>
     );
@@ -509,97 +458,65 @@ const isDueSoon = (dueDate: string) => {
 
   return (
     <div className={`space-y-3 ${bgColor} ${textColor}`}>
-            {/* Task View Tabs */}
+      {/* Task View Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-        <TabsList className={`grid grid-cols-4 w-full ${cardBg} border ${borderColor}`}>
-            <TabsTrigger 
-            value="all" 
-            className={`data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}
-          >
+        <TabsList className={`grid grid-cols-4 w-full ${cardBg} border ${borderColor} ${neon ? 'bg-slate-950/80 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]' : ''}`}>
+          <TabsTrigger value="all" className={`${neon ? 'data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             All Tasks
           </TabsTrigger>
-          <TabsTrigger 
-            value="starred" 
-            className={`data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}
-          >
+          <TabsTrigger value="starred" className={`${neon ? 'data-[state=active]:bg-fuchsia-500/20 data-[state=active]:text-fuchsia-400 data-[state=active]:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Starred
           </TabsTrigger>
-          <TabsTrigger 
-            value="today" 
-            className={`data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}
-          >
+          <TabsTrigger value="today" className={`${neon ? 'data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 data-[state=active]:shadow-[0_0_10px_rgba(74,222,128,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Today
           </TabsTrigger>
-          <TabsTrigger 
-            value="overdue" 
-            className={`data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}
-          >
+          <TabsTrigger value="overdue" className={`${neon ? 'data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400 data-[state=active]:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Overdue
           </TabsTrigger>
         </TabsList>
 
-<TabsContent value="starred">
-  {renderTasks(tasks.filter(task => task.starred))}
-</TabsContent>
+         <TabsContent value="starred" className="mt-0">
+          {renderTasks(tasks.filter(task => task.starred))}
+        </TabsContent>
 
-<TabsContent value="today">
-  {renderTasks(tasks.filter(task => {
-    const today = new Date().toISOString().split("T")[0];
-    return task.dueDate === today;
-  }))}
-</TabsContent>
+        <TabsContent value="today" className="-mt-3">
+          {renderTasks(tasks.filter(task => isDueToday(task.dueDate)))}
+        </TabsContent>
 
-<TabsContent value="overdue">
-  {renderTasks(tasks.filter(task => {
-    const today = new Date().toISOString().split("T")[0];
-    return task.dueDate && task.dueDate < today;
-  }))}
-</TabsContent>
-<TabsContent value="all">
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-    {tasks.map(task => (
-      <Card
-        key={task.id}
-        className={`p-4 shadow-md rounded-lg border ${cardBg} ${borderColor} ${textColor}`}
-      >
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>{task.title}</span>
-            <span className="text-yellow-500">{task.starred ? '⭐' : '☆'}</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-1 text-sm">
-          <p>{task.description}</p>
-          <p>
-            <span className="font-medium">Due:</span>{' '}
-            <span className="font-semibold">{formatIndianDate(task.dueDate)}</span>
-          </p>
-          <p>
-            <span className="font-medium">Priority:</span> {task.priority}
-          </p>
-          <p 
-            className="cursor-pointer hover:underline"
-            onClick={() => updateTaskStatus(task.id, getNextStatus(task.status))}
-          >
-            <span className="font-medium">Status:</span> {task.status}
-          </p>
-          <span 
-  
-  onClick={() => updateTaskStatus(task.id, getNextStatus(task.status))}
->
-  
-</span>
-        </CardContent>
-      </Card>
-    ))}
-  </div>
-</TabsContent>
+        <TabsContent value="overdue" className="mt-0">
+          {renderTasks(tasks.filter(task => isOverdue(task.dueDate)))}
+        </TabsContent>
+        <TabsContent value="all">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {tasks.map(task => (
+              <Card key={task.id} className={`p-4 shadow-md rounded-lg border ${cardBg} ${borderColor} ${textColor} ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
+                <CardHeader>
+                  <CardTitle className="flex justify-between items-center">
+                    <span className={neon ? 'drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>{task.title}</span>
+                    <span className={task.starred ? 'text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.5)]' : 'text-yellow-500'}>{task.starred ? '⭐' : '☆'}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-1 text-sm">
+                  <p>{task.description}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getPriorityColor(task.priority)}`}>{task.priority}</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(task.status)}`}>{task.status}</span>
+                  </div>
+                  <p className="mt-2">
+                    <span className="font-medium">Due:</span>{' '}
+                    <span className={`font-semibold ${getDueDateColor(task.dueDate)}`}>{formatIndianDate(task.dueDate)}</span>
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
       </Tabs>
  
       {/* Add Task Section */}
-      <Card className={`${cardBg} ${borderColor}`}>
+      <Card className={`-mt-2 ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.1)] border-cyan-500/30' : ''}`}>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className={`flex items-center gap-2 ${neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}`}>
             <Plus className="h-5 w-5" />
             Add New Task
           </CardTitle>
@@ -613,7 +530,7 @@ const isDueSoon = (dueDate: string) => {
                 value={newTask.title}
                 onChange={(e) => setNewTask({...newTask, title: e.target.value})}
                 placeholder="Task title"
-                className={`${inputBg} ${borderColor}`}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
               />
             </div>
             <div className="space-y-2">
@@ -623,7 +540,7 @@ const isDueSoon = (dueDate: string) => {
                 value={newTask.description}
                 onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                 placeholder="Task description"
-                className={`${inputBg} ${borderColor}`}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
               />
             </div>
             <div className="space-y-2">
@@ -632,10 +549,10 @@ const isDueSoon = (dueDate: string) => {
                 value={newTask.priority}
                 onValueChange={(value: Priority) => setNewTask({...newTask, priority: value})}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor}`}>
+                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="High">High</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
                   <SelectItem value="Low">Low</SelectItem>
@@ -645,12 +562,12 @@ const isDueSoon = (dueDate: string) => {
             <div className="space-y-2">
               <Label htmlFor="dueDate">Due Date</Label>
               <Input
-  id="dueDate"
-  type="date"
-  value={newTask.dueDate}
-  onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-  className={`${inputBg} ${borderColor}`}
-/>
+                id="dueDate"
+                type="date"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Categories</Label>
@@ -658,41 +575,30 @@ const isDueSoon = (dueDate: string) => {
                 {newTask.categories.map(category => (
                   <span 
                     key={category} 
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${highlightBg} ${textColor}`}
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${neon ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,255,255,0.15)]' : `${highlightBg} ${textColor}`}`}
                   >
                     {category}
-                    <button 
-                      type="button" 
-                      onClick={() => removeCategory(category)}
-                      className={`${inputBg} ${borderColor}`}
-                    >
+                    <button type="button" onClick={() => removeCategory(category)} className="ml-1">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
                 ))}
               </div>
               <div className="flex gap-2">
-                <Select
-                  value={newCategory}
-                  onValueChange={setNewCategory}
-                >
+                <Select value={newCategory} onValueChange={setNewCategory}>
                   <SelectTrigger className={`${inputBg} ${borderColor}`}>
                     <SelectValue placeholder="Add category" />
                   </SelectTrigger>
-                  <SelectContent className={`${cardBg} ${borderColor}`}>
-                    {allCategories
-                      .filter(cat => !newTask.categories.includes(cat))
-                      .map(category => (
-                        <SelectItem key={category} value={category}>
-                          {category}
-                        </SelectItem>
-                      ))}
+                  <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                    {allCategories.filter(cat => !newTask.categories.includes(cat)).map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Button 
                   variant="outline" 
                   onClick={addCategory}
-                  className={`${inputBg} ${borderColor}`}
+                  className={`${inputBg} ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add
                 </Button>
@@ -700,42 +606,37 @@ const isDueSoon = (dueDate: string) => {
             </div>
           </div>
           <div className="mt-4 flex justify-between">
-            <div>
+            <div className="flex items-center">
               <Checkbox 
                 id="starred" 
                 checked={newTask.starred}
                 onCheckedChange={(checked) => setNewTask({...newTask, starred: !!checked})}
+                className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
               />
-              <Label htmlFor="starred" className="ml-2">
-                Starred
-              </Label>
+              <Label htmlFor="starred" className="ml-2">Starred</Label>
             </div>
             <Button 
               onClick={handleAddTask} 
-              className="gap-2"
-              style={{
-                backgroundColor: buttonBg,
-                color: buttonText,
-              }}
+              className={`gap-2 ${neon ? 'rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] transition-all' : ''}`}
+              style={!neon ? { backgroundColor: buttonBg, color: buttonText } : undefined}
             >
               <Plus className="h-4 w-4" /> Add Task
             </Button>
           </div>
         </CardContent>
       </Card>
-
-      {/* Controls Section */}
-<Card className={`${cardBg} border ${borderColor}`}>
-          <CardHeader>
+            {/* Controls Section */}
+      <Card className={`${cardBg} border ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>
+        <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Task Controls</CardTitle>
+            <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>Task Controls</CardTitle>
             {selectedTasks.length > 0 && (
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleBulkStatusChange('Completed')}
-                  className={`${borderColor} hover:${highlightBg}`}
+                  className={`${borderColor} ${neon ? 'border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-500/10 hover:text-fuchsia-200 hover:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   Mark Complete
                 </Button>
@@ -743,7 +644,7 @@ const isDueSoon = (dueDate: string) => {
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleBulkStatusChange('In Progress')}
-                  className={`${borderColor} hover:${highlightBg}`}
+                  className={`${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   Mark In Progress
                 </Button>
@@ -751,6 +652,7 @@ const isDueSoon = (dueDate: string) => {
                   variant="destructive" 
                   size="sm" 
                   onClick={handleBulkDelete}
+                  className={neon ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 hover:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : ''}
                 >
                   <Trash className="h-4 w-4 mr-2" /> Delete
                 </Button>
@@ -763,11 +665,10 @@ const isDueSoon = (dueDate: string) => {
             <div className="space-y-2">
               <Label>Search Tasks</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${neon ? 'text-cyan-400/60' : 'text-gray-400'}`} />
                 <Input
                   placeholder="Search tasks..."
-                  className={`pl-10 ${inputBg} ${borderColor}`}
-                  
+                  className={`pl-10 ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -778,12 +679,11 @@ const isDueSoon = (dueDate: string) => {
               <Select
                 value={filterPriority}
                 onValueChange={(value: Priority | 'All') => setFilterPriority(value)}
-                
               >
-                <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by priority" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor}`}>
+                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Priorities</SelectItem>
                   <SelectItem value="High">High</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
@@ -797,10 +697,10 @@ const isDueSoon = (dueDate: string) => {
                 value={filterStatus}
                 onValueChange={(value: Status | 'All') => setFilterStatus(value)}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor}`}>
+                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Statuses</SelectItem>
                   <SelectItem value="Not Started">Not Started</SelectItem>
                   <SelectItem value="In Progress">In Progress</SelectItem>
@@ -814,10 +714,10 @@ const isDueSoon = (dueDate: string) => {
                 value={filterCategory}
                 onValueChange={(value: Category | 'All') => setFilterCategory(value)}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor}`}>
+                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Categories</SelectItem>
                   {allCategories.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
@@ -834,10 +734,10 @@ const isDueSoon = (dueDate: string) => {
                   value={sortField}
                   onValueChange={(value: 'priority' | 'status' | 'dueDate') => setSortField(value)}
                 >
-                  <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                  <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent className={`${cardBg} ${borderColor}`}>
+                  <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                     <SelectItem value="priority">Priority</SelectItem>
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="dueDate">Due Date</SelectItem>
@@ -846,7 +746,7 @@ const isDueSoon = (dueDate: string) => {
                 <Button
                   variant="outline"
                   onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                  className={`${borderColor} hover:${highlightBg}`}
+                  className={`${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
                 </Button>
@@ -857,10 +757,9 @@ const isDueSoon = (dueDate: string) => {
       </Card>
 
       {/* Tasks List */}
-      <Card className={`${cardBg} ${borderColor}`}>
-        <CardHeader>
+<Card className={`rounded-full overflow-hidden ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>       <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>
+            <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>
               {activeTab === 'all' && 'All Tasks'}
               {activeTab === 'starred' && 'Starred Tasks'}
               {activeTab === 'today' && "Today's Tasks"}
@@ -875,6 +774,7 @@ const isDueSoon = (dueDate: string) => {
                   id="select-all" 
                   checked={selectedTasks.length === filteredTasks.length && filteredTasks.length > 0}
                   onCheckedChange={toggleSelectAll}
+                  className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
                 />
                 <Label htmlFor="select-all">Select all</Label>
               </div>
@@ -883,7 +783,7 @@ const isDueSoon = (dueDate: string) => {
         </CardHeader>
         <CardContent>
           {sortedTasks.length === 0 ? (
-            <div className={`text-center py-8 ${mutedText}`}>
+            <div className={`text-center py-8 ${mutedText} ${neon ? 'text-cyan-400/60' : ''}`}>
               No tasks found matching your filters
             </div>
           ) : (
@@ -892,7 +792,13 @@ const isDueSoon = (dueDate: string) => {
                 <div 
                   key={task.id} 
                   className={`border rounded-lg p-4 ${borderColor} ${
-                    selectedTasks.includes(task.id) ? selectedBg : cardBg
+                    selectedTasks.includes(task.id) 
+                      ? neon 
+                        ? 'bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_15px_rgba(0,255,255,0.15)]' 
+                        : selectedBg 
+                      : neon 
+                        ? 'bg-slate-950/50 border-cyan-500/20 hover:border-cyan-500/40 hover:shadow-[0_0_10px_rgba(0,255,255,0.1)] transition-all' 
+                        : cardBg
                   }`}
                 >
                   {editingTaskId === task.id ? (
@@ -902,7 +808,7 @@ const isDueSoon = (dueDate: string) => {
                         <Input
                           value={editTaskData?.title || ''}
                           onChange={(e) => editTaskData && setEditTaskData({...editTaskData, title: e.target.value})}
-                          className={`${inputBg} ${borderColor}`}
+                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                         />
                       </div>
                       <div className="space-y-2">
@@ -910,7 +816,7 @@ const isDueSoon = (dueDate: string) => {
                         <Input
                           value={editTaskData?.description || ''}
                           onChange={(e) => editTaskData && setEditTaskData({...editTaskData, description: e.target.value})}
-                          className={`${inputBg} ${borderColor}`}
+                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                         />
                       </div>
                       <div className="space-y-2">
@@ -922,7 +828,7 @@ const isDueSoon = (dueDate: string) => {
                           <SelectTrigger className={`${inputBg} ${borderColor}`}>
                             <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
-                          <SelectContent className={`${cardBg} ${borderColor}`}>
+                          <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                             <SelectItem value="High">High</SelectItem>
                             <SelectItem value="Medium">Medium</SelectItem>
                             <SelectItem value="Low">Low</SelectItem>
@@ -938,7 +844,7 @@ const isDueSoon = (dueDate: string) => {
                           <SelectTrigger className={`${inputBg} ${borderColor}`}>
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
-                          <SelectContent className={`${cardBg} ${borderColor}`}>
+                          <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                             <SelectItem value="Not Started">Not Started</SelectItem>
                             <SelectItem value="In Progress">In Progress</SelectItem>
                             <SelectItem value="Completed">Completed</SelectItem>
@@ -948,27 +854,24 @@ const isDueSoon = (dueDate: string) => {
                       <div className="space-y-2">
                         <Label>Due Date</Label>
                         <Input
-  type="date"
-  value={editTaskData?.dueDate || ''}
-  onChange={(e) => editTaskData && setEditTaskData({...editTaskData, dueDate: e.target.value})}
-  className={`${inputBg} ${borderColor}`}
-/>
+                          type="date"
+                          value={editTaskData?.dueDate || ''}
+                          onChange={(e) => editTaskData && setEditTaskData({...editTaskData, dueDate: e.target.value})}
+                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
+                        />
                       </div>
                       <div className="flex items-end gap-2">
                         <Button 
                           onClick={saveEdit} 
-                          className="gap-2"
-                          style={{
-                            backgroundColor: buttonBg,
-                            color: buttonText,
-                          }}
+                          className={`gap-2 ${neon ? 'rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)]' : ''}`}
+                          style={!neon ? { backgroundColor: buttonBg, color: buttonText } : undefined}
                         >
                           <Check className="h-4 w-4" /> Save
                         </Button>
                         <Button 
                           variant="outline" 
                           onClick={cancelEdit} 
-                          className={`gap-2 ${borderColor} hover:${highlightBg}`}
+                          className={`gap-2 ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200' : `hover:${highlightBg}`}`}
                         >
                           <X className="h-4 w-4" /> Cancel
                         </Button>
@@ -981,19 +884,20 @@ const isDueSoon = (dueDate: string) => {
                           id={`select-${task.id}`}
                           checked={selectedTasks.includes(task.id)}
                           onCheckedChange={() => toggleTaskSelection(task.id)}
+                          className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
                         />
                       </div>
                       <div className="md:col-span-2">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{task.title}</h3>
-                          {task.starred && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />}
+                          <h3 className={`font-medium ${neon ? 'drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}`}>{task.title}</h3>
+                          {task.starred && <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 drop-shadow-[0_0_6px_rgba(250,204,21,0.5)]" />}
                         </div>
                         <p className={`text-sm ${mutedText}`}>{task.description}</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {task.categories.map(category => (
                             <span 
                               key={category} 
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${highlightBg} ${textColor}`}
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${neon ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_6px_rgba(0,255,255,0.1)]' : `${highlightBg} ${textColor}`}`}
                             >
                               {category}
                             </span>
@@ -1016,48 +920,49 @@ const isDueSoon = (dueDate: string) => {
                         </Button>
                       </div>
                       <div className="flex items-center justify-between">
-  <div className="flex flex-col">
-    <div className="flex items-center">
-      <Calendar className="h-4 w-4 mr-1" />
-      <span className="text-sm">
-        {formatIndianDate(task.dueDate)}
-      </span>
-    </div>
-    <div className="ml-5">
-      <span className={`text-sm ${getDueDateColor(task.dueDate)}`}>
-        {isOverdue(task.dueDate) && "(Overdue)"}
-        {isDueToday(task.dueDate) && "(Today)"}
-        {isDueSoon(task.dueDate) && !isDueToday(task.dueDate) && "(Due soon)"}
-      </span>
-    </div>
-  </div>
-  <div className="flex gap-2">
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => toggleStar(task.id)}
-      className="h-8 w-8 p-0 hover:bg-opacity-50"
-    >
-      <Star className={`h-4 w-4 ${task.starred ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
-    </Button>
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => startEditing(task)}
-      className="hover:bg-opacity-50"
-    >
-      <Edit className="h-4 w-4" />
-    </Button>
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => handleDeleteTask(task.id)}
-      className="hover:bg-opacity-50 text-red-500 hover:text-red-600"
-    >
-      <Trash className="h-4 w-4" />
-    </Button>
-  </div>
-</div>                    </div>
+                        <div className="flex flex-col">
+                          <div className="flex items-center">
+                            <Calendar className={`h-4 w-4 mr-1 ${neon ? 'text-cyan-400' : ''}`} />
+                            <span className="text-sm">
+                              {formatIndianDate(task.dueDate)}
+                            </span>
+                          </div>
+                          <div className="ml-5">
+                            <span className={`text-sm ${getDueDateColor(task.dueDate)}`}>
+                              {isOverdue(task.dueDate) && "(Overdue)"}
+                              {isDueToday(task.dueDate) && "(Today)"}
+                              {isDueSoon(task.dueDate) && !isDueToday(task.dueDate) && "(Due soon)"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleStar(task.id)}
+                            className={`h-8 w-8 p-0 hover:bg-opacity-50 ${neon ? 'hover:bg-cyan-500/10' : ''}`}
+                          >
+                            <Star className={`h-4 w-4 ${task.starred ? 'text-yellow-500 fill-yellow-500 drop-shadow-[0_0_6px_rgba(250,204,21,0.5)]' : neon ? 'text-slate-500' : 'text-gray-400'}`} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => startEditing(task)}
+                            className={`hover:bg-opacity-50 ${neon ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' : ''}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteTask(task.id)}
+                            className={`hover:bg-opacity-50 ${neon ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:shadow-[0_0_8px_rgba(255,0,0,0.2)]' : 'text-red-500 hover:text-red-600'}`}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               ))}

@@ -4,6 +4,7 @@ import { useState,useRef, useCallback, createContext, useContext } from 'react';
 import { Calendar } from "lucide-react"
 import { Label } from "@/components/ui/label"
 import { Pause, Play } from "lucide-react";
+import { isNeon } from '@/lib/theme';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
 import React from 'react';
@@ -75,6 +76,7 @@ import {
   Check, 
   X,
   Activity,
+  UserPlus,
   BarChart2,
   TrendingUp,
   PieChart,
@@ -411,30 +413,46 @@ return (
 function ThemeSelector({ theme, setTheme }: ThemeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const currentTheme = themes[theme] || themes['blue-smoke'];
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Helper to extract color from Tailwind class like 'bg-[#1E293B]'
+  const extractColor = (bgClass: string) => {
+    const match = bgClass.match(/bg-\[#([0-9A-Fa-f]{6})\]/);
+    return match ? `#${match[1]}` : '#6366f1';
+  };
 
   return (
-    <div className="relative">
-      <Button 
-        variant="outline" 
-        className={`flex items-center gap-2 ${getButtonClasses(theme, 'outline')}`}
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        <div className="w-4 h-4 rounded-full" style={{ 
-          backgroundColor: themes[theme].buttonBg.replace('bg-[', '').replace(']', '')
-        }} />
-        <span>Theme</span>
-        {isOpen ? (
-          <ChevronUp className="h-4 w-4 opacity-50" />
-        ) : (
-          <ChevronDown className="h-4 w-4 opacity-50" />
-        )}
-      </Button>
+    <div className="relative" ref={dropdownRef}>
+  <Button 
+    variant="outline" 
+    className={`rounded-full flex items-center gap-2 ${getButtonClasses(theme, 'outline')}`}
+    onClick={() => setIsOpen(!isOpen)}
+  >
+    <div 
+      className="w-4 h-4 rounded-full border border-gray-400" 
+      style={{ backgroundColor: extractColor(themes[theme].buttonBg) }}
+    />
+    <span className="capitalize">{theme.replace(/-/g, ' ')}</span>
+    {isOpen ? (
+      <ChevronUp className="h-4 w-4 opacity-50" />
+    ) : (
+      <ChevronDown className="h-4 w-4 opacity-50" />
+    )}
+  </Button>
       
       {isOpen && (
-        <div 
-          className={`absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 ${currentTheme.cardBg} ${currentTheme.borderColor}`}
-          onMouseLeave={() => setIsOpen(false)}
-        >
+        <div className={`absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 ${currentTheme.cardBg} ${currentTheme.borderColor} ${isNeon(theme) ? 'shadow-[0_0_30px_rgba(0,255,255,0.2)] border-cyan-500/30' : ''}`}>
           <div className="py-1">
             {Object.entries(themes).map(([themeName, themeColors]) => (
               <button
@@ -443,16 +461,24 @@ function ThemeSelector({ theme, setTheme }: ThemeSelectorProps) {
                   setTheme(themeName as ThemeName);
                   setIsOpen(false);
                 }}
-                className={`flex items-center px-4 py-2 text-sm w-full text-left ${
+                className={`flex items-center px-4 py-2 text-sm w-full text-left transition-colors ${
                   theme === themeName 
-                    ? currentTheme.selectedBg 
-                    : `hover:${currentTheme.highlightBg}`
+                    ? isNeon(theme) 
+                      ? 'bg-cyan-500/20 text-cyan-300' 
+                      : currentTheme.selectedBg 
+                    : isNeon(theme) 
+                      ? 'hover:bg-cyan-500/10 text-slate-300' 
+                      : `hover:bg-gray-100`
                 } ${currentTheme.textColor}`}
               >
-                <div className="w-4 h-4 rounded-full mr-3" style={{ 
-                  backgroundColor: themeColors.buttonBg.replace('bg-[', '').replace(']', '')
-                }} />
-                <span className="capitalize">{themeName.replace('-', ' ')}</span>
+                <div 
+                  className="w-4 h-4 rounded-full mr-3 border border-gray-400" 
+                  style={{ backgroundColor: extractColor(themeColors.buttonBg) }}
+                />
+                <span className="capitalize">{themeName.replace(/-/g, ' ')}</span>
+                {theme === themeName && (
+                  <Check className="h-4 w-4 ml-auto" />
+                )}
               </button>
             ))}
           </div>
@@ -515,24 +541,11 @@ function TimeoutWarningModal({ theme }: TimeoutWarningModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div 
-        className={`timeout-modal p-6 rounded-lg ${currentTheme.cardBg} ${currentTheme.borderColor} max-w-md w-full`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h3 className="text-xl font-bold mb-4">Session Timeout Warning</h3>
-        <p className="mb-4">Your session is about to expire due to inactivity.</p>
-        <p className="mb-6">Would you like to continue your session?</p>
-        
-        {/* Countdown timer */}
-        <div className="mb-6 flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              {minutes}:{seconds.toString().padStart(2, '0')}
-            </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Time remaining
-            </p>
-          </div>
+      <div className={`timeout-modal p-6 rounded-lg ${currentTheme.cardBg} ${currentTheme.borderColor} max-w-md w-full ${isNeon(theme) ? 'shadow-[0_0_40px_rgba(0,255,255,0.3)] border-cyan-500/30' : ''}`}>
+  <h3 className={`text-xl font-bold mb-4 ${isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}`}>Session Timeout Warning</h3>
+  <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-yellow-600 dark:text-yellow-400'}`}>
+    {minutes}:{seconds.toString().padStart(2, '0')}
+  </div>
         </div>
         
         <div className="flex justify-end gap-2">
@@ -545,13 +558,13 @@ function TimeoutWarningModal({ theme }: TimeoutWarningModalProps) {
           <Button 
             onClick={handleLogout}
             variant="outline"
-            className={getButtonClasses(theme, 'outline')}
+            className={`rounded-full ${getButtonClasses(theme, 'outline')}`}
           >
             Log Out Now
           </Button>
         </div>
       </div>
-    </div>
+    
   );
 }
 export default function CRMDashboard() {
@@ -1302,11 +1315,11 @@ const handleSendWhatsApp = () => {
   alert(`WhatsApp message sent to ${client.name}`);
 };
   
-  const [newLead, setNewLead] = useState<Omit<Lead, 'id' | 'status' | 'notes'>>({ 
+  const [newLead, setNewLead] = useState<{ name: string; email: string; phone: string; productInterest: string[] }>({ 
     name: '', 
     email: '', 
     phone: '', 
-    productInterest: '' 
+    productInterest: [] 
   });
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
   const [newNote, setNewNote] = useState('');
@@ -1521,14 +1534,17 @@ if (themeLoading) {
   }
 
  return (
-      <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor}`}>
+      <div className={`min-h-screen ${themes[theme].bgColor} ${themes[theme].textColor} ${isNeon(theme) ? 'neon-grid-bg' : ''}`}>
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full"></Tabs>
     {/* Timeout Warning Modal */}
 <TimeoutWarningModal theme={theme} />
       <Toaster position="top-right" />
       <div className="container mx-auto px-4 py-8">
         {/* Header with theme selector */}
          <div className="flex justify-between items-center mb-8">
-  <h1 className="text-3xl font-bold">DFS CRM Dashboard</h1>
+  <h1 className={`text-3xl font-bold ${isNeon(theme) ? 'text-cyan-400 drop-shadow-[0_0_10px_rgba(0,255,255,0.5)]' : ''}`}>
+  DFS CRM Dashboard
+</h1>
   <ClientCelebrations clients={clients} />
   <div className="flex items-center gap-2">
     <ThemeSelector theme={theme} setTheme={handleThemeChange} />
@@ -1537,7 +1553,7 @@ if (themeLoading) {
     <Button 
       variant="outline" 
       onClick={toggleTheme}
-      className={`${getButtonClasses(theme, 'outline')} flex items-center gap-2`}
+      className={`rounded-full ${getButtonClasses(theme, 'outline')} flex items-center gap-2`}
     >
       {theme === 'dark' ? (
         <>
@@ -1564,7 +1580,7 @@ if (themeLoading) {
         }
       }}
       variant="outline"
-      className={getButtonClasses(theme, 'danger')}
+      className={`rounded-full ${getButtonClasses(theme, 'danger')}`}
     >
       Logout
     </Button>
@@ -1575,16 +1591,16 @@ if (themeLoading) {
   <div className="group relative">
     {/* Floating Icon Button */}
     <Button 
-      variant="default"
-      size="icon"
-      className={`
-        w-12 h-12 rounded-full shadow-lg
-        ${theme === 'dark' 
-          ? 'bg-blue-600 hover:bg-blue-700' 
-          : 'bg-blue-500 hover:bg-blue-600'}
-        text-white transition-all duration-300
-      `}
-    >
+  variant="default"
+  size="icon"
+  className={`w-12 h-12 rounded-full shadow-lg ${
+    isNeon(theme) 
+      ? 'bg-cyan-500 hover:bg-cyan-400 shadow-[0_0_20px_rgba(0,255,255,0.4)] hover:shadow-[0_0_30px_rgba(0,255,255,0.6)]' 
+      : theme === 'dark' 
+        ? 'bg-blue-600 hover:bg-blue-700' 
+        : 'bg-blue-500 hover:bg-blue-600'
+  } text-white transition-all duration-300`}
+>
       <MoreVertical className="h-6 w-6" />
     </Button>
     
@@ -1594,6 +1610,7 @@ if (themeLoading) {
   w-56
   ${themes[theme].cardBg} ${themes[theme].borderColor}
   border rounded-lg shadow-xl
+  ${isNeon(theme) ? 'shadow-[0_0_30px_rgba(0,255,255,0.2)] border-cyan-500/30' : ''}
   opacity-0 invisible group-hover:opacity-100 group-hover:visible
   transition-all duration-300 ease-in-out
   transform group-hover:translate-y-0 translate-y-2
@@ -1616,14 +1633,16 @@ if (themeLoading) {
       { name: 'Care Health Insurance', url: 'https://faveo.careinsurance.com/NewFaveo/#auth/login' }
     ].map((link, index) => (
       <div 
-        key={index}
-        className={`
-          px-3 py-2 text-sm rounded cursor-pointer flex items-center
-          transition-colors duration-200
-          ${theme === 'dark' 
-            ? 'hover:bg-gray-700 text-gray-200 hover:text-white' 
-            : 'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}
-        `}
+  key={index}
+  className={`
+    px-3 py-2 text-sm rounded cursor-pointer flex items-center
+    transition-colors duration-200
+    ${isNeon(theme) 
+      ? 'hover:bg-cyan-500/10 text-slate-300 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'hover:bg-gray-700 text-gray-200 hover:text-white' 
+        : 'hover:bg-gray-100 text-gray-800 hover:text-gray-900'}
+  `}
         onClick={() => window.open(link.url, '_blank')}
       >
         <ExternalLink className="h-4 w-4 mr-2" />
@@ -1639,62 +1658,116 @@ if (themeLoading) {
 
 
 <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className={`grid w-full grid-cols-9 ${theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
+          <TabsList className={`grid w-full grid-cols-9 rounded-full p1.5 ${isNeon(theme) ? 'bg-slate-900 border border-cyan-500/50 shadow-[0_0_15px_rgba(0,255,255,0.1)]' : theme === 'dark' ? 'bg-gray-700' : highlightBg}`}>
   <TabsTrigger
     value="dashboard"
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <Activity className="mr-2 h-4 w-4 text-blue-500" /> Dashboard
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/50 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <Activity className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-cyan-400' : 'text-blue-500'}`} /> Dashboard
+</TabsTrigger>
   <TabsTrigger 
     value="leads" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <Users className="mr-2 h-4 w-4 text-green-500" /> Leads
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <Users className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-green-400 ' : 'text-blue-500'}`} /> Leads
+</TabsTrigger>
   <TabsTrigger 
     value="kyc" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <Shield className="mr-2 h-4 w-4 text-yellow-500" /> KYC
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <Shield className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-amber-400' : 'text-blue-500'}`} /> KYC
+</TabsTrigger>
   <TabsTrigger 
     value="clients" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <User className="mr-2 h-4 w-4 text-purple-500" /> Clients
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <User className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-fuchsia-400' : 'text-blue-500'}`} /> Clients
+</TabsTrigger>
   
   <TabsTrigger 
     value="sip" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <CalendarDays className="mr-2 h-4 w-4 text-red-500" /> SIP Reminders
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <CalendarDays className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-red-400' : 'text-blue-500'}`} /> SIP Reminders
+</TabsTrigger>
   <TabsTrigger 
     value="communication" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <Mail className="mr-2 h-4 w-4 text-indigo-500" /> Communication
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <Mail className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-indigo-400' : 'text-blue-500'}`} /> Communication
+</TabsTrigger>
   <TabsTrigger 
   value="email" 
-  className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
+  className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
 >
-  <Mail theme={theme} /> Email
+  <Mail className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-violet-400' : 'text-blue-500'}`} /> Email
 </TabsTrigger>
 <TabsTrigger 
       value="tasks" 
-      className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-    >
-      <ListChecks className="mr-2 h-4 w-4 text-indigo-500" /> Tasks
-    </TabsTrigger>
+      className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <ListChecks className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-purple-400' : 'text-blue-500'}`} /> Tasks
+</TabsTrigger>
   <TabsTrigger 
     value="investment-tracker" 
-    className={`${theme === 'dark' ? 'data-[state=active]:bg-gray-600' : 'data-[state=active]:bg-white'} data-[state=active]:border data-[state=active]:border-gray-300`}
-  >
-    <BarChart2 className="mr-2 h-4 w-4 text-teal-500" /> Investment Tracker
-  </TabsTrigger>
+    className={`rounded-full ${
+    isNeon(theme) 
+      ? 'data-[state=active]:bg-cyan-500/40 data-[state=active]:text-cyan-300 data-[state=active]:border data-[state=active]:border-cyan-500/40 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)] text-slate-400 hover:text-cyan-300' 
+      : theme === 'dark' 
+        ? 'data-[state=active]:bg-gray-600' 
+        : 'data-[state=active]:bg-white'
+  } data-[state=active]:border data-[state=active]:border-gray-300`}
+>
+  <BarChart2 className={`mr-2 h-4 w-4 ${isNeon(theme) ? 'text-teal-400' : 'text-blue-500'}`} /> Investment Tracker
+</TabsTrigger>
 
   </TabsList>
   
@@ -1708,29 +1781,29 @@ if (themeLoading) {
     {/* First row - Metrics cards */}
     <div className="lg:col-span-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className={`${cardBg} ${borderColor}`}>
+        <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Leads</CardTitle>
             <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeLeads}</div>
+            <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}`}>{activeLeads}</div>
             <p className={`text-xs ${mutedText}`}>Currently being worked on</p>
           </CardContent>
         </Card>
 
-        <Card className={`${cardBg} ${borderColor}`}>
+        <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Converted Clients</CardTitle>
             <User className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{convertedClients}</div>
+            <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-fuchsia-300 drop-shadow-[0_0_8px_rgba(232,121,249,0.4)]' : ''}`}>{convertedClients}</div>
             <p className={`text-xs ${mutedText}`}>Total successful conversions</p>
           </CardContent>
         </Card>
 
-  <Card className={`${cardBg} ${borderColor}`}>
+  <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
   <CardHeader 
     className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer"
     onClick={() => setActiveTab("kyc")}
@@ -1742,18 +1815,18 @@ if (themeLoading) {
     className="cursor-pointer"
     onClick={() => setActiveTab("kyc")}
   >
-    <div className="text-2xl font-bold">{pendingKYC}</div>
+    <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : ''}`}>{pendingKYC}</div>
     <p className={`text-xs ${mutedText}`}>Leads in KYC process</p>
   </CardContent>
 </Card>
 
-        <Card className={`${cardBg} ${borderColor}`}>
+        <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
             <TrendingUp className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{conversionRate}%</div>
+            <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-green-300 drop-shadow-[0_0_8px_rgba(74,222,128,0.4)]' : ''}`}>{conversionRate}%</div>
             <p className={`text-xs ${mutedText}`}>Leads to clients ratio</p>
           </CardContent>
         </Card>
@@ -1770,11 +1843,11 @@ if (themeLoading) {
         <CardContent className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={leadsVsClientsData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="value" fill="#F97316" />
+              <CartesianGrid strokeDasharray="3 3" stroke={isNeon(theme) ? '#1e293b' : '#e2e8f0'} />
+              <XAxis dataKey="name" stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
+<YAxis stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
+              <Tooltip contentStyle={isNeon(theme) ? { backgroundColor: '#0f172a', border: '1px solid rgba(0,255,255,0.3)', boxShadow: '0 0 15px rgba(0,255,255,0.2)', color: '#22d3ee' } : undefined} />
+              <Bar dataKey="value" fill={isNeon(theme) ? '#22d3ee' : '#F97316'} style={isNeon(theme) ? { filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.4))' } : undefined} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
@@ -1782,43 +1855,72 @@ if (themeLoading) {
     </div>
 
     {/* Lead Status Distribution - Column 2 */}
-    <div className="lg:col-span-2">
-      <Card className={`${cardBg} ${borderColor} h-full`}>
-  <CardHeader>
-    <CardTitle>Lead Status Distribution</CardTitle>
-  </CardHeader>
-  <CardContent className="h-[300px]">
-    <ResponsiveContainer width="100%" height="100%">
-      <RechartsPieChart>
-        <Pie
-          data={leadStatusData.filter(item => item.value > 0)}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          outerRadius={80}
-          innerRadius={45}
-          fill="#8884d8"
-          dataKey="value"
-          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-        >
-          {leadStatusData
-            .filter(item => item.value > 0)
-            .map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-        </Pie>
-        <Tooltip />
-        {leadStatusData.some(item => item.value > 0) && <Legend />}
-      </RechartsPieChart>
-    </ResponsiveContainer>
-    {!leadStatusData.some(item => item.value > 0) && (
-      <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-        No lead status data available
-      </div>
-    )}
-  </CardContent>
-</Card>
-    </div>
+<div className="lg:col-span-2">
+  <Card className={`${cardBg} ${borderColor} h-full ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''}`}>
+    <CardHeader>
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Lead Status Distribution
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsPieChart>
+          <Pie
+            data={leadStatusData.filter(item => item.value > 0)}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            innerRadius={45}
+            fill="#8884d8"
+            dataKey="value"
+            stroke={isNeon(theme) ? 'rgba(0,255,255,0.15)' : 'none'}
+            strokeWidth={isNeon(theme) ? 2 : 0}
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          >
+            {leadStatusData
+              .filter(item => item.value > 0)
+              .map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={
+                    isNeon(theme) 
+                      ? ['#22d3ee', '#e879f9', '#4ade80', '#f87171', '#fbbf24', '#2dd4bf'][index % 6] 
+                      : COLORS[index % COLORS.length]
+                  } 
+                  style={isNeon(theme) ? { filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.4))' } : undefined}
+                />
+              ))}
+          </Pie>
+          <Tooltip 
+            contentStyle={isNeon(theme) ? { 
+              backgroundColor: '#0f172a', 
+              border: '1px solid rgba(0,255,255,0.3)', 
+              boxShadow: '0 0 15px rgba(0,255,255,0.2)', 
+              color: '#22d3ee',
+              borderRadius: '8px'
+            } : undefined}
+            itemStyle={isNeon(theme) ? { color: '#22d3ee' } : undefined}
+          />
+          {leadStatusData.some(item => item.value > 0) && (
+            <Legend 
+              formatter={(value) => (
+                <span style={isNeon(theme) ? { color: '#94a3b8', textShadow: '0 0 4px rgba(0,255,255,0.2)' } : {}}>
+                  {value}
+                </span>
+              )}
+            />
+          )}
+        </RechartsPieChart>
+      </ResponsiveContainer>
+      {!leadStatusData.some(item => item.value > 0) && (
+        <div className={`absolute inset-0 flex items-center justify-center ${isNeon(theme) ? 'text-cyan-400/60' : 'text-gray-500'}`}>
+          No lead status data available
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</div>
 
     {/* New Product Distribution - 2 columns */}
     <div className="lg:col-span-2">
@@ -1865,16 +1967,13 @@ if (themeLoading) {
   dataKey="value"
   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
 >
-  {[
-    '#e46b0c', 
-    '#00C49F', 
-    '#FFBB28', 
-    '#0088FE',
-    '#FF8042', // Add color for Taxation
-    '#A4DE6C'  // Add color for NPS
-  ].map((color, index) => (
-    <Cell key={`cell-${index}`} fill={color} />
-  ))}
+  {isNeon(theme) 
+  ? ['#22d3ee', '#e879f9', '#4ade80', '#f87171', '#fbbf24', '#2dd4bf'].map((color, index) => (
+      <Cell key={`cell-${index}`} fill={color} />
+    ))
+  : COLORS.map((color, index) => (
+      <Cell key={`cell-${index}`} fill={color} />
+    ))}
 </Pie>
               <Tooltip />
               <Legend />
@@ -1885,7 +1984,7 @@ if (themeLoading) {
     </div>
 
   <div className="lg:col-span-4">
-  <Card className={`${cardBg} ${borderColor}`}>
+  <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
     <CardHeader>
       <CardTitle>Investment Overview</CardTitle>
     </CardHeader>
@@ -1894,67 +1993,79 @@ if (themeLoading) {
     </CardContent>
   </Card>
 </div>
-   <div className="lg:col-span-2">
+
+<div className="lg:col-span-2">
   <Card className={`${cardBg} ${borderColor} h-full`}>
     <CardHeader>
       <CardTitle>Quick Actions</CardTitle>
     </CardHeader>
     <CardContent className="grid grid-cols-2 gap-4">
-      <Button 
-        variant="outline" 
-        className={`h-24 flex flex-col items-center justify-center ${getButtonClasses(theme, 'primary')}`}
+      <Button
+        variant="outline"
+        className={`rounded-xl h-24 flex flex-col items-center justify-center ${
+          isNeon(theme)
+            ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_15px_rgba(0,255,255,0.2)] transition-all'
+            : getButtonClasses(theme, 'primary')
+        }`}
         onClick={() => {
           setActiveTab("leads");
-          // Scroll to top in case the form is below
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       >
-        <Plus className="h-6 w-6 mb-2" />
+        <Plus className={`h-6 w-6 mb-2 ${isNeon(theme) ? 'text-cyan-400' : ''}`} />
         Add New Lead
       </Button>
-      
-      <Button 
-        variant="outline" 
-       className={`h-24 flex flex-col items-center justify-center ${getButtonClasses(theme, 'primary')}`}
+
+      <Button
+        variant="outline"
+        className={`rounded-xl h-24 flex flex-col items-center justify-center ${
+          isNeon(theme)
+            ? 'border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-500/10 hover:border-fuchsia-400 hover:shadow-[0_0_15px_rgba(232,121,249,0.2)] transition-all'
+            : getButtonClasses(theme, 'primary')
+        }`}
         onClick={() => {
           setActiveTab("communication");
-          // Auto-select the first client if available
           if (clients.length > 0 && !selectedClientId) {
             setSelectedClientId(clients[0].id);
           }
         }}
       >
-        <Mail className="h-6 w-6 mb-2" />
+        <Mail className={`h-6 w-6 mb-2 ${isNeon(theme) ? 'text-fuchsia-400' : ''}`} />
         Send Email
       </Button>
-      
-      <Button 
-        variant="outline" 
-        className={`h-24 flex flex-col items-center justify-center ${getButtonClasses(theme, 'primary')}`}
+
+      <Button
+        variant="outline"
+        className={`rounded-xl h-24 flex flex-col items-center justify-center ${
+          isNeon(theme)
+            ? 'border-green-500/30 text-green-300 hover:bg-green-500/10 hover:border-green-400 hover:shadow-[0_0_15px_rgba(74,222,128,0.2)] transition-all'
+            : getButtonClasses(theme, 'primary')
+        }`}
         onClick={() => {
           setActiveTab("communication");
-          // Set today's date as default for meeting
           setMeetingDate(new Date());
-          // Auto-select the first client if available
           if (clients.length > 0 && !selectedClientId) {
             setSelectedClientId(clients[0].id);
           }
         }}
       >
-        <CalendarDays className="h-6 w-6 mb-2" />
+        <CalendarDays className={`h-6 w-6 mb-2 ${isNeon(theme) ? 'text-green-400' : ''}`} />
         Schedule Meeting
       </Button>
-      
-      <Button 
-        variant="outline" 
-        className={`h-24 flex flex-col items-center justify-center ${getButtonClasses(theme, 'primary')}`}
+
+      <Button
+        variant="outline"
+        className={`rounded-xl h-24 flex flex-col items-center justify-center ${
+          isNeon(theme)
+            ? 'border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-400 hover:shadow-[0_0_15px_rgba(251,191,36,0.2)] transition-all'
+            : getButtonClasses(theme, 'primary')
+        }`}
         onClick={() => {
           setActiveTab("kyc");
-          // Scroll to top in case the form is below
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
       >
-        <Shield className="h-6 w-6 mb-2" />
+        <Shield className={`h-6 w-6 mb-2 ${isNeon(theme) ? 'text-amber-400' : ''}`} />
         Start KYC
       </Button>
     </CardContent>
@@ -2017,8 +2128,12 @@ if (themeLoading) {
               })
               .map(activity => (
                 <div 
-                  key={activity.id} 
-                  className={`p-4 border rounded-lg hover:${highlightBg} transition-colors ${borderColor} cursor-pointer`}
+  key={activity.id} 
+  className={`p-4 border rounded-lg transition-colors cursor-pointer ${
+    isNeon(theme) 
+      ? 'border-cyan-500/10 hover:bg-cyan-500/5 hover:border-cyan-500/30 hover:shadow-[0_0_10px_rgba(0,255,255,0.1)]' 
+      : `hover:${highlightBg} ${borderColor}`
+  }`}
                   onClick={() => {
                     // Navigate to relevant tab based on activity type
                     switch(activity.type) {
@@ -2094,7 +2209,7 @@ if (themeLoading) {
 </TabsContent>
 
           {/* Leads Tab */}
-         <TabsContent value="leads">
+          <TabsContent value="leads">
   <LeadsTab
     theme={theme}
     leads={leads}

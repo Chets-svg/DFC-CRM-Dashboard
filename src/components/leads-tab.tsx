@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { motion } from 'framer-motion';
 import { ThemeName, themes, getButtonClasses } from '@/lib/theme';
+import LeadProgressBar from './LeadProgressBar'; 
 
 interface Lead {
   id: string;
@@ -90,300 +91,57 @@ export default function LeadsTab({
 }: LeadsTabProps) {
   const currentTheme = themes[theme] || themes['blue-smoke'];
   const { cardBg, borderColor, highlightBg, selectedBg, mutedText, inputBg } = currentTheme;
-
-  const LeadProgressBar = ({ 
-    status = 'lead-generated', 
-    onStatusChange,
-    isLost = false
-  }: {
-    status?: string;
-    onStatusChange?: (newStatus: string) => void;
-    isLost?: boolean;
-  }) => {
-    const stages: Stage[] = [
-      { 
-        id: 'lead-generated', 
-        label: 'Generated', 
-        icon: <User className="w-5 h-5" />,
-        description: 'Lead has been created in the system',
-        actionLink: 'https://www.cvlkra.com/'
-      },
-      { 
-        id: 'Kyc-Status', 
-        label: 'KYC Status', 
-        icon: <Shield className="w-5 h-5" />,
-        description: 'Lead has been created in the system',
-        actionLink: 'https://www.cvlkra.com/'
-      },
-      { 
-        id: 'kyc-started', 
-        label: 'KYC Started', 
-        icon: <FileText className="w-5 h-5" />,
-        description: 'KYC process initiated - verification required',
-        actionLink: 'https://edge360.camsonline.com/signin', 
-      },
-      { 
-        id: 'kyc-completed', 
-        label: 'KYC Done', 
-        icon: <Check className="w-5 h-5" />,
-        description: 'KYC documents verified and approved',
-        actionLink: 'https://www.mfuonline.com/'
-      },
-      { 
-        id: 'can-no-generated', 
-        label: 'CAN No.', 
-        icon: <CreditCard className="w-5 h-5" />,
-        description: 'Client Account Number generated',
-        actionLink: 'https://www.mfuonline.com/'
-      },
-      { 
-        id: 'can-account-created', 
-        label: 'CAN Account', 
-        icon: <Check className="w-5 h-5" />,
-        description: 'Investment account created',
-        actionLink: 'https://www.mfuonline.com/'
-      },
-      { 
-        id: 'mandate-generated', 
-        label: 'Mandate', 
-        icon: <FileSignature className="w-5 h-5" />,
-        description: 'Auto-debit mandate generated',
-        actionLink: 'https://www.mfuonline.com/'
-      },
-      { 
-        id: 'mandate-accepted', 
-        label: 'Accepted', 
-        icon: <ThumbsUp className="w-5 h-5" />,
-        description: 'Mandate approved by client',
-        actionLink: 'https://www.mfuonline.com/'
-      },
-      { 
-        id: 'sip-setup', 
-        label: 'SIP Done', 
-        icon: <Check className="w-5 h-5" />,
-        description: 'Systematic Investment Plan activated'
-      }
-    ];
-
-    const currentIndex = stages.findIndex(stage => stage.id === status);
-    const isComplete = status === 'sip-setup';
-
-    const handlePrevious = () => {
-      if (currentIndex > 0 && onStatusChange) {
-        const newStatus = stages[currentIndex - 1].id;
-        onStatusChange(newStatus);
-      }
-    };
-
-    const handleNext = () => {
-      if (currentIndex < stages.length - 1 && onStatusChange) {
-        const newStatus = stages[currentIndex + 1].id;
-        onStatusChange(newStatus);
-      }
-    };
-
-    // If lead is lost, show a simplified progress bar
-    if (isLost) {
-      return (
-        <div className="w-full py-4">
-          <div className="flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-red-500 font-bold text-lg">Lead Lost</div>
-              <div className="text-sm text-gray-500 mt-1">This lead has been marked as lost</div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="relative w-full py-1">
-        <div className="flex justify-between items-center mb-5">
-          <button 
-            onClick={handlePrevious}
-            disabled={currentIndex === 0}
-            className={`px-4 py-2 rounded ${
-              currentIndex === 0 
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            Previous
-          </button>
-
-          <div className="text-center px-10">
-            <p className="text-sm text-muted-foreground">
-              {stages[currentIndex]?.description}
-            </p>
-            {stages[currentIndex]?.actionLink && (
-              <a 
-                href={stages[currentIndex].actionLink} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center text-sm text-blue-600 hover:text-blue-800 underline"
-              >
-                {stages[currentIndex].label} Portal
-                <svg xmlns="http://www.w3.org/2000/svg" className="ml-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
-            )}
-          </div>
-          
-          <button 
-            onClick={handleNext}
-            disabled={currentIndex === stages.length - 1}
-            className={`px-4 py-2 rounded ${
-              currentIndex === stages.length - 1 
-                ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
-                : 'bg-blue-500 text-white hover:bg-blue-600'
-            }`}
-          >
-            Next
-          </button>
-        </div>
-        
-        <div className="relative flex justify-between items-center">
-          {stages.map((stage, index) => {
-            const isCompleted = index < currentIndex;
-            const isCurrent = index === currentIndex;
-
-            return (
-              <React.Fragment key={stage.id}>
-                <div className="flex flex-col items-center z-10">
-                  <motion.div
-                    className={`relative w-12 h-12 rounded-full flex items-center justify-center border-2 ${
-                      isCurrent 
-                        ? isComplete 
-                          ? 'border-green-500 bg-green-50 shadow-lg' 
-                          : 'border-blue-500 bg-white shadow-lg' 
-                        : isCompleted 
-                          ? isComplete 
-                            ? 'border-green-300 bg-green-50' 
-                            : 'border-blue-300 bg-white' 
-                          : 'border-gray-200 bg-white'
-                    }`}
-                    whileHover={{ scale: 1.1 }}
-                  >
-                    {/* Spinning circle for current step */}
-                    {isCurrent && (
-                      <motion.div
-                        className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-500 border-r-blue-500"
-                        animate={{ rotate: 360 }}
-                        transition={{ 
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "linear"
-                        }}
-                      />
-                    )}
-                    
-                    {isCompleted ? (
-                      <Check className={`w-6 h-6 ${isComplete ? 'text-green-500' : 'text-blue-500'}`} />
-                    ) : isCurrent ? (
-                      <motion.div 
-                        animate={{ 
-                          scale: [1, 1, 1],
-                          rotate: [0, 10, -10, 0]
-                        }}
-                        transition={{ 
-                          duration: 0.6,
-                          repeat: Infinity,
-                          repeatDelay: 2
-                        }}
-                      >
-                        <div className={isComplete ? 'text-green-500' : 'text-blue-500'}>
-                          {stage.icon}
-                        </div>
-                      </motion.div>
-                    ) : (
-                      <span className="text-xs font-medium text-gray-500">
-                        {stage.icon}
-                      </span>
-                    )}
-                  </motion.div>
-                  <span className={`text-xs font-medium text-center max-w-[80px] mt-2 ${
-                    isCurrent 
-                      ? isComplete 
-                        ? 'text-green-600 font-semibold' 
-                        : 'text-blue-600 font-semibold' 
-                      : isCompleted 
-                        ? isComplete 
-                          ? 'text-green-500' 
-                          : 'text-blue-500' 
-                        : 'text-gray-500'
-                  }`}>
-                    {stage.label}
-                  </span>
-                </div>
-
-                {index < stages.length - 1 && (
-                  <div className="flex-1 flex justify-center">
-                    <ArrowRight className={`w-6 h-6 ${
-                      isCompleted 
-                        ? isComplete 
-                          ? 'text-green-500' 
-                          : 'text-blue-500' 
-                        : 'text-gray-300'
-                    }`} />
-                  </div>
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+  const neon = theme === 'neon-cyberpunk';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card className={`${cardBg} ${borderColor}`}>
+      <Card className={`${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_25px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''}`}>
         <CardHeader>
-          <CardTitle>Add New Lead</CardTitle>
+          <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>
+            Add New Lead
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Name Input */}
             <div>
-              <label className="block mb-1">Name *</label>
+              <label className={`block mb-1 text-sm font-medium ${neon ? 'text-slate-300 drop-shadow-[0_0_2px_rgba(0,255,255,0.15)]' : ''}`}>Name *</label>
               <Input
                 type="text"
                 value={newLead.name}
                 onChange={(e) => setNewLead({...newLead, name: e.target.value})}
-                className={`${inputBg} ${borderColor}`}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(0,255,255,0.25)] text-cyan-100 placeholder-slate-500 transition-all duration-300' : ''}`}
+                placeholder={neon ? 'Enter lead name...' : ''}
                 required
               />
             </div>
             
-            {/* Email Input */}
             <div>
-              <label className="block mb-1">Email *</label>
+              <label className={`block mb-1 text-sm font-medium ${neon ? 'text-slate-300 drop-shadow-[0_0_2px_rgba(0,255,255,0.15)]' : ''}`}>Email *</label>
               <Input
                 type="email"
                 value={newLead.email}
                 onChange={(e) => setNewLead({...newLead, email: e.target.value})}
-                className={`${inputBg} ${borderColor}`}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(0,255,255,0.25)] text-cyan-100 placeholder-slate-500 transition-all duration-300' : ''}`}
+                placeholder={neon ? 'Enter email address...' : ''}
                 required
               />
             </div>
             
-            {/* Phone Input */}
             <div>
-              <label className="block mb-1">Phone *</label>
+              <label className={`block mb-1 text-sm font-medium ${neon ? 'text-slate-300 drop-shadow-[0_0_2px_rgba(0,255,255,0.15)]' : ''}`}>Phone *</label>
               <Input
                 type="tel"
                 value={newLead.phone}
                 onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
-                className={`${inputBg} ${borderColor}`}
+                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(0,255,255,0.25)] text-cyan-100 placeholder-slate-500 transition-all duration-300' : ''}`}
+                placeholder={neon ? 'Enter phone number...' : ''}
                 required
               />
             </div>
             
-            {/* Product Interest - Multi-select */}
             <div>
-              <label className="block mb-1">Interested Products *</label>
-              <div className={`p-3 border rounded ${inputBg} ${borderColor}`}>
+              <label className={`block mb-1 text-sm font-medium ${neon ? 'text-slate-300 drop-shadow-[0_0_2px_rgba(0,255,255,0.15)]' : ''}`}>Interested Products *</label>
+              <div className={`p-3 border rounded-md ${inputBg} ${borderColor} ${neon ? 'border-cyan-500/20 shadow-[0_0_4px_rgba(0,255,255,0.05)]' : ''}`}>
                 {[
                   'Mutual Funds - SIP',
                   'Mutual Funds - Lumpsum',
@@ -394,7 +152,7 @@ export default function LeadsTab({
                   'Taxation Planning',
                   'National Pension System (NPS)'
                 ].map(product => (
-                  <div key={product} className="flex items-center mb-2">
+                  <div key={product} className="flex items-center mb-2 last:mb-0">
                     <input
                       type="checkbox"
                       id={`product-${product}`}
@@ -412,9 +170,12 @@ export default function LeadsTab({
                           });
                         }
                       }}
-                      className="mr-2 h-4 w-4"
+                      className={`mr-2 h-4 w-4 rounded ${neon ? 'accent-cyan-400' : ''}`}
                     />
-                    <label htmlFor={`product-${product}`} className="text-sm">
+                    <label 
+                      htmlFor={`product-${product}`} 
+                      className={`text-sm ${neon ? 'text-slate-300' : ''}`}
+                    >
                       {product}
                     </label>
                   </div>
@@ -426,7 +187,7 @@ export default function LeadsTab({
         <CardFooter>
           <Button 
             onClick={addLead} 
-            className={`${getButtonClasses(theme)} w-full`}
+            className={`rounded-full ${getButtonClasses(theme)} w-full ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.35)] hover:shadow-[0_0_25px_rgba(0,255,255,0.55)] transition-all duration-300' : ''}`}
             disabled={!newLead.name || !newLead.email || !newLead.phone || newLead.productInterest.length === 0}
           >
             <Plus className="mr-2 h-4 w-4" /> Add Lead
@@ -435,81 +196,121 @@ export default function LeadsTab({
       </Card>
 
       <div className="md:col-span-2 space-y-4">
-        <Card className={`${cardBg} ${borderColor}`}>
+        <Card className={`${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_25px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''}`}>
           <CardHeader>
-            <CardTitle>Lead List</CardTitle>
+            <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>
+              Lead List
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               {leads
               .sort((a, b) => {
-                // Push lost leads to the bottom
                 if (a.status === 'lost' && b.status !== 'lost') return 1;
                 if (a.status !== 'lost' && b.status === 'lost') return -1;
-                // For non-lost leads, sort by creation date (newest first)
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
               })
               .map(lead => (
-                <div key={lead.id} className={`p-4 border rounded-lg ${borderColor} ${expandedLeadId === lead.id ? selectedBg : highlightBg}`}>
+                <div 
+                  key={lead.id} 
+                  className={`p-4 border rounded-lg transition-all duration-300 ${
+                    borderColor
+                  } ${
+                    expandedLeadId === lead.id 
+                      ? selectedBg 
+                      : highlightBg
+                  } ${
+                    neon 
+                      ? expandedLeadId === lead.id 
+                        ? 'border-cyan-500/40 shadow-[0_0_18px_rgba(0,255,255,0.12)] bg-cyan-500/5' 
+                        : 'border-slate-700 hover:border-cyan-500/25 hover:shadow-[0_0_8px_rgba(0,255,255,0.06)]' 
+                      : ''
+                  }`}
+                >
                   <div 
                     className="flex justify-between items-start cursor-pointer"
                     onClick={() => toggleLead(lead.id)}
                   >
                     <div>
-                      {/* Make lost lead names red */}
-                      <h3 className={`font-bold ${lead.status === 'lost' ? 'text-red-600' : ''}`}>
+                      <h3 className={`font-bold text-lg ${
+                        lead.status === 'lost' 
+                          ? neon ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]' : 'text-red-600' 
+                          : neon ? 'text-cyan-100 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : ''
+                      }`}>
                         {lead.name}
                       </h3>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {lead.productInterest.map(product => (
                           <span 
                             key={product} 
-                            className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full"
+                            className={`text-xs px-2.5 py-1 rounded-full transition-all duration-300 ${
+                              neon 
+                                ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/25 shadow-[0_0_4px_rgba(0,255,255,0.08)] hover:bg-cyan-500/20 hover:border-cyan-400/40 hover:shadow-[0_0_8px_rgba(0,255,255,0.15)]' 
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
                           >
                             {product}
                           </span>
                         ))}
                       </div>
-                      <p className={`text-sm ${mutedText}`}>{lead.email} | {lead.phone}</p>
+                      <p className={`text-sm mt-1 ${neon ? 'text-slate-400' : mutedText}`}>{lead.email} | {lead.phone}</p>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        lead.status === 'new' ? 'bg-blue-100 text-blue-800' :
-                        lead.status === 'contacted' ? 'bg-yellow-100 text-yellow-800' :
-                        lead.status === 'qualified' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
+                      <span className={`px-2.5 py-1 text-xs rounded-full font-medium ${
+                        lead.status === 'new' 
+                          ? neon 
+                            ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-[0_0_6px_rgba(0,255,255,0.15)]' 
+                            : 'bg-blue-100 text-blue-800'
+                          : lead.status === 'contacted' 
+                            ? neon 
+                              ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_6px_rgba(245,158,11,0.15)]' 
+                              : 'bg-yellow-100 text-yellow-800'
+                            : lead.status === 'qualified' 
+                              ? neon 
+                                ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shadow-[0_0_6px_rgba(52,211,153,0.15)]' 
+                                : 'bg-green-100 text-green-800'
+                              : neon 
+                                ? 'bg-red-500/15 text-red-300 border border-red-500/30 shadow-[0_0_6px_rgba(248,113,113,0.15)]' 
+                                : 'bg-red-100 text-red-800'
                       }`}>
                         {lead.status}
                       </span>
                       {expandedLeadId === lead.id ? (
-                        <ChevronUp className="h-4 w-4" />
+                        <ChevronUp className={`h-4 w-4 ${neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}`} />
                       ) : (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className={`h-4 w-4 ${neon ? 'text-slate-500' : ''}`} />
                       )}
                     </div>
                   </div>
 
-                  {/* Progress Bar - Always shown for lost leads when expanded, otherwise only for mutual fund leads */}
                   {(expandedLeadId === lead.id || (lead.productInterest.some(product => product.includes('Mutual Funds')) && lead.status !== 'lost')) && (
                     <div className="my-3">
                       <LeadProgressBar 
                         status={lead.progressStatus} 
                         onStatusChange={(newStatus) => updateLeadProgress(lead.id, newStatus)}
                         isLost={lead.status === 'lost'}
+                        themeName={theme}
                       />
                     </div>
                   )}
 
-                  {/* Expanded Lead Details */}
                   {expandedLeadId === lead.id && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="flex justify-between mb-4">
-                        <div className="space-x-2">
+                    <div className={`mt-4 pt-4 border-t ${neon ? 'border-cyan-500/20' : 'border-gray-200'}`}>
+                      <div className="flex flex-wrap justify-between gap-3 mb-4">
+                        <div className="flex flex-wrap gap-2">
                           <Button 
                             variant={lead.status === 'contacted' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => updateLeadStatus(lead.id, 'contacted')}
-                            className={`${lead.status === 'contacted' ? getButtonClasses(theme, 'primary') : getButtonClasses(theme, 'outline')}`}
+                            className={`transition-all duration-300 ${
+                              lead.status === 'contacted' 
+                                ? neon 
+                                  ? 'bg-amber-500/20 text-amber-300 border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.3)] hover:shadow-[0_0_16px_rgba(245,158,11,0.5)] hover:bg-amber-500/30' 
+                                  : getButtonClasses(theme, 'primary') 
+                                : neon 
+                                  ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_8px_rgba(0,255,255,0.2)]' 
+                                  : getButtonClasses(theme, 'outline')
+                            }`}
                           >
                             Contacted
                           </Button>
@@ -517,7 +318,15 @@ export default function LeadsTab({
                             variant={lead.status === 'qualified' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => updateLeadStatus(lead.id, 'qualified')}
-                            className={lead.status === 'qualified' ? 'bg-green-500 hover:bg-green-600' : ''}
+                            className={`transition-all duration-300 ${
+                              lead.status === 'qualified' 
+                                ? neon 
+                                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-[0_0_10px_rgba(52,211,153,0.3)] hover:shadow-[0_0_16px_rgba(52,211,153,0.5)] hover:bg-emerald-500/30' 
+                                  : 'bg-green-500 hover:bg-green-600' 
+                                : neon 
+                                  ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_8px_rgba(0,255,255,0.2)]' 
+                                  : ''
+                            }`}
                           >
                             Qualified
                           </Button>
@@ -525,7 +334,15 @@ export default function LeadsTab({
                             variant={lead.status === 'lost' ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => updateLeadStatus(lead.id, 'lost')}
-                            className={lead.status === 'lost' ? 'bg-red-500 hover:bg-red-600' : ''}
+                            className={`transition-all duration-300 ${
+                              lead.status === 'lost' 
+                                ? neon 
+                                  ? 'bg-red-500/20 text-red-300 border border-red-500/50 shadow-[0_0_10px_rgba(248,113,113,0.3)] hover:shadow-[0_0_16px_rgba(248,113,113,0.5)] hover:bg-red-500/30' 
+                                  : 'bg-red-500 hover:bg-red-600' 
+                                : neon 
+                                  ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_8px_rgba(0,255,255,0.2)]' 
+                                  : ''
+                            }`}
                           >
                             Lost
                           </Button>
@@ -534,17 +351,27 @@ export default function LeadsTab({
                         <Button 
                           onClick={() => convertLeadToClient(lead.id)}
                           disabled={lead.status === 'lost'}
-                          className={`${getButtonClasses(theme)}`}
+                          className={`rounded-full transition-all duration-300 ${
+                            lead.status === 'lost' 
+                              ? neon 
+                                ? 'opacity-40 cursor-not-allowed bg-slate-800/50 text-slate-600 border border-slate-700/30' 
+                                : '' 
+                              : getButtonClasses(theme) + (neon ? ' shadow-[0_0_15px_rgba(0,255,255,0.35)] hover:shadow-[0_0_25px_rgba(0,255,255,0.55)]' : '')
+                          }`}
                         >
                           Convert to Client
                         </Button>
                       </div>
 
                       <div>
-                        <h4 className="font-bold mb-2">Notes</h4>
+                        <h4 className={`font-bold mb-2 ${neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : ''}`}>Notes</h4>
                         <div className="space-y-2 mb-4">
                           {lead.notes.map((note, index) => (
-                            <div key={index} className={`p-2 rounded ${highlightBg}`}>
+                            <div key={index} className={`p-2.5 rounded-md ${
+                              neon 
+                                ? 'bg-slate-800/80 text-slate-300 border border-cyan-500/10 shadow-[0_0_4px_rgba(0,255,255,0.04)]' 
+                                : highlightBg
+                            }`}>
                               {note}
                             </div>
                           ))}
@@ -555,16 +382,20 @@ export default function LeadsTab({
                             value={newNote}
                             onChange={(e) => setNewNote(e.target.value)}
                             placeholder="Add a note..."
-                            className={`flex-1 ${inputBg} ${borderColor}`}
+                            className={`flex-1 ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_12px_rgba(0,255,255,0.25)] text-cyan-100 placeholder-slate-500 transition-all duration-300' : ''}`}
                           />
                           <Button 
                             onClick={() => {
                               addNoteToLead(lead.id);
                               if (expandedLeadId !== lead.id) {
-                                setExpandedLeadId(lead.id);
+                                toggleLead(lead.id);
                               }
                             }}
-                            className="ml-2"
+                            className={`ml-2 transition-all duration-300 ${
+                              neon 
+                                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,255,255,0.2)] hover:bg-cyan-500/30 hover:shadow-[0_0_18px_rgba(0,255,255,0.4)] hover:border-cyan-400 active:bg-cyan-500/20' 
+                                : ''
+                            }`}
                           >
                             Add
                           </Button>
