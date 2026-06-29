@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Star, Edit, Save, Lock, ChevronDown, ChevronUp, Plus, Trash } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -137,8 +137,13 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
     primary: 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.4)]',
     muted: 'text-slate-500',
     progressTrack: 'bg-slate-800 border border-cyan-500/15',
+    lumpProgressTrack: 'bg-slate-800 border border-emerald-500/15',
+    yearProgressTrack: 'bg-slate-800 border border-violet-500/15',
+    yearlyProgressTrack: 'bg-slate-800 border border-amber-500/15',
     sipBar: 'bg-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.6)]',
     lumpBar: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]',
+    yearBar: 'bg-violet-400 shadow-[0_0_10px_rgba(139,92,246,0.6)]',
+    yearlyBar: 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.6)]',
     input: 'bg-slate-900 border-cyan-500/30 text-cyan-100 placeholder-slate-500 focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(0,255,255,0.3)]',
     tableHead: 'bg-slate-800/80 text-cyan-400/80',
     tableBody: 'divide-cyan-500/10',
@@ -168,6 +173,12 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
     textSlate400: 'text-slate-400',
     textCyan400_70: 'text-cyan-400/70 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]',
     deleteBtn: 'text-red-400 hover:text-red-300 hover:shadow-[0_0_8px_rgba(248,113,113,0.4)]',
+    sipProgressPct: 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]',
+    lumpProgressPct: 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]',
+    yearProgressPct: 'text-violet-400 drop-shadow-[0_0_4px_rgba(139,92,246,0.3)]',
+    yearlyProgressPct: 'text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.3)]',
+    monthlySipValue: 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]',
+    monthlyLumpValue: 'text-emerald-300 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]',
   } : {};
 
   const calculateTotals = () => {
@@ -185,6 +196,21 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   };
 
   const totals = calculateTotals();
+
+  const totalTarget = totals.sipTarget + totals.lumpsumTarget;
+  const totalAchieved = totals.sipAchieved + totals.lumpsumAchieved;
+
+  const sipProgress = totals.sipTarget > 0 ? Math.min(100, Math.round((totals.sipAchieved / totals.sipTarget) * 100)) : 0;
+  const lumpsumProgress = totals.lumpsumTarget > 0 ? Math.min(100, Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100)) : 0;
+  const overallProgress = totalTarget > 0 ? Math.min(100, Math.round((totalAchieved / totalTarget) * 100)) : 0;
+
+  // ─── Yearly Progress Calculation ──────────────────────────
+  const now = new Date();
+  const isCurrentYear = currentYear === now.getFullYear();
+  const currentMonthForProgress = now.getMonth() + 1; // 1-12
+  const yearlyProgress = isCurrentYear 
+    ? Math.round((currentMonthForProgress / 12) * 100) 
+    : 100;
 
   const toggleMonthExpansion = (monthIndex: number) => {
     setExpandedMonths(prev => ({
@@ -440,10 +466,12 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                 </div>
                 <div className="pt-2">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className={neon ? ns.label : ''}>Progress: <span className={neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}>{totals.sipTarget > 0 ? `${Math.min(100, Math.round((totals.sipAchieved / totals.sipTarget) * 100))}` : '0'}%</span></span>
+                    <span className={neon ? ns.label : ''}>
+                      Progress: <span className={neon ? ns.sipProgressPct : ''}>{sipProgress}%</span>
+                    </span>
                   </div>
                   <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.progressTrack : 'bg-gray-200'}`}>
-                    <div className={`h-full rounded-full ${neon ? ns.sipBar : (theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500')} transition-all duration-300`} style={{ width: totals.sipTarget > 0 ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` : '0%' }} />
+                    <div className={`h-full rounded-full transition-all duration-300 ${neon ? ns.sipBar : (theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500')}`} style={{ width: `${sipProgress}%` }} />
                   </div>
                 </div>
               </CardContent>
@@ -473,16 +501,18 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                 </div>
                 <div className="pt-2">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className={neon ? ns.label : ''}>Progress: <span className={neon ? 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]' : ''}>{totals.lumpsumTarget > 0 ? `${Math.min(100, Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100))}` : '0'}%</span></span>
+                    <span className={neon ? ns.label : ''}>
+                      Progress: <span className={neon ? ns.lumpProgressPct : ''}>{lumpsumProgress}%</span>
+                    </span>
                   </div>
-                  <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.progressTrack : 'bg-gray-200'}`}>
-                    <div className={`h-full rounded-full ${neon ? ns.lumpBar : 'bg-green-500'} transition-all duration-300`} style={{ width: totals.lumpsumTarget > 0 ? `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%' }} />
+                  <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.lumpProgressTrack : 'bg-gray-200'}`}>
+                    <div className={`h-full rounded-full transition-all duration-300 ${neon ? ns.lumpBar : 'bg-green-500'}`} style={{ width: `${lumpsumProgress}%` }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Year Summary */}
+            {/* ─── Year Summary ────────────────────────────────── */}
             <Card className={`${highlightBg} ${borderColor} ${neon ? ns.yearCard : ''}`}>
               <CardHeader>
                 <CardTitle className={`text-lg ${neon ? ns.yearTitle : ''}`}>{currentYear} Summary</CardTitle>
@@ -490,24 +520,37 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
                   <Label className={neon ? ns.label : ''}>Total Target:</Label>
-                  <span className={`font-medium ${neon ? 'text-violet-100 drop-shadow-[0_0_4px_rgba(139,92,246,0.2)]' : ''}`}>{formatCurrency(totals.sipTarget + totals.lumpsumTarget)}</span>
+                  <span className={`font-medium ${neon ? 'text-violet-100 drop-shadow-[0_0_4px_rgba(139,92,246,0.2)]' : ''}`}>{formatCurrency(totalTarget)}</span>
                 </div>
                 <div className="flex justify-between">
                   <Label className={neon ? ns.label : ''}>Total Achieved:</Label>
-                  <span className={`text-primary font-medium ${neon ? ns.yearValue : ''}`}>{formatCurrency(totals.sipAchieved + totals.lumpsumAchieved)}</span>
+                  <span className={`text-primary font-medium ${neon ? ns.yearValue : ''}`}>{formatCurrency(totalAchieved)}</span>
                 </div>
                 <div className="flex justify-between">
                   <Label className={neon ? ns.label : ''}>Overall Deficit:</Label>
-                  <span className={`font-medium ${(totals.sipAchieved + totals.lumpsumAchieved) >= (totals.sipTarget + totals.lumpsumTarget) ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')}`}>{formatCurrency((totals.sipAchieved + totals.lumpsumAchieved) - (totals.sipTarget + totals.lumpsumTarget))}</span>
+                  <span className={`font-medium ${totalAchieved >= totalTarget ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')}`}>{formatCurrency(totalAchieved - totalTarget)}</span>
                 </div>
+
+                {/* Overall Investment Progress */}
+                <div className="pt-2">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className={neon ? ns.label : ''}>
+                      Overall Progress: <span className={neon ? ns.yearProgressPct : ''}>{overallProgress}%</span>
+                    </span>
+                  </div>
+                  <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.yearProgressTrack : 'bg-gray-200'}`}>
+                    <div className={`h-full rounded-full transition-all duration-300 ${neon ? ns.yearBar : 'bg-purple-500'}`} style={{ width: `${overallProgress}%` }} />
+                  </div>
+                </div>
+
                 <div className="pt-2 space-y-2">
                   <div className={`text-sm ${neon ? ns.textSlate300 : ''}`}>
                     <span className={`font-medium ${neon ? ns.label : ''}`}>Monthly SIP Target: </span>
-                    <span className={neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}>{formatCurrency(records[0]?.sipTarget || 0)}</span>
+                    <span className={neon ? ns.monthlySipValue : ''}>{formatCurrency(records[0]?.sipTarget || 0)}</span>
                   </div>
                   <div className={`text-sm ${neon ? ns.textSlate300 : ''}`}>
                     <span className={`font-medium ${neon ? ns.label : ''}`}>Annual Lumpsum Target: </span>
-                    <span className={neon ? 'text-emerald-300 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]' : ''}>{formatCurrency(records[0]?.lumpsumTarget || 0)}</span>
+                    <span className={neon ? ns.monthlyLumpValue : ''}>{formatCurrency(records[0]?.lumpsumTarget || 0)}</span>
                   </div>
                 </div>
               </CardContent>
@@ -554,11 +597,8 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
               </thead>
               <tbody className={`divide-y ${neon ? ns.tableBody : 'divide-border'}`}>
                 {records.map((record) => (
-                  <>
-                    <tr 
-                      key={record.month}
-                      className={`border-b ${borderColor} ${record.isEditable ? (neon ? ns.currentRow : 'bg-cyan-500/10 rounded-full') : ''}`}
-                    >
+                  <React.Fragment key={record.month}>
+                    <tr className={`border-b ${borderColor} ${record.isEditable ? (neon ? ns.currentRow : 'bg-cyan-500/10 rounded-full') : ''}`}>
                       <td className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
                           <Button
@@ -782,7 +822,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                         </td>
                       </tr>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>
