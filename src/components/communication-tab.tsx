@@ -361,7 +361,7 @@ export default function CommunicationTab({
               <div className="flex justify-end">
                 <Button 
                   onClick={handleScheduleMeeting}
-                  className={getButtonClasses(theme)}
+                  className={`${getButtonClasses(theme)} rounded-full`}
                   disabled={!selectedClientId}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
