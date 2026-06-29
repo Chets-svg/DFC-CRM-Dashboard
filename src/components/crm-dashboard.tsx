@@ -167,9 +167,8 @@ function DashboardCalendar({ theme }: DashboardCalendarProps) {
   const [showCalendar, setShowCalendar] = useState(true);
   const [activeDate, setActiveDate] = useState<Date | null>(new Date());
 
-  const currentTheme = themes[theme] || themes['blue-smoke']; // Fallback to 'blue-smoke' if theme is invalid
+  const currentTheme = themes[theme] || themes['blue-smoke'];
 
-  // Sample events data
   const events: Event[] = [
     { 
       date: new Date(2023, 5, 15), 
@@ -191,40 +190,29 @@ function DashboardCalendar({ theme }: DashboardCalendarProps) {
     },
     { 
       date: new Date(), 
-      title: 'Today\'s Event', 
+      title: "Today's Event", 
       time: '3:00 PM',
       description: 'Demo meeting with potential client' 
     },
   ];
 
-  const VALID_TABS = [
-  'dashboard',
-  'leads',
-  'kyc',
-  'clients',
-  'crm',
-  'sip',
-  'communication',
-  'email',
-  'tasks',
-  'investment-tracker'
-];
+  const neon = isNeon(theme);
 
-  // Custom class for days with events
+  // Custom class for days with events — neon dot glows cyan
   const tileContent = ({ date, view }: { date: Date; view: string }) => {
     if (view === 'month') {
       const hasEvents = events.some(
         event => event.date.toDateString() === date.toDateString()
       );
       return hasEvents ? (
-        <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-500"></div>
+        <div className={`absolute top-1 right-1 w-2 h-2 rounded-full ${
+          neon 
+            ? 'bg-cyan-400 shadow-[0_0_6px_rgba(0,255,255,0.6)]' 
+            : 'bg-blue-500'
+        }`}></div>
       ) : null;
     }
     return null;
-  };
-
-  const tileClassName = ({ date, view }: { date: Date; view: string }) => {
-    // ... your implementation
   };
 
   // Get events for the selected date
@@ -233,11 +221,16 @@ function DashboardCalendar({ theme }: DashboardCalendarProps) {
       event.date.toDateString() === date.toDateString()
     );
   };
-return (
-    <Card className={`${currentTheme.cardBg} ${currentTheme.borderColor}`}>
+
+  return (
+    <Card className={`${currentTheme.cardBg} ${currentTheme.borderColor} h-full ${
+      neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''
+    }`}>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Upcoming Events</CardTitle>
+          <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+            Upcoming Events
+          </CardTitle>
           <Button 
             variant="outline" 
             size="sm"
@@ -278,6 +271,39 @@ return (
     [&_.react-calendar__navigation]:bg-inherit
     [&_.react-calendar__navigation__label]:text-inherit
     [&_.react-calendar__navigation__arrow]:text-inherit
+    [&_.react-calendar__month-view]:bg-inherit
+    [&_.react-calendar__month-view__days]:bg-inherit
+    [&_.react-calendar__month-view__days__day]:bg-inherit
+    [&_.react-calendar__year-view]:bg-inherit
+    [&_.react-calendar__year-view__months]:bg-inherit
+    [&_.react-calendar__year-view__months__month]:bg-inherit
+    [&_.react-calendar__decade-view]:bg-inherit
+    [&_.react-calendar__decade-view__years]:bg-inherit
+    [&_.react-calendar__decade-view__years__year]:bg-inherit
+    [&_.react-calendar__century-view]:bg-inherit
+    [&_.react-calendar__century-view__decades]:bg-inherit
+    [&_.react-calendar__century-view__decades__decade]:bg-inherit
+    ${neon ? `
+      [&_.react-calendar__navigation]:border-b
+      [&_.react-calendar__navigation]:border-cyan-500/20
+      [&_.react-calendar__navigation__arrow]:text-cyan-400
+      [&_.react-calendar__navigation__arrow:hover]:bg-cyan-500/10
+      [&_.react-calendar__navigation__label]:text-cyan-300
+      [&_.react-calendar__month-view__weekdays]:bg-inherit
+      [&_.react-calendar__month-view__weekdays__weekday]:text-cyan-400/70
+      [&_.react-calendar__month-view__weekdays__weekday]:bg-inherit
+      [&_.react-calendar__month-view__days__day]:text-slate-300
+      [&_.react-calendar__month-view__days__day:hover]:bg-cyan-500/10
+      [&_.react-calendar__tile]:text-slate-300
+      [&_.react-calendar__tile:hover]:bg-cyan-500/10
+      [&_.react-calendar__tile--active]:bg-cyan-500/20
+      [&_.react-calendar__tile--active]:text-cyan-300
+      [&_.react-calendar__tile--active]:shadow-[0_0_10px_rgba(0,255,255,0.2)]
+      [&_.react-calendar__tile--now]:bg-fuchsia-500/15
+      [&_.react-calendar__tile--now]:text-fuchsia-400
+      border-cyan-500/20
+      shadow-[0_0_15px_rgba(0,255,255,0.05)]
+    ` : ''}
   `}
   tileContent={tileContent}
   tileClassName={({ date, view }) => `
@@ -287,7 +313,11 @@ return (
     hover:bg-opacity-10
   `}
   navigationLabel={({ label }) => (
-    <span className="text-inherit font-medium">{label}</span>
+    <span className={`font-medium ${
+      neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : 'text-inherit'
+    }`}>
+      {label}
+    </span>
   )}
   formatMonthYear={(locale, date) =>
     new Intl.DateTimeFormat(locale, {
@@ -303,7 +333,9 @@ return (
 
             {/* Events for selected date */}
             <div className="mt-4">
-              <h3 className="font-medium mb-3">
+              <h3 className={`font-medium mb-3 ${
+                neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.15)]' : ''
+              }`}>
                 {activeDate?.toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
@@ -317,21 +349,35 @@ return (
                   {getEventsForDate(activeDate || new Date()).map((event, index) => (
                     <div 
                       key={index} 
-                      className={`p-4 rounded-lg ${currentTheme.highlightBg}`}
+                      className={`p-4 rounded-lg transition-all duration-200 ${
+                        neon 
+                          ? 'bg-cyan-500/5 border border-cyan-500/10 hover:bg-cyan-500/10 hover:border-cyan-500/20 hover:shadow-[0_0_12px_rgba(0,255,255,0.08)]' 
+                          : currentTheme.highlightBg
+                      }`}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={`p-2 rounded-full ${currentTheme.selectedBg}`}>
-                          <Clock className="h-5 w-5 text-blue-500" />
+                        <div className={`p-2 rounded-full ${
+                          neon 
+                            ? 'bg-cyan-500/15 shadow-[0_0_8px_rgba(0,255,255,0.15)]' 
+                            : currentTheme.selectedBg
+                        }`}>
+                          <Clock className={`h-5 w-5 ${
+                            neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.4)]' : 'text-blue-500'
+                          }`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between items-start">
-                            <h4 className="font-semibold">{event.title}</h4>
-                            <span className="text-sm font-medium">
+                            <h4 className={`font-semibold ${neon ? 'text-slate-200' : ''}`}>
+                              {event.title}
+                            </h4>
+                            <span className={`text-sm font-medium ${
+                              neon ? 'text-cyan-400/80' : ''
+                            }`}>
                               {event.time}
                             </span>
                           </div>
                           {event.description && (
-                            <p className="mt-2 text-sm">
+                            <p className={`mt-2 text-sm ${neon ? 'text-slate-400' : ''}`}>
                               {event.description}
                             </p>
                           )}
@@ -341,8 +387,14 @@ return (
                   ))}
                 </div>
               ) : (
-                <div className={`p-4 text-center rounded-lg ${currentTheme.highlightBg}`}>
-                  <p className={`text-sm ${currentTheme.mutedText}`}>
+                <div className={`p-4 text-center rounded-lg ${
+                  neon 
+                    ? 'bg-cyan-500/5 border border-cyan-500/10' 
+                    : currentTheme.highlightBg
+                }`}>
+                  <p className={`text-sm ${
+                    neon ? 'text-cyan-400/50' : currentTheme.mutedText
+                  }`}>
                     No events scheduled for this day
                   </p>
                 </div>
@@ -352,24 +404,40 @@ return (
             {/* Upcoming Events (when not viewing today) */}
             {activeDate?.toDateString() !== new Date().toDateString() && (
               <div className="mt-6">
-                <h3 className="font-medium mb-3">Today's Events</h3>
+                <h3 className={`font-medium mb-3 ${
+                  neon ? 'text-fuchsia-400 drop-shadow-[0_0_4px_rgba(232,121,249,0.15)]' : ''
+                }`}>
+                  Today's Events
+                </h3>
                 {getEventsForDate(new Date()).length > 0 ? (
                   <div className="space-y-3">
                     {getEventsForDate(new Date()).map((event, index) => (
                       <div 
                         key={index} 
-                        className={`p-3 rounded-lg ${currentTheme.highlightBg}`}
+                        className={`p-3 rounded-lg transition-all duration-200 ${
+                          neon 
+                            ? 'bg-fuchsia-500/5 border border-fuchsia-500/10 hover:bg-fuchsia-500/10 hover:border-fuchsia-500/20' 
+                            : currentTheme.highlightBg
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-blue-500" />
-                          <span className="font-medium">{event.time}</span>
+                          <Clock className={`h-4 w-4 ${
+                            neon ? 'text-fuchsia-400 drop-shadow-[0_0_4px_rgba(232,121,249,0.4)]' : 'text-blue-500'
+                          }`} />
+                          <span className={`font-medium ${
+                            neon ? 'text-fuchsia-400' : ''
+                          }`}>{event.time}</span>
                         </div>
-                        <p className="mt-1 text-sm">{event.title}</p>
+                        <p className={`mt-1 text-sm ${neon ? 'text-slate-300' : ''}`}>
+                          {event.title}
+                        </p>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className={`text-sm ${currentTheme.mutedText}`}>
+                  <p className={`text-sm ${
+                    neon ? 'text-cyan-400/50' : currentTheme.mutedText
+                  }`}>
                     No events today
                   </p>
                 )}
@@ -381,7 +449,11 @@ return (
         {/* Compact view when calendar is hidden */}
         {!showCalendar && (
           <div className="space-y-4">
-            <h3 className="font-medium">Upcoming Events</h3>
+            <h3 className={`font-medium ${
+              neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.15)]' : ''
+            }`}>
+              Upcoming Events
+            </h3>
             {events
               .filter(e => e.date >= new Date())
               .sort((a, b) => a.date.getTime() - b.date.getTime())
@@ -389,17 +461,29 @@ return (
               .map((event, index) => (
                 <div 
                   key={index} 
-                  className={`p-3 rounded-lg ${currentTheme.highlightBg}`}
+                  className={`p-3 rounded-lg transition-all duration-200 ${
+                    neon 
+                      ? 'bg-cyan-500/5 border border-cyan-500/10 hover:bg-cyan-500/10 hover:border-cyan-500/20 hover:shadow-[0_0_12px_rgba(0,255,255,0.08)]' 
+                      : currentTheme.highlightBg
+                  }`}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">{event.title}</span>
-                    <span className={`text-xs ${currentTheme.mutedText}`}>
+                    <span className={`font-medium ${neon ? 'text-slate-200' : ''}`}>
+                      {event.title}
+                    </span>
+                    <span className={`text-xs ${
+                      neon ? 'text-cyan-400/60' : currentTheme.mutedText
+                    }`}>
                       {event.date.toLocaleDateString()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <Clock className="h-3 w-3 text-blue-500" />
-                    <span className="text-xs">{event.time}</span>
+                    <Clock className={`h-3 w-3 ${
+                      neon ? 'text-cyan-400 drop-shadow-[0_0_3px_rgba(0,255,255,0.3)]' : 'text-blue-500'
+                    }`} />
+                    <span className={`text-xs ${neon ? 'text-cyan-400/70' : ''}`}>
+                      {event.time}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -409,7 +493,6 @@ return (
     </Card>
   );
 }
-
 function ThemeSelector({ theme, setTheme }: ThemeSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const currentTheme = themes[theme] || themes['blue-smoke'];
@@ -1783,7 +1866,9 @@ if (themeLoading) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Leads</CardTitle>
+            <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Active Leads
+      </CardTitle>
             <Users className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -1794,7 +1879,9 @@ if (themeLoading) {
 
         <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Converted Clients</CardTitle>
+            <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Converted Clients
+      </CardTitle>
             <User className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
@@ -1808,7 +1895,9 @@ if (themeLoading) {
     className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer"
     onClick={() => setActiveTab("kyc")}
   >
-    <CardTitle className="text-sm font-medium">Pending KYC</CardTitle>
+    <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Pending KYC
+      </CardTitle>
     <Shield className="h-4 w-4 text-yellow-500" />
   </CardHeader>
   <CardContent 
@@ -1822,7 +1911,9 @@ if (themeLoading) {
 
         <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Conversion Rate
+      </CardTitle>
             <TrendingUp className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
@@ -1835,21 +1926,38 @@ if (themeLoading) {
 
     {/* Second row - Charts and Activity */}
     {/* Leads vs Clients Chart - Column 1 */}
-        <div className="lg:col-span-2">
-      <Card className={`${cardBg} ${borderColor} h-full`}>
-        <CardHeader>
-          <CardTitle>Leads vs Clients</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={leadsVsClientsData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={isNeon(theme) ? '#1e293b' : '#e2e8f0'} />
-              <XAxis dataKey="name" stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
-<YAxis stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
-              <Tooltip contentStyle={isNeon(theme) ? { backgroundColor: '#0f172a', border: '1px solid rgba(0,255,255,0.3)', boxShadow: '0 0 15px rgba(0,255,255,0.2)', color: '#22d3ee' } : undefined} />
-              <Bar dataKey="value" fill={isNeon(theme) ? '#22d3ee' : '#F97316'} style={isNeon(theme) ? { filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.4))' } : undefined} />
-            </BarChart>
-          </ResponsiveContainer>
+<div className="lg:col-span-2">
+  <Card className={`${cardBg} ${borderColor} h-full ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''}`}>
+    <CardHeader>
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Leads vs Clients
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="h-[300px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={leadsVsClientsData}>
+          <CartesianGrid strokeDasharray="3 3" stroke={isNeon(theme) ? '#1e293b' : '#e2e8f0'} />
+          <XAxis dataKey="name" stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
+          <YAxis stroke={isNeon(theme) ? '#94a3b8' : '#64748b'} />
+          <Tooltip 
+            cursor={false}
+            contentStyle={isNeon(theme) ? { 
+              backgroundColor: '#0f172a', 
+              border: '1px solid rgba(0,255,255,0.3)', 
+              boxShadow: '0 0 15px rgba(0,255,255,0.2)', 
+              color: '#22d3ee',
+              borderRadius: '8px'
+            } : undefined} 
+            itemStyle={isNeon(theme) ? { color: '#22d3ee' } : undefined}
+          />
+          <Bar 
+            dataKey="value" 
+            fill={isNeon(theme) ? '#22d3ee' : '#F97316'} 
+            style={isNeon(theme) ? { filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.4))' } : undefined}
+            activeBar={{ fill: isNeon(theme) ? '#22d3ee' : '#F97316' }}
+          />
+        </BarChart>
+      </ResponsiveContainer>
         </CardContent>
       </Card>
     </div>
@@ -1923,70 +2031,125 @@ if (themeLoading) {
 </div>
 
     {/* New Product Distribution - 2 columns */}
-    <div className="lg:col-span-2">
-      <Card className={`${cardBg} ${borderColor} h-full`}>
-        <CardHeader>
-          <CardTitle>Product Distribution</CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart>
-              <Pie
-  data={[
-    { 
-      name: 'SIP', 
-      value: clients.filter(c => c.products.sip).length 
-    },
-    { 
-      name: 'Lumpsum', 
-      value: clients.filter(c => c.products.lumpsum).length 
-    },
-    { 
-      name: 'Health Insurance', 
-      value: clients.filter(c => c.products.healthInsurance).length 
-    },
-    { 
-      name: 'Life Insurance', 
-      value: clients.filter(c => c.products.lifeInsurance).length 
-    },
-    { 
-      name: 'Taxation', 
-      value: clients.filter(c => c.products.taxation).length 
-    },
-    { 
-      name: 'NPS', 
-      value: clients.filter(c => c.products.nps).length 
-    }
-  ]}
-  cx="45%"
-  cy="45%"
-  labelLine={false}
-  outerRadius={80}
-  innerRadius={45}
-  fill="#8884d8"
-  dataKey="value"
-  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
->
-  {isNeon(theme) 
-  ? ['#22d3ee', '#e879f9', '#4ade80', '#f87171', '#fbbf24', '#2dd4bf'].map((color, index) => (
-      <Cell key={`cell-${index}`} fill={color} />
-    ))
-  : COLORS.map((color, index) => (
-      <Cell key={`cell-${index}`} fill={color} />
-    ))}
-</Pie>
-              <Tooltip />
-              <Legend />
-            </RechartsPieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-    </div>
+<div className="lg:col-span-2">
+  <Card className={`${cardBg} ${borderColor} h-full ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''}`}>
+    <CardHeader>
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Product Distribution
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="h-[300px] relative">
+      <ResponsiveContainer width="100%" height="100%">
+        <RechartsPieChart>
+          <Pie
+            data={[
+              { 
+                name: 'SIP', 
+                value: clients.filter(c => c.products.sip).length 
+              },
+              { 
+                name: 'Lumpsum', 
+                value: clients.filter(c => c.products.lumpsum).length 
+              },
+              { 
+                name: 'Health Insurance', 
+                value: clients.filter(c => c.products.healthInsurance).length 
+              },
+              { 
+                name: 'Life Insurance', 
+                value: clients.filter(c => c.products.lifeInsurance).length 
+              },
+              { 
+                name: 'Taxation', 
+                value: clients.filter(c => c.products.taxation).length 
+              },
+              { 
+                name: 'NPS', 
+                value: clients.filter(c => c.products.nps).length 
+              }
+            ].filter(item => item.value > 0)}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            innerRadius={45}
+            fill="#8884d8"
+            dataKey="value"
+            stroke={isNeon(theme) ? 'rgba(0,255,255,0.15)' : 'none'}
+            strokeWidth={isNeon(theme) ? 2 : 0}
+            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          >
+            {[
+              { name: 'SIP', value: clients.filter(c => c.products.sip).length },
+              { name: 'Lumpsum', value: clients.filter(c => c.products.lumpsum).length },
+              { name: 'Health Insurance', value: clients.filter(c => c.products.healthInsurance).length },
+              { name: 'Life Insurance', value: clients.filter(c => c.products.lifeInsurance).length },
+              { name: 'Taxation', value: clients.filter(c => c.products.taxation).length },
+              { name: 'NPS', value: clients.filter(c => c.products.nps).length }
+            ]
+              .filter(item => item.value > 0)
+              .map((entry, index) => (
+                <Cell 
+                  key={`cell-${index}`} 
+                  fill={
+                    isNeon(theme) 
+                      ? ['#22d3ee', '#e879f9', '#4ade80', '#f87171', '#fbbf24', '#2dd4bf'][index % 6] 
+                      : COLORS[index % COLORS.length]
+                  } 
+                  style={isNeon(theme) ? { filter: 'drop-shadow(0 0 6px rgba(0,255,255,0.4))' } : undefined}
+                />
+              ))}
+          </Pie>
+          <Tooltip 
+            contentStyle={isNeon(theme) ? { 
+              backgroundColor: '#0f172a', 
+              border: '1px solid rgba(0,255,255,0.3)', 
+              boxShadow: '0 0 15px rgba(0,255,255,0.2)', 
+              color: '#22d3ee',
+              borderRadius: '8px'
+            } : undefined}
+            itemStyle={isNeon(theme) ? { color: '#22d3ee' } : undefined}
+          />
+          {[
+            { name: 'SIP', value: clients.filter(c => c.products.sip).length },
+            { name: 'Lumpsum', value: clients.filter(c => c.products.lumpsum).length },
+            { name: 'Health Insurance', value: clients.filter(c => c.products.healthInsurance).length },
+            { name: 'Life Insurance', value: clients.filter(c => c.products.lifeInsurance).length },
+            { name: 'Taxation', value: clients.filter(c => c.products.taxation).length },
+            { name: 'NPS', value: clients.filter(c => c.products.nps).length }
+          ].some(item => item.value > 0) && (
+            <Legend 
+              formatter={(value) => (
+                <span style={isNeon(theme) ? { color: '#94a3b8', textShadow: '0 0 4px rgba(0,255,255,0.2)' } : {}}>
+                  {value}
+                </span>
+              )}
+            />
+          )}
+        </RechartsPieChart>
+      </ResponsiveContainer>
+      {![
+        { name: 'SIP', value: clients.filter(c => c.products.sip).length },
+        { name: 'Lumpsum', value: clients.filter(c => c.products.lumpsum).length },
+        { name: 'Health Insurance', value: clients.filter(c => c.products.healthInsurance).length },
+        { name: 'Life Insurance', value: clients.filter(c => c.products.lifeInsurance).length },
+        { name: 'Taxation', value: clients.filter(c => c.products.taxation).length },
+        { name: 'NPS', value: clients.filter(c => c.products.nps).length }
+      ].some(item => item.value > 0) && (
+        <div className={`absolute inset-0 flex items-center justify-center ${isNeon(theme) ? 'text-cyan-400/60' : 'text-gray-500'}`}>
+          No product data available
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</div>
 
   <div className="lg:col-span-4">
   <Card className={`${cardBg} ${borderColor} ${isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] hover:shadow-[0_0_30px_rgba(0,255,255,0.15)] border-cyan-500/20 transition-shadow' : ''}`}>
     <CardHeader>
-      <CardTitle>Investment Overview</CardTitle>
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Investment Overview
+      </CardTitle>
     </CardHeader>
     <CardContent>
       <InvestmentSummaryCards theme={theme} />
@@ -1997,7 +2160,9 @@ if (themeLoading) {
 <div className="lg:col-span-2">
   <Card className={`${cardBg} ${borderColor} h-full`}>
     <CardHeader>
-      <CardTitle>Quick Actions</CardTitle>
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Quick Actions
+      </CardTitle>
     </CardHeader>
     <CardContent className="grid grid-cols-2 gap-4">
       <Button
@@ -2076,123 +2241,155 @@ if (themeLoading) {
   <DashboardCalendar theme={theme} />
          </div>
           
-    {/* Recent Activity - Column 3 */}
-    <div className="lg:col-span-2">
-      <Card className={`${cardBg} ${borderColor} h-full`}>
-  <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-    <CardTitle className="text-xl md:text-2xl">Recent Activity</CardTitle>
-    <div className="flex gap-2 items-center">
-      <Select
-        value={activityFilter}
-        onValueChange={(value) => setActivityFilter(value as ActivityType)}
-      >
-        <SelectTrigger className={`w-[180px] ${inputBg} ${borderColor}`}>
-          <SelectValue placeholder="All Activities" />
-        </SelectTrigger>
-        <SelectContent className={`${cardBg} ${borderColor}`}>
-          {[
-            { value: 'all', label: 'All Activities' },
-            { value: 'login', label: 'Logins' },
-            { value: 'task', label: 'Tasks' },
-            { value: 'system', label: 'System' },
-            { value: 'notification', label: 'Notifications' }
-          ].map((item) => (
-            <SelectItem 
-              key={item.value} 
-              value={item.value}
-              className={`hover:${highlightBg} ${textColor}`}
-            >
-              {item.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-
-  </CardHeader>
-  
-        <CardContent>
-          {filteredActivities.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              No activities found for the selected filter.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredActivities
-              .filter(activity => {
-                // Filter activities from the last 7 days
-                const activityDate = new Date(activity.timestamp);
-                const sevenDaysAgo = new Date();
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                return activityDate >= sevenDaysAgo;
-              })
-              .map(activity => (
-                <div 
-  key={activity.id} 
-  className={`p-4 border rounded-lg transition-colors cursor-pointer ${
-    isNeon(theme) 
-      ? 'border-cyan-500/10 hover:bg-cyan-500/5 hover:border-cyan-500/30 hover:shadow-[0_0_10px_rgba(0,255,255,0.1)]' 
-      : `hover:${highlightBg} ${borderColor}`
-  }`}
-                  onClick={() => {
-                    // Navigate to relevant tab based on activity type
-                    switch(activity.type) {
-                      case 'task':
-                        if (activity.title.includes('Lead')) {
-                          setActiveTab('leads');
-                        } else if (activity.title.includes('Client')) {
-                          setActiveTab('clients');
-                        } else if (activity.title.includes('KYC')) {
-                          setActiveTab('kyc');
-                        } else if (activity.title.includes('Meeting') || activity.title.includes('Communication')) {
-                          setActiveTab('communication');
-                        } else if (activity.title.includes('SIP')) {
-                          setActiveTab('sip');
-                        }
-                        break;
-                      case 'system':
-                      case 'notification':
-                      case 'login':
-                      default:
-                        // Default to dashboard for other types
-                        setActiveTab('dashboard');
-                    }
-                  }}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-1">
-                      {getActivityIcon(activity.type)}
+   {/* Recent Activity - Column 3 */}
+<div className="lg:col-span-2">
+  <Card className={`${cardBg} ${borderColor} h-full ${
+    isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/20' : ''
+  }`}>
+    <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <CardTitle className={isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+        Recent Activity
+      </CardTitle>
+      <div className="flex gap-2 items-center">
+        <Select
+          value={activityFilter}
+          onValueChange={(value) => setActivityFilter(value as ActivityType)}
+        >
+          <SelectTrigger className={`${
+            isNeon(theme)
+              ? 'border-cyan-500/30 text-cyan-300 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-500/50 focus:ring-cyan-500/20 transition-all duration-200'
+              : getButtonClasses(theme, 'outline')
+          }`}>
+            <SelectValue placeholder="All Activities" />
+          </SelectTrigger>
+          <SelectContent className={`${
+            isNeon(theme)
+              ? 'bg-slate-900/95 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)] backdrop-blur-sm'
+              : `${cardBg} ${borderColor}`
+          }`}>
+            {[
+              { value: 'all', label: 'All Activities' },
+              { value: 'login', label: 'Logins' },
+              { value: 'task', label: 'Tasks' },
+              { value: 'system', label: 'System' },
+              { value: 'notification', label: 'Notifications' }
+            ].map((item) => (
+              <SelectItem 
+                key={item.value} 
+                value={item.value}
+                className={`${
+                  isNeon(theme)
+                    ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300 transition-colors duration-150'
+                    : `hover:${highlightBg} ${textColor}`
+                }`}
+              >
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </CardHeader>
+    
+    <CardContent>
+      {filteredActivities.length === 0 ? (
+        <div className={`text-center py-8 ${
+          isNeon(theme) ? 'text-cyan-400/50' : 'text-gray-500'
+        }`}>
+          No activities found for the selected filter.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filteredActivities
+            .filter(activity => {
+              const activityDate = new Date(activity.timestamp);
+              const sevenDaysAgo = new Date();
+              sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+              return activityDate >= sevenDaysAgo;
+            })
+            .map(activity => (
+              <div 
+                key={activity.id} 
+                className={`p-4 border rounded-lg transition-all duration-200 cursor-pointer ${
+                  isNeon(theme) 
+                    ? 'border-cyan-500/10 bg-cyan-500/[0.02] hover:bg-cyan-500/5 hover:border-cyan-500/30 hover:shadow-[0_0_10px_rgba(0,255,255,0.1)]' 
+                    : `${borderColor} hover:${highlightBg}`
+                }`}
+                onClick={() => {
+                  switch(activity.type) {
+                    case 'task':
+                      if (activity.title.includes('Lead')) {
+                        setActiveTab('leads');
+                      } else if (activity.title.includes('Client')) {
+                        setActiveTab('clients');
+                      } else if (activity.title.includes('KYC')) {
+                        setActiveTab('kyc');
+                      } else if (activity.title.includes('Meeting') || activity.title.includes('Communication')) {
+                        setActiveTab('communication');
+                      } else if (activity.title.includes('SIP')) {
+                        setActiveTab('sip');
+                      }
+                      break;
+                    case 'system':
+                    case 'notification':
+                    case 'login':
+                    default:
+                      setActiveTab('dashboard');
+                  }
+                }}
+              >
+                <div className="flex items-start gap-3">
+                  <div className={`mt-1 ${
+                    isNeon(theme) ? 'drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''
+                  }`}>
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className={`font-medium truncate ${
+                        isNeon(theme) ? 'text-slate-200' : ''
+                      }`}>
+                        {activity.title}
+                      </h3>
+                      {getStatusIcon(activity.status)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">{activity.title}</h3>
-                        {getStatusIcon(activity.status)}
-                      </div>
-                      <p className={`text-sm ${mutedText}`}>{activity.description}</p>
-                      {activity.user && (
-                        <p className={`text-xs ${mutedText} mt-1`}>User: {activity.user}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 text-sm text-gray-500">
-                      <Clock className="w-3 h-3" />
-                      <span>
-                        {formatDate(activity.timestamp)}
-                      </span>
-                    </div>
+                    <p className={`text-sm mt-0.5 ${
+                      isNeon(theme) ? 'text-slate-400' : mutedText
+                    }`}>
+                      {activity.description}
+                    </p>
+                    {activity.user && (
+                      <p className={`text-xs mt-1 ${
+                        isNeon(theme) ? 'text-cyan-400/60' : mutedText
+                      }`}>
+                        User: {activity.user}
+                      </p>
+                    )}
+                  </div>
+                  <div className={`flex items-center gap-1 text-sm whitespace-nowrap ${
+                    isNeon(theme) ? 'text-cyan-400/60' : 'text-gray-500'
+                  }`}>
+                    <Clock className={`w-3 h-3 ${
+                      isNeon(theme) ? 'drop-shadow-[0_0_3px_rgba(0,255,255,0.3)]' : ''
+                    }`} />
+                    <span>{formatDate(activity.timestamp)}</span>
                   </div>
                 </div>
-                
-              ))}
-            </div>
-            
-          )}
-        </CardContent>
-      </Card>
-    </div>
-    <div className="lg:col-span-2 {`${cardBg} ${borderColor}">
-      <ClientCelebrations clients={clients}/>
-    </div>
-       </div>
+              </div>
+            ))}
+        </div>
+      )}
+    </CardContent>
+  </Card>
+</div>
+
+{/* Client Celebrations */}
+<div className={`lg:col-span-2 ${
+  isNeon(theme) ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border border-cyan-500/20 rounded-lg' : `${cardBg} ${borderColor}`
+}`}>
+  <ClientCelebrations clients={clients} />
+</div>
+</div>
 </TabsContent>
 <TabsContent value="email">
   <EmailComponent 

@@ -44,7 +44,7 @@ import {
   Cell, 
   Tooltip 
 } from "recharts";
-import { ThemeName, themes, getButtonClasses } from '@/lib/theme';
+import { ThemeName, themes, getButtonClasses, isNeon } from '@/lib/theme';
 
 type CommunicationType = 'email' | 'whatsapp' | 'call' | 'meeting' | 'document';
 type CommunicationPriority = 'low' | 'medium' | 'high';
@@ -55,7 +55,6 @@ interface Client {
   name: string;
   email: string;
   phone: string;
-  // Add other client properties as needed
 }
 
 interface EnhancedCommunication {
@@ -91,6 +90,7 @@ export default function CommunicationTab({
   showAlert
 }: CommunicationTabProps) {
   const currentTheme = themes[theme] || themes['blue-smoke'];
+  const neon = isNeon(theme);
   const { cardBg, borderColor, inputBg, highlightBg, textColor, mutedText } = currentTheme;
 
   const [newCommunication, setNewCommunication] = useState<{
@@ -113,6 +113,14 @@ export default function CommunicationTab({
   const [meetingNotes, setMeetingNotes] = useState('');
 
   const getPriorityColor = (priority: CommunicationPriority) => {
+    if (neon) {
+      switch (priority) {
+        case 'high': return 'bg-red-500/10 text-red-400 border border-red-500/30';
+        case 'medium': return 'bg-amber-500/10 text-amber-400 border border-amber-500/30';
+        case 'low': return 'bg-green-500/10 text-green-400 border border-green-500/30';
+        default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/30';
+      }
+    }
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800';
       case 'medium': return 'bg-yellow-100 text-yellow-800';
@@ -122,6 +130,16 @@ export default function CommunicationTab({
   };
 
   const getStatusColor = (status: CommunicationStatus) => {
+    if (neon) {
+      switch (status) {
+        case 'pending': return 'bg-blue-500/10 text-blue-400 border border-blue-500/30';
+        case 'sent': return 'bg-purple-500/10 text-purple-400 border border-purple-500/30';
+        case 'received': return 'bg-green-500/10 text-green-400 border border-green-500/30';
+        case 'read': return 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30';
+        case 'failed': return 'bg-red-500/10 text-red-400 border border-red-500/30';
+        default: return 'bg-slate-500/10 text-slate-400 border border-slate-500/30';
+      }
+    }
     switch (status) {
       case 'pending': return 'bg-blue-100 text-blue-800';
       case 'sent': return 'bg-purple-100 text-purple-800';
@@ -148,7 +166,6 @@ export default function CommunicationTab({
         return;
       }
 
-      // Create the communication document
       await addDocument(COMMUNICATIONS_COLLECTION, {
         clientId: selectedClientId,
         clientName: client.name,
@@ -157,7 +174,6 @@ export default function CommunicationTab({
         ...newCommunication
       });
 
-      // Reset form
       setNewCommunication({
         type: 'email',
         subject: '',
@@ -184,7 +200,6 @@ export default function CommunicationTab({
     if (!client) return;
 
     try {
-      // Create the meeting communication document
       await addDocument(COMMUNICATIONS_COLLECTION, {
         clientId: selectedClientId,
         clientName: client.name,
@@ -218,24 +233,40 @@ export default function CommunicationTab({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-      {/* Communication History */}
-      <Card className={`${cardBg} ${borderColor} lg:col-span-2`}>
+      {/* ── Communication History ── */}
+      <Card className={`${cardBg} ${borderColor} lg:col-span-2 ${
+        neon ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)]' : ''
+      }`}>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Client Communication History</CardTitle>
+            <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+              Client Communication History
+            </CardTitle>
             <Select
               value={selectedClientId || undefined}
               onValueChange={(value) => setSelectedClientId(value || null)}
             >
-              <SelectTrigger className={`w-[200px] ${inputBg} ${borderColor}`}>
+              <SelectTrigger className={`w-[200px] rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                  : `${inputBg} ${borderColor}`
+              }`}>
                 <SelectValue placeholder="Filter by client" />
               </SelectTrigger>
-              <SelectContent className={`${cardBg} ${borderColor}`}>
+              <SelectContent className={`${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                  : `${cardBg} ${borderColor}`
+              }`}>
                 {clients?.map(client => (
                   <SelectItem 
                     key={client.id} 
                     value={client.id}
-                    className={`hover:${highlightBg} ${textColor}`}
+                    className={
+                      neon
+                        ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300'
+                        : `hover:${highlightBg} ${textColor}`
+                    }
                   >
                     {client.name}
                   </SelectItem>
@@ -253,11 +284,17 @@ export default function CommunicationTab({
               .map(comm => {
                 const client = clients.find(c => c.id === comm.clientId);
                 return (
-                  <div key={comm.id} className={`p-4 border rounded-lg ${highlightBg} ${borderColor}`}>
+                  <div key={comm.id} className={`p-4 border rounded-lg transition-colors ${
+                    neon
+                      ? 'bg-cyan-500/5 border-cyan-500/10 hover:border-cyan-500/20'
+                      : `${highlightBg} ${borderColor}`
+                  }`}>
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold">{comm.subject}</h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className={`font-bold ${neon ? 'text-slate-200' : ''}`}>
+                            {comm.subject}
+                          </h3>
                           <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(comm.priority)}`}>
                             {comm.priority}
                           </span>
@@ -265,32 +302,44 @@ export default function CommunicationTab({
                             {comm.status}
                           </span>
                         </div>
-                        <p className={`text-sm ${mutedText}`}>
+                        <p className={`text-sm mt-1 ${neon ? 'text-slate-400' : mutedText}`}>
                           {client?.name} • {formatDate(comm.date)} • {comm.type}
                         </p>
                       </div>
                       {comm.relatedProduct && (
-                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                        <span className={`px-2 py-1 text-xs rounded-full ${
+                          neon
+                            ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
                           {comm.relatedProduct}
                         </span>
                       )}
                     </div>
                     
-                    <div className={`mt-3 p-3 rounded ${theme === 'dark' ? 'bg-gray-600' : 'bg-gray-50'}`}>
+                    <div className={`mt-3 p-3 rounded ${
+                      neon
+                        ? 'bg-cyan-500/5 border border-cyan-500/10 text-slate-300'
+                        : theme === 'dark'
+                          ? 'bg-gray-600 text-gray-200'
+                          : 'bg-gray-50 text-gray-800'
+                    }`}>
                       <p>{comm.content}</p>
                     </div>
 
                     {(comm.followUpDate || comm.advisorNotes) && (
-                      <div className="mt-3 pt-3 border-t border-gray-200">
+                      <div className={`mt-3 pt-3 border-t ${
+                        neon ? 'border-cyan-500/10' : 'border-gray-200'
+                      }`}>
                         {comm.followUpDate && (
-                          <p className="text-sm">
+                          <p className={`text-sm ${neon ? 'text-slate-300' : ''}`}>
                             <span className="font-medium">Follow-up:</span> {formatDate(comm.followUpDate)}
                           </p>
                         )}
                         {comm.advisorNotes && (
                           <div className="mt-2">
-                            <p className="text-sm font-medium">Advisor Notes:</p>
-                            <p className={`text-sm ${mutedText}`}>{comm.advisorNotes}</p>
+                            <p className={`text-sm font-medium ${neon ? 'text-cyan-300/80' : ''}`}>Advisor Notes:</p>
+                            <p className={`text-sm ${neon ? 'text-slate-400' : mutedText}`}>{comm.advisorNotes}</p>
                           </div>
                         )}
                       </div>
@@ -301,31 +350,48 @@ export default function CommunicationTab({
           </div>
         </CardContent>
       </Card>
-
-      {/* Schedule Meeting Section */}
+            {/* ── Schedule Meeting ── */}
       <div>      
-        <Card className={`${cardBg} ${borderColor}`}>
+        <Card className={`${cardBg} ${borderColor} ${
+          neon ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)]' : ''
+        }`}>
           <CardHeader>
-            <CardTitle>Schedule Meeting</CardTitle>
+            <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+              Schedule Meeting
+            </CardTitle>
           </CardHeader>
         
           <CardContent className="pt-1">
             <div className="space-y-5">
               <div>
-                <Label className="block mb-2">Client</Label>
+                <Label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+                  Client
+                </Label>
                 <Select
                   value={selectedClientId || undefined}
                   onValueChange={(value) => setSelectedClientId(value || null)}
                 >
-                  <SelectTrigger className={`w-full ${inputBg} ${borderColor}`}>
+                  <SelectTrigger className={`w-full rounded-full ${
+                    neon
+                      ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                      : `${inputBg} ${borderColor}`
+                  }`}>
                     <SelectValue placeholder="Select a client" />
                   </SelectTrigger>
-                  <SelectContent className={`${cardBg} ${borderColor}`}>
+                  <SelectContent className={`${
+                    neon
+                      ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                      : `${cardBg} ${borderColor}`
+                  }`}>
                     {clients?.map(client => (
                       <SelectItem 
                         key={client.id} 
                         value={client.id}
-                        className={`hover:${highlightBg} ${textColor}`}
+                        className={
+                          neon
+                            ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300'
+                            : `hover:${highlightBg} ${textColor}`
+                        }
                       >
                         {client.name}
                       </SelectItem>
@@ -335,33 +401,47 @@ export default function CommunicationTab({
               </div>
 
               <div>
-                <Label>Date & Time</Label>
+                <Label className={neon ? 'text-slate-300' : ''}>
+                  Date & Time
+                </Label>
                 <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="h-5 w-5 text-gray-500" />
+                  <Calendar className={`h-5 w-5 ${neon ? 'text-cyan-400/60' : 'text-gray-500'}`} />
                   <Input
                     type="datetime-local"
                     value={meetingDate?.toISOString().slice(0, 16)}
                     onChange={(e) => setMeetingDate(new Date(e.target.value))}
-                    className={`${inputBg} ${borderColor}`}
+                    className={`rounded-full ${
+                      neon
+                        ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20 focus:border-cyan-400'
+                        : `${inputBg} ${borderColor}`
+                    }`}
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="block mb-2">Meeting Agenda</Label> 
+                <Label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+                  Meeting Agenda
+                </Label> 
                 <Textarea
                   value={meetingNotes}
                   onChange={(e) => setMeetingNotes(e.target.value)}
                   placeholder="Meeting agenda or notes..."
                   rows={3}
-                  className={`${inputBg} ${borderColor}`}
+                  className={`rounded-lg ${
+                    neon
+                      ? 'bg-slate-900 border-cyan-500/30 text-slate-300 placeholder:text-slate-500 hover:border-cyan-400 focus:ring-cyan-500/20 focus:border-cyan-400'
+                      : `${inputBg} ${borderColor}`
+                  }`}
                 />
               </div>
 
               <div className="flex justify-end">
                 <Button 
                   onClick={handleScheduleMeeting}
-                  className={`${getButtonClasses(theme)} rounded-full`}
+                  className={`${getButtonClasses(theme)} rounded-full ${
+                    neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.3)] hover:shadow-[0_0_20px_rgba(0,255,255,0.5)]' : ''
+                  }`}
                   disabled={!selectedClientId}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
@@ -373,28 +453,46 @@ export default function CommunicationTab({
         </Card>
       </div>
 
-      {/* New Communication Panel */}
-      <Card className={`${cardBg} ${borderColor} lg:col-span-2`}>
+      {/* ── New Communication Panel ── */}
+      <Card className={`${cardBg} ${borderColor} lg:col-span-2 ${
+        neon ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)]' : ''
+      }`}>
         <CardHeader>
-          <CardTitle>New Communication</CardTitle>
+          <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+            New Communication
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Type Select */}
           <div>
-            <Label className="block mb-2">Type *</Label>
+            <Label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+              Type *
+            </Label>
             <Select
               value={newCommunication.type}
               onValueChange={(value) => setNewCommunication({...newCommunication, type: value as CommunicationType})}
             >
-              <SelectTrigger className={`${inputBg} ${borderColor}`}>
+              <SelectTrigger className={`rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                  : `${inputBg} ${borderColor}`
+              }`}>
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
-              <SelectContent className={`${cardBg} ${borderColor}`}>
+              <SelectContent className={`${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                  : `${cardBg} ${borderColor}`
+              }`}>
                 {['email', 'whatsapp', 'call', 'meeting', 'document'].map(type => (
                   <SelectItem 
                     key={type} 
                     value={type}
-                    className={`hover:${highlightBg} ${textColor}`}
+                    className={
+                      neon
+                        ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300'
+                        : `hover:${highlightBg} ${textColor}`
+                    }
                   >
                     {type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
@@ -405,20 +503,34 @@ export default function CommunicationTab({
 
           {/* Priority Select */}
           <div>
-            <Label className="block mb-2">Priority *</Label>
+            <Label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+              Priority *
+            </Label>
             <Select
               value={newCommunication.priority}
               onValueChange={(value) => setNewCommunication({...newCommunication, priority: value as CommunicationPriority})}
             >
-              <SelectTrigger className={`${inputBg} ${borderColor}`}>
+              <SelectTrigger className={`rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                  : `${inputBg} ${borderColor}`
+              }`}>
                 <SelectValue placeholder="Select priority" />
               </SelectTrigger>
-              <SelectContent className={`${cardBg} ${borderColor}`}>
+              <SelectContent className={`${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                  : `${cardBg} ${borderColor}`
+              }`}>
                 {['low', 'medium', 'high'].map(priority => (
                   <SelectItem 
                     key={priority} 
                     value={priority}
-                    className={`hover:${highlightBg} ${textColor}`}
+                    className={
+                      neon
+                        ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300'
+                        : `hover:${highlightBg} ${textColor}`
+                    }
                   >
                     {priority.charAt(0).toUpperCase() + priority.slice(1)}
                   </SelectItem>
@@ -429,15 +541,25 @@ export default function CommunicationTab({
 
           {/* Related Product Select */}
           <div>
-            <Label className="block mb-2">Related Product</Label>
+            <Label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+              Related Product
+            </Label>
             <Select
               value={newCommunication.relatedProduct || undefined}
               onValueChange={(value) => setNewCommunication({...newCommunication, relatedProduct: value})}
             >
-              <SelectTrigger className={`${inputBg} ${borderColor}`}>
+              <SelectTrigger className={`rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                  : `${inputBg} ${borderColor}`
+              }`}>
                 <SelectValue placeholder="Select product" />
               </SelectTrigger>
-              <SelectContent className={`${cardBg} ${borderColor}`}>
+              <SelectContent className={`${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                  : `${cardBg} ${borderColor}`
+              }`}>
                 {[
                   'Mutual Funds - SIP',
                   'Mutual Funds - Lumpsum',
@@ -449,7 +571,11 @@ export default function CommunicationTab({
                   <SelectItem 
                     key={product} 
                     value={product}
-                    className={`hover:${highlightBg} ${textColor}`}
+                    className={
+                      neon
+                        ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300'
+                        : `hover:${highlightBg} ${textColor}`
+                    }
                   >
                     {product}
                   </SelectItem>
@@ -460,41 +586,61 @@ export default function CommunicationTab({
 
           {/* Subject Input */}
           <div>
-            <label className="block mb-1">Subject *</label>
+            <label className={`block mb-1 ${neon ? 'text-slate-300' : ''}`}>
+              Subject *
+            </label>
             <Input
               value={newCommunication.subject}
               onChange={(e) => setNewCommunication({...newCommunication, subject: e.target.value})}
               placeholder="Subject"
-              className={`${inputBg} ${borderColor}`}
+              className={`rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 placeholder:text-slate-500 hover:border-cyan-400 focus:ring-cyan-500/20 focus:border-cyan-400'
+                  : `${inputBg} ${borderColor}`
+              }`}
             />
           </div>
 
           {/* Content Textarea */}
           <div>
-            <label className="block mb-2">Content *</label>
+            <label className={`block mb-2 ${neon ? 'text-slate-300' : ''}`}>
+              Content *
+            </label>
             <Textarea
               value={newCommunication.content}
               onChange={(e) => setNewCommunication({...newCommunication, content: e.target.value})}
               placeholder="Type your message here..."
               rows={5}
-              className={`${inputBg} ${borderColor}`}
+              className={`rounded-lg ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 placeholder:text-slate-500 hover:border-cyan-400 focus:ring-cyan-500/20 focus:border-cyan-400'
+                  : `${inputBg} ${borderColor}`
+              }`}
             />
           </div>
 
           {/* Follow-up Date Input */}
           <div>
-            <label className="block mb-1">Follow-up Date</label>
+            <label className={`block mb-1 ${neon ? 'text-slate-300' : ''}`}>
+              Follow-up Date
+            </label>
             <Input
               type="date"
               value={newCommunication.followUpDate}
               onChange={(e) => setNewCommunication({...newCommunication, followUpDate: e.target.value})}
-              className={`${inputBg} ${borderColor}`}
+              className={`rounded-full ${
+                neon
+                  ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20 focus:border-cyan-400'
+                  : `${inputBg} ${borderColor}`
+              }`}
             />
           </div>
 
           {/* Submit Button */}
           <Button 
-            className={`w-full mt-4 ${getButtonClasses(theme)} rounded-full`}
+            className={`w-full mt-4 ${getButtonClasses(theme)} rounded-full ${
+              neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.3)] hover:shadow-[0_0_20px_rgba(0,255,255,0.5)]' : ''
+            }`}
             onClick={handleCreateCommunication}
             disabled={!selectedClientId || !newCommunication.subject || !newCommunication.content}
           >

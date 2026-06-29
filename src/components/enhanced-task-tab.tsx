@@ -372,30 +372,30 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
   const getPriorityColor = (priority: Priority) => {
     if (neon) {
       switch (priority) {
-        case 'High': return 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-[0_0_8px_rgba(255,0,0,0.15)]'
-        case 'Medium': return 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.15)]'
-        case 'Low': return 'bg-green-500/20 text-green-400 border border-green-500/40 shadow-[0_0_8px_rgba(74,222,128,0.15)]'
+        case 'High': return 'bg-red-500/20 text-red-400 border border-red-500/40 shadow-[0_0_8px_rgba(255,0,0,0.15)] rounded-full'
+        case 'Medium': return 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.15)] rounded-full'
+        case 'Low': return 'bg-green-500/20 text-green-400 border border-green-500/40 shadow-[0_0_8px_rgba(74,222,128,0.15)] rounded-full'
       }
     }
     switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100'
-      case 'Medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100'
-      case 'Low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100'
+      case 'High': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100 rounded-full'
+      case 'Medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100 rounded-full'
+      case 'Low': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 rounded-full'
     }
   }
 
   const getStatusColor = (status: Status) => {
     if (neon) {
       switch (status) {
-        case 'Not Started': return 'bg-slate-500/20 text-slate-400 border border-slate-500/40 shadow-[0_0_8px_rgba(148,163,184,0.15)]'
-        case 'In Progress': return 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,255,255,0.15)]'
-        case 'Completed': return 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/40 shadow-[0_0_8px_rgba(232,121,249,0.15)]'
+        case 'Not Started': return 'bg-slate-500/20 text-slate-400 border border-slate-500/40 shadow-[0_0_8px_rgba(148,163,184,0.15)] rounded-full'
+        case 'In Progress': return 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,255,255,0.15)] rounded-full'
+        case 'Completed': return 'bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/40 shadow-[0_0_8px_rgba(232,121,249,0.15)] rounded-full'
       }
     }
     switch (status) {
-      case 'Not Started': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'
-      case 'In Progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100'
-      case 'Completed': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100'
+      case 'Not Started': return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100 rounded-full'
+      case 'In Progress': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100 rounded-full'
+      case 'Completed': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100 rounded-full'
     }
   }
 
@@ -417,15 +417,15 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
   const renderTasks = (filteredTasks: Task[]) => (
     <div className="space-y-4">
       {filteredTasks.map(task => (
-        <Card key={task.id} className={`${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
+        <Card key={task.id} className={`${cardBg} ${borderColor} rounded-xl ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span className={neon ? 'drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>{task.title}</span>
               <div className="flex items-center gap-2">
-                <Button size="icon" variant="ghost" onClick={() => toggleStar(task.id)}>
+                <Button size="icon" variant="ghost" onClick={() => toggleStar(task.id)} className="rounded-full">
                   {task.starred ? '⭐' : '☆'}
                 </Button>
-                <Button size="icon" variant="destructive" onClick={() => handleDeleteTask(task.id)}>
+                <Button size="icon" variant="destructive" onClick={() => handleDeleteTask(task.id)} className="rounded-full">
                   <Trash className="h-4 w-4" />
                 </Button>
               </div>
@@ -450,7 +450,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
 
   if (error) {
     return (
-      <div className={`p-4 rounded ${neon ? 'text-red-400 bg-red-500/10 border border-red-500/30 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'text-red-500 bg-red-50'}`}>
+      <div className={`p-4 rounded-xl ${neon ? 'text-red-400 bg-red-500/10 border border-red-500/30 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'text-red-500 bg-red-50'}`}>
         Error: {error}
       </div>
     );
@@ -460,17 +460,17 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
     <div className={`space-y-3 ${bgColor} ${textColor}`}>
       {/* Task View Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
-        <TabsList className={`grid grid-cols-4 w-full ${cardBg} border ${borderColor} ${neon ? 'bg-slate-950/80 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]' : ''}`}>
-          <TabsTrigger value="all" className={`${neon ? 'data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
+        <TabsList className={`grid grid-cols-4 w-full ${cardBg} border ${borderColor} rounded-xl ${neon ? 'bg-slate-950/80 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.1)]' : ''}`}>
+          <TabsTrigger value="all" className={`rounded-lg ${neon ? 'data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-400 data-[state=active]:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             All Tasks
           </TabsTrigger>
-          <TabsTrigger value="starred" className={`${neon ? 'data-[state=active]:bg-fuchsia-500/20 data-[state=active]:text-fuchsia-400 data-[state=active]:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
+          <TabsTrigger value="starred" className={`rounded-lg ${neon ? 'data-[state=active]:bg-fuchsia-500/20 data-[state=active]:text-fuchsia-400 data-[state=active]:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Starred
           </TabsTrigger>
-          <TabsTrigger value="today" className={`${neon ? 'data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 data-[state=active]:shadow-[0_0_10px_rgba(74,222,128,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
+          <TabsTrigger value="today" className={`rounded-lg ${neon ? 'data-[state=active]:bg-green-500/20 data-[state=active]:text-green-400 data-[state=active]:shadow-[0_0_10px_rgba(74,222,128,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Today
           </TabsTrigger>
-          <TabsTrigger value="overdue" className={`${neon ? 'data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400 data-[state=active]:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
+          <TabsTrigger value="overdue" className={`rounded-lg ${neon ? 'data-[state=active]:bg-red-500/20 data-[state=active]:text-red-400 data-[state=active]:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : `data-[state=active]:${buttonBg} data-[state=active]:${buttonText}`}`}>
             Overdue
           </TabsTrigger>
         </TabsList>
@@ -489,7 +489,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
         <TabsContent value="all">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
             {tasks.map(task => (
-              <Card key={task.id} className={`p-4 shadow-md rounded-lg border ${cardBg} ${borderColor} ${textColor} ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
+              <Card key={task.id} className={`p-4 shadow-md rounded-xl border ${cardBg} ${borderColor} ${textColor} ${neon ? 'shadow-[0_0_15px_rgba(0,255,255,0.1)] border-cyan-500/30 hover:shadow-[0_0_25px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}>
                 <CardHeader>
                   <CardTitle className="flex justify-between items-center">
                     <span className={neon ? 'drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>{task.title}</span>
@@ -514,7 +514,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
       </Tabs>
  
       {/* Add Task Section */}
-      <Card className={`-mt-2 ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.1)] border-cyan-500/30' : ''}`}>
+      <Card className={`-mt-2 rounded-xl ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.1)] border-cyan-500/30' : ''}`}>
         <CardHeader>
           <CardTitle className={`flex items-center gap-2 ${neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}`}>
             <Plus className="h-5 w-5" />
@@ -530,7 +530,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={newTask.title}
                 onChange={(e) => setNewTask({...newTask, title: e.target.value})}
                 placeholder="Task title"
-                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
+                className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
               />
             </div>
             <div className="space-y-2">
@@ -540,7 +540,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={newTask.description}
                 onChange={(e) => setNewTask({...newTask, description: e.target.value})}
                 placeholder="Task description"
-                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
+                className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
               />
             </div>
             <div className="space-y-2">
@@ -549,10 +549,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={newTask.priority}
                 onValueChange={(value: Priority) => setNewTask({...newTask, priority: value})}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
+                <SelectTrigger className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Select priority" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="High">High</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
                   <SelectItem value="Low">Low</SelectItem>
@@ -566,7 +566,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 type="date"
                 value={newTask.dueDate}
                 onChange={(e) => setNewTask({...newTask, dueDate: e.target.value})}
-                className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
+                className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
               />
             </div>
             <div className="space-y-2 md:col-span-2">
@@ -578,7 +578,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${neon ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_8px_rgba(0,255,255,0.15)]' : `${highlightBg} ${textColor}`}`}
                   >
                     {category}
-                    <button type="button" onClick={() => removeCategory(category)} className="ml-1">
+                    <button type="button" onClick={() => removeCategory(category)} className="ml-1 rounded-full hover:bg-black/10">
                       <X className="h-3 w-3" />
                     </button>
                   </span>
@@ -586,10 +586,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
               </div>
               <div className="flex gap-2">
                 <Select value={newCategory} onValueChange={setNewCategory}>
-                  <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                  <SelectTrigger className={`rounded-full ${inputBg} ${borderColor}`}>
                     <SelectValue placeholder="Add category" />
                   </SelectTrigger>
-                  <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                  <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                     {allCategories.filter(cat => !newTask.categories.includes(cat)).map(category => (
                       <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
@@ -598,7 +598,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 <Button 
                   variant="outline" 
                   onClick={addCategory}
-                  className={`${inputBg} ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
+                  className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                 >
                   <Plus className="h-4 w-4 mr-2" /> Add
                 </Button>
@@ -611,13 +611,13 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 id="starred" 
                 checked={newTask.starred}
                 onCheckedChange={(checked) => setNewTask({...newTask, starred: !!checked})}
-                className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
+                className={`rounded ${neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}`}
               />
               <Label htmlFor="starred" className="ml-2">Starred</Label>
             </div>
             <Button 
               onClick={handleAddTask} 
-              className={`gap-2 ${neon ? 'rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] transition-all' : ''}`}
+              className={`gap-2 rounded-full ${neon ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)] transition-all' : ''}`}
               style={!neon ? { backgroundColor: buttonBg, color: buttonText } : undefined}
             >
               <Plus className="h-4 w-4" /> Add Task
@@ -625,8 +625,8 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
           </div>
         </CardContent>
       </Card>
-            {/* Controls Section */}
-      <Card className={`${cardBg} border ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>
+                  {/* Controls Section */}
+      <Card className={`rounded-xl ${cardBg} border ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>Task Controls</CardTitle>
@@ -636,7 +636,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleBulkStatusChange('Completed')}
-                  className={`${borderColor} ${neon ? 'border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-500/10 hover:text-fuchsia-200 hover:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `hover:${highlightBg}`}`}
+                  className={`rounded-full ${borderColor} ${neon ? 'border-fuchsia-500/30 text-fuchsia-300 hover:bg-fuchsia-500/10 hover:text-fuchsia-200 hover:shadow-[0_0_10px_rgba(232,121,249,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   Mark Complete
                 </Button>
@@ -644,7 +644,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleBulkStatusChange('In Progress')}
-                  className={`${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
+                  className={`rounded-full ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   Mark In Progress
                 </Button>
@@ -652,7 +652,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                   variant="destructive" 
                   size="sm" 
                   onClick={handleBulkDelete}
-                  className={neon ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 hover:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : ''}
+                  className={`rounded-full ${neon ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 hover:shadow-[0_0_10px_rgba(255,0,0,0.2)]' : ''}`}
                 >
                   <Trash className="h-4 w-4 mr-2" /> Delete
                 </Button>
@@ -668,7 +668,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${neon ? 'text-cyan-400/60' : 'text-gray-400'}`} />
                 <Input
                   placeholder="Search tasks..."
-                  className={`pl-10 ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
+                  className={`pl-10 rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)] transition-shadow' : ''}`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -680,10 +680,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={filterPriority}
                 onValueChange={(value: Priority | 'All') => setFilterPriority(value)}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
+                <SelectTrigger className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by priority" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Priorities</SelectItem>
                   <SelectItem value="High">High</SelectItem>
                   <SelectItem value="Medium">Medium</SelectItem>
@@ -697,10 +697,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={filterStatus}
                 onValueChange={(value: Status | 'All') => setFilterStatus(value)}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
+                <SelectTrigger className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Statuses</SelectItem>
                   <SelectItem value="Not Started">Not Started</SelectItem>
                   <SelectItem value="In Progress">In Progress</SelectItem>
@@ -714,10 +714,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 value={filterCategory}
                 onValueChange={(value: Category | 'All') => setFilterCategory(value)}
               >
-                <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
+                <SelectTrigger className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                   <SelectValue placeholder="Filter by category" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                   <SelectItem value="All">All Categories</SelectItem>
                   {allCategories.map(category => (
                     <SelectItem key={category} value={category}>{category}</SelectItem>
@@ -734,10 +734,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                   value={sortField}
                   onValueChange={(value: 'priority' | 'status' | 'dueDate') => setSortField(value)}
                 >
-                  <SelectTrigger className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
+                  <SelectTrigger className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400' : ''}`}>
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
-                  <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                  <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                     <SelectItem value="priority">Priority</SelectItem>
                     <SelectItem value="status">Status</SelectItem>
                     <SelectItem value="dueDate">Due Date</SelectItem>
@@ -746,7 +746,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                 <Button
                   variant="outline"
                   onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
-                  className={`${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
+                  className={`rounded-full ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200 hover:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : `hover:${highlightBg}`}`}
                 >
                   {sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />}
                 </Button>
@@ -757,7 +757,8 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
       </Card>
 
       {/* Tasks List */}
-<Card className={`rounded-full overflow-hidden ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>       <CardHeader>
+      <Card className={`overflow-hidden rounded-xl ${cardBg} ${borderColor} ${neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.08)] border-cyan-500/30' : ''}`}>       
+        <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}>
               {activeTab === 'all' && 'All Tasks'}
@@ -774,7 +775,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                   id="select-all" 
                   checked={selectedTasks.length === filteredTasks.length && filteredTasks.length > 0}
                   onCheckedChange={toggleSelectAll}
-                  className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
+                  className={`rounded ${neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}`}
                 />
                 <Label htmlFor="select-all">Select all</Label>
               </div>
@@ -791,7 +792,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
               {sortedTasks.map(task => (
                 <div 
                   key={task.id} 
-                  className={`border rounded-lg p-4 ${borderColor} ${
+                  className={`border rounded-xl p-4 ${borderColor} ${
                     selectedTasks.includes(task.id) 
                       ? neon 
                         ? 'bg-cyan-500/10 border-cyan-500/40 shadow-[0_0_15px_rgba(0,255,255,0.15)]' 
@@ -808,7 +809,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                         <Input
                           value={editTaskData?.title || ''}
                           onChange={(e) => editTaskData && setEditTaskData({...editTaskData, title: e.target.value})}
-                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
+                          className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                         />
                       </div>
                       <div className="space-y-2">
@@ -816,7 +817,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                         <Input
                           value={editTaskData?.description || ''}
                           onChange={(e) => editTaskData && setEditTaskData({...editTaskData, description: e.target.value})}
-                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
+                          className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                         />
                       </div>
                       <div className="space-y-2">
@@ -825,10 +826,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                           value={editTaskData?.priority || 'Medium'}
                           onValueChange={(value: Priority) => editTaskData && setEditTaskData({...editTaskData, priority: value})}
                         >
-                          <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                          <SelectTrigger className={`rounded-full ${inputBg} ${borderColor}`}>
                             <SelectValue placeholder="Select priority" />
                           </SelectTrigger>
-                          <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                          <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                             <SelectItem value="High">High</SelectItem>
                             <SelectItem value="Medium">Medium</SelectItem>
                             <SelectItem value="Low">Low</SelectItem>
@@ -841,10 +842,10 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                           value={editTaskData?.status || 'Not Started'}
                           onValueChange={(value: Status) => editTaskData && setEditTaskData({...editTaskData, status: value})}
                         >
-                          <SelectTrigger className={`${inputBg} ${borderColor}`}>
+                          <SelectTrigger className={`rounded-full ${inputBg} ${borderColor}`}>
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
-                          <SelectContent className={`${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
+                          <SelectContent className={`rounded-xl ${cardBg} ${borderColor} ${neon ? 'bg-slate-950 border-cyan-500/30 shadow-[0_0_15px_rgba(0,255,255,0.2)]' : ''}`}>
                             <SelectItem value="Not Started">Not Started</SelectItem>
                             <SelectItem value="In Progress">In Progress</SelectItem>
                             <SelectItem value="Completed">Completed</SelectItem>
@@ -857,13 +858,13 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                           type="date"
                           value={editTaskData?.dueDate || ''}
                           onChange={(e) => editTaskData && setEditTaskData({...editTaskData, dueDate: e.target.value})}
-                          className={`${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
+                          className={`rounded-full ${inputBg} ${borderColor} ${neon ? 'focus:border-cyan-400 focus:shadow-[0_0_10px_rgba(0,255,255,0.2)]' : ''}`}
                         />
                       </div>
                       <div className="flex items-end gap-2">
                         <Button 
                           onClick={saveEdit} 
-                          className={`gap-2 ${neon ? 'rounded-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)]' : ''}`}
+                          className={`gap-2 rounded-full ${neon ? 'bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(0,255,255,0.4)] hover:shadow-[0_0_25px_rgba(0,255,255,0.6)]' : ''}`}
                           style={!neon ? { backgroundColor: buttonBg, color: buttonText } : undefined}
                         >
                           <Check className="h-4 w-4" /> Save
@@ -871,7 +872,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                         <Button 
                           variant="outline" 
                           onClick={cancelEdit} 
-                          className={`gap-2 ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200' : `hover:${highlightBg}`}`}
+                          className={`gap-2 rounded-full ${borderColor} ${neon ? 'border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 hover:text-cyan-200' : `hover:${highlightBg}`}`}
                         >
                           <X className="h-4 w-4" /> Cancel
                         </Button>
@@ -884,7 +885,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                           id={`select-${task.id}`}
                           checked={selectedTasks.includes(task.id)}
                           onCheckedChange={() => toggleTaskSelection(task.id)}
-                          className={neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}
+                          className={`rounded ${neon ? 'border-cyan-500/40 data-[state=checked]:bg-cyan-500 data-[state=checked]:border-cyan-400' : ''}`}
                         />
                       </div>
                       <div className="md:col-span-2">
@@ -897,7 +898,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                           {task.categories.map(category => (
                             <span 
                               key={category} 
-                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${neon ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_6px_rgba(0,255,255,0.1)]' : `${highlightBg} ${textColor}`}`}
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${neon ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 shadow-[0_0_6px_rgba(0,255,255,0.1)]' : `${highlightBg} ${textColor}`}`}
                             >
                               {category}
                             </span>
@@ -913,7 +914,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                         <Button 
                           variant="ghost" 
                           size="sm" 
-                          className={`${getStatusColor(task.status)} hover:bg-opacity-80`}
+                          className={`rounded-full ${getStatusColor(task.status)} hover:bg-opacity-80`}
                           onClick={() => toggleStatus(task.id)}                        
                         >
                           {task.status}
@@ -940,7 +941,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => toggleStar(task.id)}
-                            className={`h-8 w-8 p-0 hover:bg-opacity-50 ${neon ? 'hover:bg-cyan-500/10' : ''}`}
+                            className={`h-8 w-8 p-0 rounded-full hover:bg-opacity-50 ${neon ? 'hover:bg-cyan-500/10' : ''}`}
                           >
                             <Star className={`h-4 w-4 ${task.starred ? 'text-yellow-500 fill-yellow-500 drop-shadow-[0_0_6px_rgba(250,204,21,0.5)]' : neon ? 'text-slate-500' : 'text-gray-400'}`} />
                           </Button>
@@ -948,7 +949,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => startEditing(task)}
-                            className={`hover:bg-opacity-50 ${neon ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' : ''}`}
+                            className={`rounded-full hover:bg-opacity-50 ${neon ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' : ''}`}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -956,7 +957,7 @@ export default function EnhancedTaskTab({ theme }: EnhancedTaskTabProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDeleteTask(task.id)}
-                            className={`hover:bg-opacity-50 ${neon ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:shadow-[0_0_8px_rgba(255,0,0,0.2)]' : 'text-red-500 hover:text-red-600'}`}
+                            className={`rounded-full hover:bg-opacity-50 ${neon ? 'text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:shadow-[0_0_8px_rgba(255,0,0,0.2)]' : 'text-red-500 hover:text-red-600'}`}
                           >
                             <Trash className="h-4 w-4" />
                           </Button>

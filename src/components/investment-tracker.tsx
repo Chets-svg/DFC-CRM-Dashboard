@@ -15,7 +15,8 @@ import {
   ThemeName, 
   ThemeColors, 
   themes, 
-  getButtonClasses 
+  getButtonClasses,
+  isNeon
 } from '@/lib/theme';
 
 interface ClientInvestment {
@@ -93,7 +94,7 @@ export const formatCurrency = (amount: number) => {
 
 export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTrackerProps) {
   const currentTheme = themes[theme] || themes['blue-smoke'];
-  const neon = theme === 'neon-cyberpunk';
+  const neon = isNeon(theme);
   
   const {
     bgColor,
@@ -117,6 +118,57 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
   const [records, setRecords] = useState<InvestmentRecord[]>(defaultRecords);
   const [expandedMonths, setExpandedMonths] = useState<Record<number, boolean>>({});
   const [clientToDelete, setClientToDelete] = useState<{ monthIndex: number; clientId: string } | null>(null);
+
+  // ─── Neon Styles Object (Consistent with Dashboard) ──────────
+  const ns = neon ? {
+    card: 'border-cyan-500/25 shadow-[0_0_25px_rgba(0,255,255,0.08)]',
+    sipCard: 'border-cyan-500/25 shadow-[0_0_25px_rgba(0,255,255,0.08)]',
+    lumpCard: 'border-emerald-500/25 shadow-[0_0_25px_rgba(52,211,153,0.08)]',
+    yearCard: 'border-violet-500/25 shadow-[0_0_25px_rgba(139,92,246,0.08)]',
+    monthlyCard: 'border-fuchsia-500/25 shadow-[0_0_25px_rgba(217,70,239,0.08)]',
+    clientCard: 'border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.06)]',
+    title: 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]',
+    sipTitle: 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]',
+    lumpTitle: 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]',
+    yearTitle: 'text-violet-300 drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]',
+    monthlyTitle: 'text-fuchsia-300 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)]',
+    label: 'text-slate-400 drop-shadow-[0_0_2px_rgba(0,255,255,0.1)]',
+    value: 'text-cyan-100 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]',
+    primary: 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.4)]',
+    muted: 'text-slate-500',
+    progressTrack: 'bg-slate-800 border border-cyan-500/15',
+    sipBar: 'bg-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.6)]',
+    lumpBar: 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]',
+    input: 'bg-slate-900 border-cyan-500/30 text-cyan-100 placeholder-slate-500 focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(0,255,255,0.3)]',
+    tableHead: 'bg-slate-800/80 text-cyan-400/80',
+    tableBody: 'divide-cyan-500/10',
+    currentRow: 'bg-cyan-500/[0.02] rounded-full',
+    summaryBox: 'bg-slate-800/60 border border-cyan-500/10',
+    deficitPositive: 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]',
+    deficitNegative: 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]',
+    btnOutline: 'border-cyan-500/40 text-cyan-300 shadow-[0_0_6px_rgba(0,255,255,0.12)] hover:border-cyan-400 hover:shadow-[0_0_14px_rgba(0,255,255,0.3)] hover:text-cyan-200',
+    btnDestructive: 'bg-red-500/20 border border-red-500/40 text-red-300 shadow-[0_0_8px_rgba(248,113,113,0.3)] hover:bg-red-500/30 hover:shadow-[0_0_14px_rgba(248,113,113,0.5)]',
+    btnGhost: 'text-cyan-400 hover:text-cyan-200 hover:bg-cyan-500/10',
+    chevron: 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]',
+    lock: 'text-slate-500',
+    star: 'text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]',
+    currentBadge: 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]',
+    overlay: 'bg-black/70',
+    dialogCard: 'bg-slate-900 border-red-500/30 shadow-[0_0_30px_rgba(248,113,113,0.15)]',
+    dialogTitle: 'text-red-300 drop-shadow-[0_0_8px_rgba(248,113,113,0.4)]',
+    dialogDesc: 'text-slate-400',
+    completeMonthBtn: 'bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300 shadow-[0_0_8px_rgba(217,70,239,0.3)] hover:bg-fuchsia-500/30 hover:shadow-[0_0_14px_rgba(217,70,239,0.5)]',
+    clientTitle: 'text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.3)]',
+    clientSummaryTitle: 'text-amber-300 drop-shadow-[0_0_4px_rgba(245,158,11,0.3)]',
+    lumpValue: 'text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]',
+    yearValue: 'text-violet-300 drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]',
+    totalInvestValue: 'text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]',
+    textSlate200: 'text-slate-200',
+    textSlate300: 'text-slate-300',
+    textSlate400: 'text-slate-400',
+    textCyan400_70: 'text-cyan-400/70 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]',
+    deleteBtn: 'text-red-400 hover:text-red-300 hover:shadow-[0_0_8px_rgba(248,113,113,0.4)]',
+  } : {};
 
   const calculateTotals = () => {
     const monthlySipTarget = Math.max(0, records[0]?.sipTarget || 0);
@@ -321,82 +373,33 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
     await saveToFirestore(records, newMonthIndex);
   };
 
-  // ─── Neon helper classes ───────────────────────────────────────
-  const neonCardBase = neon ? 'border-cyan-500/25 shadow-[0_0_25px_rgba(0,255,255,0.08)]' : '';
-  const neonSipCard = neon ? 'border-cyan-500/25 shadow-[0_0_25px_rgba(0,255,255,0.08)]' : '';
-  const neonLumpCard = neon ? 'border-emerald-500/25 shadow-[0_0_25px_rgba(52,211,153,0.08)]' : '';
-  const neonYearCard = neon ? 'border-violet-500/25 shadow-[0_0_25px_rgba(139,92,246,0.08)]' : '';
-  const neonMonthlyCard = neon ? 'border-fuchsia-500/25 shadow-[0_0_25px_rgba(217,70,239,0.08)]' : '';
-  const neonClientCard = neon ? 'border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.06)]' : '';
-
-  const neonTitleCls = neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : '';
-  const neonSipTitle = neon ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : '';
-  const neonLumpTitle = neon ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.4)]' : '';
-  const neonYearTitle = neon ? 'text-violet-300 drop-shadow-[0_0_8px_rgba(139,92,246,0.4)]' : '';
-  const neonMonthlyTitle = neon ? 'text-fuchsia-300 drop-shadow-[0_0_8px_rgba(217,70,239,0.4)]' : '';
-
-  const neonLabelCls = neon ? 'text-slate-400 drop-shadow-[0_0_2px_rgba(0,255,255,0.1)]' : '';
-  const neonValueCls = neon ? 'text-cyan-100 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : '';
-  const neonPrimaryCls = neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.4)]' : '';
-  const neonMutedCls = neon ? 'text-slate-500' : '';
-
-  const neonProgressTrack = neon ? 'bg-slate-800 border border-cyan-500/15' : 'bg-gray-200';
-  const neonSipBar = neon ? 'bg-cyan-400 shadow-[0_0_10px_rgba(0,255,255,0.6)]' : (theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500');
-  const neonLumpBar = neon ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]' : 'bg-green-500';
-
-  const neonInputCls = neon 
-    ? 'bg-slate-900 border-cyan-500/30 text-cyan-100 placeholder-slate-500 focus:border-cyan-400 focus:shadow-[0_0_8px_rgba(0,255,255,0.3)]' 
-    : `${inputBg} ${borderColor}`;
-
-  const neonTableHead = neon ? 'bg-slate-800/80 text-cyan-400/80' : 'bg-muted';
-  const neonTableBody = neon ? 'divide-cyan-500/10' : 'divide-border';
-  const neonCurrentRow = neon ? 'bg-cyan-500/[0.02] rounded-full' : 'bg-cyan-500/10 rounded-full';
-  const neonSummaryBox = neon ? 'bg-slate-800/60 border border-cyan-500/10' : 'bg-muted';
-
-  const neonDeficitPositive = neon ? 'text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]' : 'text-green-500';
-  const neonDeficitNegative = neon ? 'text-red-400 drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]' : 'text-red-500';
-
-  const neonBtnOutline = neon 
-    ? 'border-cyan-500/40 text-cyan-300 shadow-[0_0_6px_rgba(0,255,255,0.12)] hover:border-cyan-400 hover:shadow-[0_0_14px_rgba(0,255,255,0.3)] hover:text-cyan-200' 
-    : getButtonClasses(theme, 'outline');
-
-  const neonBtnDestructive = neon 
-    ? 'bg-red-500/20 border border-red-500/40 text-red-300 shadow-[0_0_8px_rgba(248,113,113,0.3)] hover:bg-red-500/30 hover:shadow-[0_0_14px_rgba(248,113,113,0.5)]' 
-    : '';
-
-  const neonBtnGhost = neon ? 'text-cyan-400 hover:text-cyan-200 hover:bg-cyan-500/10' : '';
-  const neonChevronCls = neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : '';
-  const neonLockCls = neon ? 'text-slate-500' : 'text-muted-foreground dark:text-gray-400';
-  const neonStarCls = neon ? 'text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.5)]' : 'text-green-500';
-  const neonCurrentBadge = neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : 'text-blue-500 dark:text-blue-400';
-
   return (
     <div className={`space-y-4 ${bgColor} ${textColor}`}>
       {/* ─── Confirmation Dialog ──────────────────────────────── */}
       {clientToDelete && (
-        <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${neon ? 'bg-black/70' : 'bg-black bg-opacity-40'}`}>
-          <Card className={`w-full max-w-md ${neon ? 'bg-slate-900 border-red-500/30 shadow-[0_0_30px_rgba(248,113,113,0.15)]' : 'bg-white dark:bg-gray-300'}`}>
+        <div className={`fixed inset-0 flex items-center justify-center z-50 p-4 ${neon ? ns.overlay : 'bg-black bg-opacity-40'}`}>
+          <Card className={`w-full max-w-md ${neon ? ns.dialogCard : 'bg-white dark:bg-gray-300'}`}>
             <CardHeader>
-              <CardTitle className={neon ? 'text-red-300 drop-shadow-[0_0_8px_rgba(248,113,113,0.4)]' : ''}>Confirm Deletion</CardTitle>
-              <CardDescription className={neon ? 'text-slate-400' : ''}>Are you sure you want to delete this client? This action cannot be undone.</CardDescription>
+              <CardTitle className={neon ? ns.dialogTitle : ''}>Confirm Deletion</CardTitle>
+              <CardDescription className={neon ? ns.dialogDesc : ''}>Are you sure you want to delete this client? This action cannot be undone.</CardDescription>
             </CardHeader>
             <CardContent className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={cancelDeleteClient} className={neonBtnOutline}>Cancel</Button>
-              <Button variant="destructive" onClick={removeClient} className={neon ? neonBtnDestructive : ''}>Delete</Button>
+              <Button variant="outline" onClick={cancelDeleteClient} className={neon ? ns.btnOutline : getButtonClasses(theme, 'outline')}>Cancel</Button>
+              <Button variant="destructive" onClick={removeClient} className={neon ? ns.btnDestructive : ''}>Delete</Button>
             </CardContent>
           </Card>
         </div>
       )}
 
       {/* ─── Main Investment Card ─────────────────────────────── */}
-      <Card className={`${cardBg} ${borderColor} ${neonCardBase}`}>
+      <Card className={`${cardBg} ${borderColor} ${neon ? ns.card : ''}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className={neonTitleCls}>Investment Tracker - {currentYear}</CardTitle>
-              <CardDescription className={neon ? 'text-slate-400' : ''}>Track your monthly investment goals and achievements</CardDescription>
+              <CardTitle className={neon ? ns.title : ''}>Investment Tracker - {currentYear}</CardTitle>
+              <CardDescription className={neon ? ns.dialogDesc : ''}>Track your monthly investment goals and achievements</CardDescription>
             </div>
-            <div className={`text-sm ${neon ? 'text-cyan-400/70 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : 'text-muted-foreground'}`}>
+            <div className={`text-sm ${neon ? ns.textCyan400_70 : 'text-muted-foreground'}`}>
               Current Month: {currentMonthName} {currentYear}
             </div>
           </div>
@@ -406,7 +409,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
         <CardContent className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className={`text-lg font-semibold ${neon ? 'text-cyan-200 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}`}>Investment Summary</h3>
-            <Button onClick={() => setIsEditingSummary(!isEditingSummary)} variant="outline" className={`gap-2 rounded-full ${neonBtnOutline}`}>
+            <Button onClick={() => setIsEditingSummary(!isEditingSummary)} variant="outline" className={`gap-2 rounded-full ${neon ? ns.btnOutline : getButtonClasses(theme, 'outline')}`}>
               {isEditingSummary ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
               {isEditingSummary ? "Save Summary" : "Edit Summary"}
             </Button>
@@ -414,96 +417,96 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* SIP Summary */}
-            <Card className={`${highlightBg} ${borderColor} ${neonSipCard}`}>
+            <Card className={`${highlightBg} ${borderColor} ${neon ? ns.sipCard : ''}`}>
               <CardHeader>
-                <CardTitle className={`text-lg ${neonSipTitle}`}>SIP Summary (Yearly)</CardTitle>
+                <CardTitle className={`text-lg ${neon ? ns.sipTitle : ''}`}>SIP Summary (Yearly)</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Target:</Label>
+                  <Label className={neon ? ns.label : ''}>Target:</Label>
                   {isEditingSummary ? (
-                    <Input type="number" value={records[0]?.sipTarget || 0} onChange={(e) => handleUpdateTargetValue('sipTarget', Number(e.target.value))} className={`w-24 ${neonInputCls}`} />
+                    <Input type="number" value={records[0]?.sipTarget || 0} onChange={(e) => handleUpdateTargetValue('sipTarget', Number(e.target.value))} className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`} />
                   ) : (
-                    <span className={`font-medium ${neonValueCls}`}>{formatCurrency(totals.sipTarget)}</span>
+                    <span className={`font-medium ${neon ? ns.value : ''}`}>{formatCurrency(totals.sipTarget)}</span>
                   )}
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Achieved:</Label>
-                  <span className={`text-primary font-medium ${neonPrimaryCls}`}>{formatCurrency(totals.sipAchieved)}</span>
+                  <Label className={neon ? ns.label : ''}>Achieved:</Label>
+                  <span className={`text-primary font-medium ${neon ? ns.primary : ''}`}>{formatCurrency(totals.sipAchieved)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Deficit:</Label>
-                  <span className={`font-medium ${totals.sipAchieved >= totals.sipTarget ? neonDeficitPositive : neonDeficitNegative}`}>{formatCurrency(totals.sipAchieved - totals.sipTarget)}</span>
+                  <Label className={neon ? ns.label : ''}>Deficit:</Label>
+                  <span className={`font-medium ${totals.sipAchieved >= totals.sipTarget ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')}`}>{formatCurrency(totals.sipAchieved - totals.sipTarget)}</span>
                 </div>
                 <div className="pt-2">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className={neonLabelCls}>Progress: <span className={neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}>{totals.sipTarget > 0 ? `${Math.min(100, Math.round((totals.sipAchieved / totals.sipTarget) * 100))}` : '0'}%</span></span>
+                    <span className={neon ? ns.label : ''}>Progress: <span className={neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}>{totals.sipTarget > 0 ? `${Math.min(100, Math.round((totals.sipAchieved / totals.sipTarget) * 100))}` : '0'}%</span></span>
                   </div>
-                  <div className={`w-full rounded-full h-3 overflow-hidden ${neonProgressTrack}`}>
-                    <div className={`h-full rounded-full ${neonSipBar} transition-all duration-300`} style={{ width: totals.sipTarget > 0 ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` : '0%' }} />
+                  <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.progressTrack : 'bg-gray-200'}`}>
+                    <div className={`h-full rounded-full ${neon ? ns.sipBar : (theme === 'dark' ? 'bg-blue-400' : 'bg-blue-500')} transition-all duration-300`} style={{ width: totals.sipTarget > 0 ? `${Math.min(100, (totals.sipAchieved / totals.sipTarget) * 100)}%` : '0%' }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Lumpsum Summary */}
-            <Card className={`${highlightBg} ${borderColor} ${neonLumpCard}`}>
+            <Card className={`${highlightBg} ${borderColor} ${neon ? ns.lumpCard : ''}`}>
               <CardHeader>
-                <CardTitle className={`text-lg ${neonLumpTitle}`}>Lumpsum Summary</CardTitle>
+                <CardTitle className={`text-lg ${neon ? ns.lumpTitle : ''}`}>Lumpsum Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Target:</Label>
+                  <Label className={neon ? ns.label : ''}>Target:</Label>
                   {isEditingSummary ? (
-                    <Input type="number" value={records[0]?.lumpsumTarget || 0} onChange={(e) => handleUpdateTargetValue('lumpsumTarget', Number(e.target.value))} className={`w-24 ${neonInputCls}`} />
+                    <Input type="number" value={records[0]?.lumpsumTarget || 0} onChange={(e) => handleUpdateTargetValue('lumpsumTarget', Number(e.target.value))} className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`} />
                   ) : (
                     <span className={`font-medium ${neon ? 'text-emerald-100 drop-shadow-[0_0_4px_rgba(52,211,153,0.2)]' : ''}`}>{formatCurrency(records[0]?.lumpsumTarget || 0)}</span>
                   )}
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Achieved:</Label>
-                  <span className={`text-primary font-medium ${neon ? 'text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]' : ''}`}>{formatCurrency(totals.lumpsumAchieved)}</span>
+                  <Label className={neon ? ns.label : ''}>Achieved:</Label>
+                  <span className={`text-primary font-medium ${neon ? ns.lumpValue : ''}`}>{formatCurrency(totals.lumpsumAchieved)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Deficit:</Label>
-                  <span className={`font-medium ${totals.lumpsumAchieved >= totals.lumpsumTarget ? neonDeficitPositive : neonDeficitNegative}`}>{formatCurrency(totals.lumpsumAchieved - totals.lumpsumTarget)}</span>
+                  <Label className={neon ? ns.label : ''}>Deficit:</Label>
+                  <span className={`font-medium ${totals.lumpsumAchieved >= totals.lumpsumTarget ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')}`}>{formatCurrency(totals.lumpsumAchieved - totals.lumpsumTarget)}</span>
                 </div>
                 <div className="pt-2">
                   <div className="flex justify-between text-sm mb-1">
-                    <span className={neonLabelCls}>Progress: <span className={neon ? 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]' : ''}>{totals.lumpsumTarget > 0 ? `${Math.min(100, Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100))}` : '0'}%</span></span>
+                    <span className={neon ? ns.label : ''}>Progress: <span className={neon ? 'text-emerald-400 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]' : ''}>{totals.lumpsumTarget > 0 ? `${Math.min(100, Math.round((totals.lumpsumAchieved / totals.lumpsumTarget) * 100))}` : '0'}%</span></span>
                   </div>
-                  <div className={`w-full rounded-full h-3 overflow-hidden ${neonProgressTrack}`}>
-                    <div className={`h-full rounded-full ${neonLumpBar} transition-all duration-300`} style={{ width: totals.lumpsumTarget > 0 ? `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%' }} />
+                  <div className={`w-full rounded-full h-3 overflow-hidden ${neon ? ns.progressTrack : 'bg-gray-200'}`}>
+                    <div className={`h-full rounded-full ${neon ? ns.lumpBar : 'bg-green-500'} transition-all duration-300`} style={{ width: totals.lumpsumTarget > 0 ? `${Math.min(100, (totals.lumpsumAchieved / totals.lumpsumTarget) * 100)}%` : '0%' }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Year Summary */}
-            <Card className={`${highlightBg} ${borderColor} ${neonYearCard}`}>
+            <Card className={`${highlightBg} ${borderColor} ${neon ? ns.yearCard : ''}`}>
               <CardHeader>
-                <CardTitle className={`text-lg ${neonYearTitle}`}>{currentYear} Summary</CardTitle>
+                <CardTitle className={`text-lg ${neon ? ns.yearTitle : ''}`}>{currentYear} Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Total Target:</Label>
+                  <Label className={neon ? ns.label : ''}>Total Target:</Label>
                   <span className={`font-medium ${neon ? 'text-violet-100 drop-shadow-[0_0_4px_rgba(139,92,246,0.2)]' : ''}`}>{formatCurrency(totals.sipTarget + totals.lumpsumTarget)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Total Achieved:</Label>
-                  <span className={`text-primary font-medium ${neon ? 'text-violet-300 drop-shadow-[0_0_6px_rgba(139,92,246,0.4)]' : ''}`}>{formatCurrency(totals.sipAchieved + totals.lumpsumAchieved)}</span>
+                  <Label className={neon ? ns.label : ''}>Total Achieved:</Label>
+                  <span className={`text-primary font-medium ${neon ? ns.yearValue : ''}`}>{formatCurrency(totals.sipAchieved + totals.lumpsumAchieved)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <Label className={neonLabelCls}>Overall Deficit:</Label>
-                  <span className={`font-medium ${(totals.sipAchieved + totals.lumpsumAchieved) >= (totals.sipTarget + totals.lumpsumTarget) ? neonDeficitPositive : neonDeficitNegative}`}>{formatCurrency((totals.sipAchieved + totals.lumpsumAchieved) - (totals.sipTarget + totals.lumpsumTarget))}</span>
+                  <Label className={neon ? ns.label : ''}>Overall Deficit:</Label>
+                  <span className={`font-medium ${(totals.sipAchieved + totals.lumpsumAchieved) >= (totals.sipTarget + totals.lumpsumTarget) ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')}`}>{formatCurrency((totals.sipAchieved + totals.lumpsumAchieved) - (totals.sipTarget + totals.lumpsumTarget))}</span>
                 </div>
                 <div className="pt-2 space-y-2">
-                  <div className={`text-sm ${neon ? 'text-slate-300' : ''}`}>
-                    <span className={`font-medium ${neonLabelCls}`}>Monthly SIP Target: </span>
+                  <div className={`text-sm ${neon ? ns.textSlate300 : ''}`}>
+                    <span className={`font-medium ${neon ? ns.label : ''}`}>Monthly SIP Target: </span>
                     <span className={neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}>{formatCurrency(records[0]?.sipTarget || 0)}</span>
                   </div>
-                  <div className={`text-sm ${neon ? 'text-slate-300' : ''}`}>
-                    <span className={`font-medium ${neonLabelCls}`}>Annual Lumpsum Target: </span>
+                  <div className={`text-sm ${neon ? ns.textSlate300 : ''}`}>
+                    <span className={`font-medium ${neon ? ns.label : ''}`}>Annual Lumpsum Target: </span>
                     <span className={neon ? 'text-emerald-300 drop-shadow-[0_0_4px_rgba(52,211,153,0.3)]' : ''}>{formatCurrency(records[0]?.lumpsumTarget || 0)}</span>
                   </div>
                 </div>
@@ -512,24 +515,23 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
           </div>
         </CardContent>
       </Card>
-
-      {/* ─── Monthly Details Table ──────────────────────────────── */}
-      <Card className={`${cardBg} ${borderColor} ${neonMonthlyCard}`}>
+            {/* ─── Monthly Details Table ──────────────────────────────── */}
+      <Card className={`${cardBg} ${borderColor} ${neon ? ns.monthlyCard : ''}`}>
         <CardHeader>
           <div className="flex justify-between items-center">
             <div>
-              <CardTitle className={neonMonthlyTitle}>Monthly Investment Details</CardTitle>
-              <CardDescription className={neon ? 'text-slate-400' : ''}>
+              <CardTitle className={neon ? ns.monthlyTitle : ''}>Monthly Investment Details</CardTitle>
+              <CardDescription className={neon ? ns.dialogDesc : ''}>
                 {isEditingMonthly ? `Editing ${records[currentMonthIndex]?.month} ${currentYear} data` : 'Click "Edit Monthly Data" to update values'}
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Button onClick={() => setIsEditingMonthly(!isEditingMonthly)} variant="outline" className={`gap-2 rounded-full ${neonBtnOutline}`}>
+              <Button onClick={() => setIsEditingMonthly(!isEditingMonthly)} variant="outline" className={`gap-2 rounded-full ${neon ? ns.btnOutline : getButtonClasses(theme, 'outline')}`}>
                 {isEditingMonthly ? <Save className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
                 {isEditingMonthly ? "Save Monthly Data" : "Edit Monthly Data"}
               </Button>
               {isEditingMonthly && (
-                <Button onClick={completeCurrentMonth} variant="default" className={`gap-2 rounded-full ${neon ? 'bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300 shadow-[0_0_8px_rgba(217,70,239,0.3)] hover:bg-fuchsia-500/30 hover:shadow-[0_0_14px_rgba(217,70,239,0.5)]' : getButtonClasses(theme, 'outline')}`}>
+                <Button onClick={completeCurrentMonth} variant="default" className={`gap-2 rounded-full ${neon ? ns.completeMonthBtn : getButtonClasses(theme, 'outline')}`}>
                   Complete Current Month
                 </Button>
               )}
@@ -538,8 +540,8 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className={`min-w-full divide-y ${neonTableBody}`}>
-              <thead className={neonTableHead}>
+            <table className={`min-w-full divide-y ${neon ? ns.tableBody : 'divide-border'}`}>
+              <thead className={neon ? ns.tableHead : 'bg-muted'}>
                 <tr>
                   <th className="px-4 py-2 text-left text-xs font-medium uppercase">Month</th>
                   <th className="px-4 py-2 text-left text-xs font-medium uppercase">SIP Target</th>
@@ -550,13 +552,12 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                   <th className="px-4 py-2 text-left text-xs font-medium uppercase">Deficit</th>
                 </tr>
               </thead>
-              <tbody className={`divide-y ${neonTableBody}`}>
+              <tbody className={`divide-y ${neon ? ns.tableBody : 'divide-border'}`}>
                 {records.map((record) => (
-                  // ─── Row continues in Part 2 ──────────────────
-                                  <>
+                  <>
                     <tr 
                       key={record.month}
-                      className={`border-b ${borderColor} ${record.isEditable && !neon ? neonCurrentRow : ''}`}
+                      className={`border-b ${borderColor} ${record.isEditable ? (neon ? ns.currentRow : 'bg-cyan-500/10 rounded-full') : ''}`}
                     >
                       <td className="px-4 py-2 whitespace-nowrap">
                         <div className="flex items-center">
@@ -567,20 +568,20 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                               e.stopPropagation();
                               toggleMonthExpansion(record.monthIndex);
                             }}
-                            className={`p-1 mr-2 ${neonBtnGhost}`}
+                            className={`p-1 mr-2 ${neon ? ns.btnGhost : ''}`}
                           >
                             {expandedMonths[record.monthIndex] ? 
-                              <ChevronUp className={`h-4 w-4 ${neonChevronCls}`} /> : 
-                              <ChevronDown className={`h-4 w-4 ${neonChevronCls}`} />
+                              <ChevronUp className={`h-4 w-4 ${neon ? ns.chevron : ''}`} /> : 
+                              <ChevronDown className={`h-4 w-4 ${neon ? ns.chevron : ''}`} />
                             }
                           </Button>
-                          <span className={neon ? 'text-slate-200' : ''}>
+                          <span className={neon ? ns.textSlate200 : ''}>
                             {record.month}
-                            {record.isEditable && <span className={`ml-2 text-xs ${neonCurrentBadge}`}>(Current)</span>}
+                            {record.isEditable && <span className={`ml-2 text-xs ${neon ? ns.currentBadge : 'text-blue-500 dark:text-blue-400'}`}>(Current)</span>}
                           </span>
                         </div>
                       </td>
-                      <td className={`px-4 py-2 whitespace-nowrap ${neon ? 'text-slate-300' : ''}`}>
+                      <td className={`px-4 py-2 whitespace-nowrap ${neon ? ns.textSlate300 : ''}`}>
                         {formatCurrency(record.sipTarget)}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
@@ -590,25 +591,25 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                               type="number"
                               value={record.sipAchieved}
                               onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'sipAchieved', Number(e.target.value))}
-                              className={`w-24 ${neonInputCls}`}
+                              className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`}
                             />
                           ) : (
                             <>
-                              <span className={neonPrimaryCls}>{formatCurrency(record.sipAchieved)}</span>
-                              {!record.isEditable && <Lock className={`h-3 w-3 ml-1 ${neonLockCls}`} />}
+                              <span className={neon ? ns.primary : ''}>{formatCurrency(record.sipAchieved)}</span>
+                              {!record.isEditable && <Lock className={`h-3 w-3 ml-1 ${neon ? ns.lock : 'text-muted-foreground dark:text-gray-400'}`} />}
                             </>
                           )}
                           {record.sipAchieved >= record.sipTarget && record.sipTarget > 0 && (
-                            <Star className={`h-4 w-4 ml-1 ${neonStarCls}`} />
+                            <Star className={`h-4 w-4 ml-1 ${neon ? ns.star : 'text-green-500'}`} />
                           )}
                         </div>
                       </td>
                       <td className={`px-4 py-2 whitespace-nowrap font-medium ${
-                        record.sipAchieved >= record.sipTarget ? neonDeficitPositive : neonDeficitNegative
+                        record.sipAchieved >= record.sipTarget ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')
                       }`}>
                         {formatCurrency(record.sipAchieved - record.sipTarget)}
                       </td>
-                      <td className={`px-4 py-2 whitespace-nowrap ${neon ? 'text-slate-300' : ''}`}>
+                      <td className={`px-4 py-2 whitespace-nowrap ${neon ? ns.textSlate300 : ''}`}>
                         {formatCurrency(record.lumpsumTarget)}
                       </td>
                       <td className="px-4 py-2 whitespace-nowrap">
@@ -618,23 +619,23 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                               type="number"
                               value={record.lumpsumAchieved}
                               onChange={(e) => handleUpdateAchievedValue(record.monthIndex, 'lumpsumAchieved', Number(e.target.value))}
-                              className={`w-24 ${neonInputCls}`}
+                              className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`}
                             />
                           ) : (
                             <>
-                              <span className={neon ? 'text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]' : ''}>
+                              <span className={neon ? ns.lumpValue : ''}>
                                 {formatCurrency(record.lumpsumAchieved)}
                               </span>
-                              {!record.isEditable && <Lock className={`h-3 w-3 ml-1 ${neonLockCls}`} />}
+                              {!record.isEditable && <Lock className={`h-3 w-3 ml-1 ${neon ? ns.lock : 'text-muted-foreground dark:text-gray-400'}`} />}
                             </>
                           )}
                           {record.lumpsumAchieved >= record.lumpsumTarget && record.lumpsumTarget > 0 && (
-                            <Star className={`h-4 w-4 ml-1 ${neonStarCls}`} />
+                            <Star className={`h-4 w-4 ml-1 ${neon ? ns.star : 'text-green-500'}`} />
                           )}
                         </div>
                       </td>
                       <td className={`px-4 py-2 whitespace-nowrap font-medium ${
-                        record.lumpsumAchieved >= record.lumpsumTarget ? neonDeficitPositive : neonDeficitNegative
+                        record.lumpsumAchieved >= record.lumpsumTarget ? (neon ? ns.deficitPositive : 'text-green-500') : (neon ? ns.deficitNegative : 'text-red-500')
                       }`}>
                         {formatCurrency(record.lumpsumAchieved - record.lumpsumTarget)}
                       </td>
@@ -644,9 +645,9 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                     {expandedMonths[record.monthIndex] && (
                       <tr key={`client-${record.monthIndex}`}>
                         <td colSpan={7} className="px-0 py-2">
-                          <Card className={`${cardBg} ${borderColor} ${neonClientCard} mx-4`}>
+                          <Card className={`${cardBg} ${borderColor} ${neon ? ns.clientCard : ''} mx-4`}>
                             <CardContent className="p-4">
-                              <h3 className={`text-lg font-semibold mb-4 ${neon ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.3)]' : ''}`}>
+                              <h3 className={`text-lg font-semibold mb-4 ${neon ? ns.clientTitle : ''}`}>
                                 Client Investments for {record.month} {currentYear}
                               </h3>
                               
@@ -656,7 +657,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                     onClick={() => addNewClient(record.monthIndex)}
                                     variant="outline"
                                     size="sm"
-                                    className={`gap-1 rounded-full ${neonBtnOutline}`}
+                                    className={`gap-1 rounded-full ${neon ? ns.btnOutline : getButtonClasses(theme, 'outline')}`}
                                   >
                                     <Plus className="h-4 w-4" />
                                     Add Client
@@ -665,14 +666,14 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                               )}
                               
                               {(!record.clients || record.clients.length === 0) ? (
-                                <div className={`text-center py-8 ${neonMutedCls}`}>
+                                <div className={`text-center py-8 ${neon ? ns.muted : 'text-muted-foreground'}`}>
                                   <p>No clients added for this month</p>
                                   {isEditingMonthly && (
                                     <Button 
                                       onClick={() => addNewClient(record.monthIndex)}
                                       variant="outline"
                                       size="sm"
-                                      className={`mt-2 rounded-full ${neonBtnOutline}`}
+                                      className={`mt-2 rounded-full ${neon ? ns.btnOutline : getButtonClasses(theme, 'outline')}`}
                                     >
                                       Add First Client
                                     </Button>
@@ -680,8 +681,8 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                 </div>
                               ) : (
                                 <div className="overflow-x-auto">
-                                  <table className={`min-w-full divide-y ${neonTableBody}`}>
-                                    <thead className={neonTableHead}>
+                                  <table className={`min-w-full divide-y ${neon ? ns.tableBody : 'divide-border'}`}>
+                                    <thead className={neon ? ns.tableHead : 'bg-muted'}>
                                       <tr>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">Client</th>
                                         <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider">SIP Amount</th>
@@ -691,7 +692,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                         )}
                                       </tr>
                                     </thead>
-                                    <tbody className={`divide-y ${neonTableBody}`}>
+                                    <tbody className={`divide-y ${neon ? ns.tableBody : 'divide-border'}`}>
                                       {(record.clients || []).map((client) => (
                                         <tr key={client.id}>
                                           <td className="px-4 py-3 whitespace-nowrap">
@@ -699,10 +700,10 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                               <Input
                                                 value={client.name}
                                                 onChange={(e) => handleClientChange(record.monthIndex, client.id, 'name', e.target.value)}
-                                                className={neonInputCls}
+                                                className={neon ? ns.input : `${inputBg} ${borderColor}`}
                                               />
                                             ) : (
-                                              <span className={neon ? 'text-slate-200' : ''}>{client.name}</span>
+                                              <span className={neon ? ns.textSlate200 : ''}>{client.name}</span>
                                             )}
                                           </td>
                                           <td className="px-4 py-3 whitespace-nowrap">
@@ -711,10 +712,10 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                                 type="number"
                                                 value={client.sipAmount || 0}
                                                 onChange={(e) => handleClientChange(record.monthIndex, client.id, 'sipAmount', Number(e.target.value))}
-                                                className={`w-24 ${neonInputCls}`}
+                                                className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`}
                                               />
                                             ) : (
-                                              <span className={neonPrimaryCls}>{formatCurrency(client.sipAmount || 0)}</span>
+                                              <span className={neon ? ns.primary : ''}>{formatCurrency(client.sipAmount || 0)}</span>
                                             )}
                                           </td>
                                           <td className="px-4 py-3 whitespace-nowrap">
@@ -723,10 +724,10 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                                 type="number"
                                                 value={client.lumpsumAmount || 0}
                                                 onChange={(e) => handleClientChange(record.monthIndex, client.id, 'lumpsumAmount', Number(e.target.value))}
-                                                className={`w-24 ${neonInputCls}`}
+                                                className={`w-24 ${neon ? ns.input : `${inputBg} ${borderColor}`}`}
                                               />
                                             ) : (
-                                              <span className={neon ? 'text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]' : ''}>
+                                              <span className={neon ? ns.lumpValue : ''}>
                                                 {formatCurrency(client.lumpsumAmount || 0)}
                                               </span>
                                             )}
@@ -737,7 +738,7 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => confirmDeleteClient(record.monthIndex, client.id)}
-                                                className={`text-red-500 hover:text-red-700 ${neon ? 'text-red-400 hover:text-red-300 hover:shadow-[0_0_8px_rgba(248,113,113,0.4)]' : ''}`}
+                                                className={neon ? ns.deleteBtn : 'text-red-500 hover:text-red-700'}
                                               >
                                                 <Trash className="h-4 w-4" />
                                               </Button>
@@ -751,26 +752,26 @@ export default function InvestmentTracker({ theme = 'blue-smoke' }: InvestmentTr
                               )}
                               
                               {/* ── Client Summary Box ─────────────────────── */}
-                              <div className={`mt-4 p-4 rounded-lg ${neonSummaryBox}`}>
-                                <h4 className={`font-medium mb-2 ${neon ? 'text-amber-300 drop-shadow-[0_0_4px_rgba(245,158,11,0.3)]' : ''}`}>
+                              <div className={`mt-4 p-4 rounded-lg ${neon ? ns.summaryBox : 'bg-muted'}`}>
+                                <h4 className={`font-medium mb-2 ${neon ? ns.clientSummaryTitle : ''}`}>
                                   Summary for {record.month}:
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                   <div>
-                                    <p className={`text-sm ${neonMutedCls}`}>Total SIP</p>
-                                    <p className={`font-medium ${neonPrimaryCls}`}>
+                                    <p className={`text-sm ${neon ? ns.muted : 'text-muted-foreground'}`}>Total SIP</p>
+                                    <p className={`font-medium ${neon ? ns.primary : ''}`}>
                                       {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0), 0))}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className={`text-sm ${neonMutedCls}`}>Total Lumpsum</p>
-                                    <p className={`font-medium ${neon ? 'text-emerald-300 drop-shadow-[0_0_6px_rgba(52,211,153,0.4)]' : ''}`}>
+                                    <p className={`text-sm ${neon ? ns.muted : 'text-muted-foreground'}`}>Total Lumpsum</p>
+                                    <p className={`font-medium ${neon ? ns.lumpValue : ''}`}>
                                       {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.lumpsumAmount || 0), 0))}
                                     </p>
                                   </div>
                                   <div>
-                                    <p className={`text-sm ${neonMutedCls}`}>Total Investment</p>
-                                    <p className={`font-medium ${neon ? 'text-amber-300 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]' : ''}`}>
+                                    <p className={`text-sm ${neon ? ns.muted : 'text-muted-foreground'}`}>Total Investment</p>
+                                    <p className={`font-medium ${neon ? ns.totalInvestValue : ''}`}>
                                       {formatCurrency((record.clients || []).reduce((sum, client) => sum + (client.sipAmount || 0) + (client.lumpsumAmount || 0), 0))}
                                     </p>
                                   </div>

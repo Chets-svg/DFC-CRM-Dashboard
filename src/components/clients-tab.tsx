@@ -42,7 +42,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ClientDetailsModal } from './ClientDetailsModal';
 import { EditClientModal } from "@/components/EditClientModal";
 import { ClientCard } from './ClientCard';
-import { ThemeName, themes, getButtonClasses } from '@/lib/theme';
+import { ThemeName, themes, getButtonClasses, isNeon } from '@/lib/theme';
 import { Client } from '@/types/client';
 import { SIPReminder } from './sip-reminder';
 import {
@@ -115,7 +115,8 @@ export default function ClientsTab({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const currentTheme = themes[theme] || themes['blue-smoke'];
-  const { cardBg, borderColor, inputBg, textColor, highlightBg } = currentTheme;
+  const neon = isNeon(theme);
+  const { cardBg, borderColor, inputBg, textColor, highlightBg, mutedText } = currentTheme;
 
   // Load user preferences on component mount
   useEffect(() => {
@@ -174,7 +175,6 @@ export default function ClientsTab({
     const frozenClients: Client[] = [];
 
     clients.forEach(client => {
-      // Check if client is frozen
       if (client.isFrozen) {
         frozenClients.push(client);
         return;
@@ -302,19 +302,15 @@ export default function ClientsTab({
     setIsDeleteDialogOpen(true);
   };
 
-  // Updated delete function with actual Firebase deletion
   const handleDeleteConfirm = async () => {
     if (deletePassword === 'Rosh@1309') {
       if (deleteConfirmation.clientId) {
         try {
-          // Delete client document from Firestore
           await deleteDoc(doc(db, 'clients', deleteConfirmation.clientId));
           
-          // Update local state to remove the client
           const updatedClients = clients.filter(client => client.id !== deleteConfirmation.clientId);
           setClients(updatedClients);
           
-          // Close dialog and reset state
           setIsDeleteDialogOpen(false);
           setDeleteConfirmation({ clientId: null, clientName: '' });
           setDeletePassword('');
@@ -338,7 +334,6 @@ export default function ClientsTab({
   };
 
   const handleFreezeUpdate = () => {
-    // Refresh clients from parent component
     if (onRefreshClients) {
       onRefreshClients();
     }
@@ -347,35 +342,54 @@ export default function ClientsTab({
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        <div className={`animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 ${
+          neon ? 'border-cyan-400' : 'border-blue-500'
+        }`}></div>
       </div>
     );
   }
 
   return (
-    <Card className={`${cardBg} ${borderColor}`}>
+    <Card className={`${cardBg} ${borderColor} ${
+      neon ? 'shadow-[0_0_20px_rgba(0,255,255,0.06)] border-cyan-500/20' : ''
+    }`}>
       <CardHeader>
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <CardTitle>Client Management</CardTitle>
+          <CardTitle className={neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''}>
+            Client Management
+          </CardTitle>
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-  <div className="relative w-full md:w-64">
-    <Input
-      placeholder="Search clients..."
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      className="pl-8 rounded-full"
-    />
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-  </div>
+            <div className="relative w-full md:w-64">
+              <Input
+                placeholder="Search clients..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`pl-8 rounded-full ${
+                  neon
+                    ? 'bg-slate-900 border-cyan-500/30 text-slate-300 placeholder:text-cyan-600/50 focus:border-cyan-400 focus:ring-cyan-500/20'
+                    : `${inputBg} ${borderColor}`
+                }`}
+              />
+              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
+                neon ? 'text-cyan-400/60' : 'text-muted-foreground'
+              }`} />
+            </div>
 
-            
             <div className="flex gap-2">
               <Button 
                 variant={viewMode === 'grid' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => updateViewMode('grid')}
-                className={viewMode === 'grid' ? getButtonClasses(theme) : ''}
+                className={`rounded-full transition-all duration-200 ${
+                  viewMode === 'grid' 
+                    ? neon 
+                      ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 shadow-[0_0_10px_rgba(0,255,255,0.2)]' 
+                      : getButtonClasses(theme)
+                    : neon 
+                      ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' 
+                      : ''
+                }`}
               >
                 <Grid3X3 className="h-4 w-4" />
               </Button>
@@ -383,7 +397,15 @@ export default function ClientsTab({
                 variant={viewMode === 'list' ? 'default' : 'outline'}
                 size="icon"
                 onClick={() => updateViewMode('list')}
-                className={viewMode === 'list' ? getButtonClasses(theme) : ''}
+                className={`rounded-full transition-all duration-200 ${
+                  viewMode === 'list' 
+                    ? neon 
+                      ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 shadow-[0_0_10px_rgba(0,255,255,0.2)]' 
+                      : getButtonClasses(theme)
+                    : neon 
+                      ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' 
+                      : ''
+                }`}
               >
                 <Table className="h-4 w-4" />
               </Button>
@@ -391,7 +413,11 @@ export default function ClientsTab({
             
             <Button 
               onClick={() => setActiveTab("leads")}
-              className={`${getButtonClasses(theme)} rounded-full`}
+              className={`rounded-full transition-all duration-200 ${
+                neon
+                  ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 font-semibold shadow-[0_0_15px_rgba(0,255,255,0.25)]'
+                  : getButtonClasses(theme)
+              }`}
             >
               <Plus className="mr-2 h-4 w-4" /> Add Lead
             </Button>
@@ -401,82 +427,134 @@ export default function ClientsTab({
                 value={clientSortField}
                 onValueChange={(value) => setClientSortField(value as ClientSortField)}
               >
-                <SelectTrigger className={`w-[180px] rounded-full ${inputBg} ${borderColor}`}>
+                <SelectTrigger className={`w-[180px] rounded-full ${
+                  neon
+                    ? 'bg-slate-900 border-cyan-500/30 text-slate-300 hover:border-cyan-400 focus:ring-cyan-500/20'
+                    : `${inputBg} ${borderColor}`
+                }`}>
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent className={`${cardBg} ${borderColor}`}>
-  <SelectItem value="createdAt" className={`${textColor}`}>Date Created</SelectItem>
-<SelectItem value="name" className={`${textColor}`}>Name</SelectItem>
-<SelectItem value="products" className={`${textColor}`}>Primary Product</SelectItem>
+                <SelectContent className={`${
+                  neon
+                    ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.1)]'
+                    : `${cardBg} ${borderColor}`
+                }`}>
+                  <SelectItem value="createdAt" className={`${
+                    neon ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300' : textColor
+                  }`}>Date Created</SelectItem>
+                  <SelectItem value="name" className={`${
+                    neon ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300' : textColor
+                  }`}>Name</SelectItem>
+                  <SelectItem value="products" className={`${
+                    neon ? 'text-slate-300 hover:bg-cyan-500/10 hover:text-cyan-300 focus:bg-cyan-500/10 focus:text-cyan-300' : textColor
+                  }`}>Primary Product</SelectItem>
                 </SelectContent>
               </Select>
 
               <Button
-  variant="ghost"
-  size="sm"
-  onClick={() => setClientSortDirection(clientSortDirection === 'asc' ? 'desc' : 'asc')}
-  className="p-2 rounded-full"
->
-  {clientSortDirection === 'asc' ? (
-    <ChevronUp className="h-4 w-4" />
-  ) : (
-    <ChevronDown className="h-4 w-4" />
-  )}
-</Button>            </div>
+                variant="ghost"
+                size="sm"
+                onClick={() => setClientSortDirection(clientSortDirection === 'asc' ? 'desc' : 'asc')}
+                className={`p-2 rounded-md transition-all duration-200 ${
+                  neon 
+                    ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' 
+                    : ''
+                }`}
+              >
+                {clientSortDirection === 'asc' ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </div>
         </div>
         
         {/* Client Tabs */}
-        <div className="flex border-b border-gray-200 mt-4">
+        <div className={`flex border-b mt-4 ${
+          neon ? 'border-cyan-500/20' : 'border-gray-200'
+        }`}>
           <button
-            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 transition-colors ${
               activeClientTab === 'mutual-funds'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? neon
+                  ? 'border-b-2 border-cyan-500 text-cyan-300'
+                  : 'border-b-2 border-blue-500 text-blue-600'
+                : neon
+                  ? 'text-slate-400 hover:text-cyan-300'
+                  : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setActiveClientTab('mutual-funds')}
           >
             Mutual Funds Clients
-            <Badge variant="secondary" className="ml-1">
+            <Badge variant="secondary" className={`ml-1 ${
+              neon
+                ? activeClientTab === 'mutual-funds'
+                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-400'
+                : ''
+            }`}>
               {mutualFundClients.length}
             </Badge>
           </button>
           <button
-            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 transition-colors ${
               activeClientTab === 'other'
-                ? 'border-b-2 border-blue-500 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? neon
+                  ? 'border-b-2 border-cyan-500 text-cyan-300'
+                  : 'border-b-2 border-blue-500 text-blue-600'
+                : neon
+                  ? 'text-slate-400 hover:text-cyan-300'
+                  : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setActiveClientTab('other')}
           >
             Other Clients
-            <Badge variant="secondary" className="ml-1">
+            <Badge variant="secondary" className={`ml-1 ${
+              neon
+                ? activeClientTab === 'other'
+                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-400'
+                : ''
+            }`}>
               {otherClients.length}
             </Badge>
           </button>
           <button
-            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 ${
+            className={`py-2 px-4 font-medium text-sm flex items-center gap-2 transition-colors ${
               activeClientTab === 'frozen'
-                ? 'border-b-2 border-cyan-500 text-cyan-600'
-                : 'text-gray-500 hover:text-gray-700'
+                ? neon
+                  ? 'border-b-2 border-cyan-500 text-cyan-300'
+                  : 'border-b-2 border-cyan-500 text-cyan-600'
+                : neon
+                  ? 'text-slate-400 hover:text-cyan-300'
+                  : 'text-gray-500 hover:text-gray-700'
             }`}
             onClick={() => setActiveClientTab('frozen')}
           >
-            <Snowflake className="h-4 w-4" />
+            <Snowflake className={`h-4 w-4 ${neon ? 'drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}`} />
             Frozen Clients
-            <Badge variant="secondary" className="ml-1 bg-slate-200 text-slate-700">
+            <Badge variant="secondary" className={`ml-1 ${
+              neon
+                ? activeClientTab === 'frozen'
+                  ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30'
+                  : 'bg-slate-800 text-slate-400'
+                : 'bg-slate-200 text-slate-700'
+            }`}>
               {frozenClients.length}
             </Badge>
           </button>
         </div>
       </CardHeader>
-      
-      <CardContent>
+            <CardContent>
         {viewMode === 'grid' ? (
-          // Grid View
+          /* ── Grid View ── */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredClients.length === 0 ? (
-              <div className="col-span-full text-center py-8 text-gray-500">
+              <div className={`col-span-full text-center py-8 ${
+                neon ? 'text-cyan-400/60' : 'text-gray-500'
+              }`}>
                 {activeClientTab === 'frozen' 
                   ? 'No frozen clients found.'
                   : 'No clients found. Try adjusting your search.'}
@@ -517,9 +595,15 @@ export default function ClientsTab({
             )}
           </div>
         ) : (
-          // List View
-          <div className="border rounded-md overflow-hidden">
-            <div className={`grid grid-cols-12 gap-4 px-4 py-3 font-semibold border-b ${currentTheme.highlightBg}`}>
+          /* ── List View ── */
+          <div className={`border rounded-lg overflow-hidden ${
+            neon ? 'border-cyan-500/20' : ''
+          }`}>
+            <div className={`grid grid-cols-12 gap-4 px-4 py-3 font-semibold border-b ${
+              neon
+                ? 'bg-cyan-500/5 border-cyan-500/20 text-cyan-300'
+                : highlightBg
+            }`}>
               <div className="col-span-3 flex items-center">Client</div>
               <div className="col-span-2 flex items-center">Products</div>
               <div className="col-span-2 flex items-center">Investment</div>
@@ -528,13 +612,17 @@ export default function ClientsTab({
             </div>
             
             {filteredClients.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className={`text-center py-8 ${
+                neon ? 'text-cyan-400/60' : 'text-gray-500'
+              }`}>
                 {activeClientTab === 'frozen' 
                   ? 'No frozen clients found.'
                   : 'No clients found. Try adjusting your search.'}
               </div>
             ) : (
-              <div className="divide-y">
+              <div className={`divide-y ${
+                neon ? 'divide-cyan-500/10' : 'divide-y'
+              }`}>
                 {filteredClients.map(client => {
                   const { totalInvestment, sipAmount, hasSIP } = getClientInvestmentData(client.id);
                   const { isBirthdayThisMonth, isAnniversaryThisMonth } = getClientDateStatus(client);
@@ -543,21 +631,35 @@ export default function ClientsTab({
                   return (
                     <div 
                       key={client.id} 
-                      className={`grid grid-cols-12 gap-4 px-4 py-3 hover:${currentTheme.highlightBg} transition-colors ${
-                        isFrozen ? 'bg-slate-50 opacity-70' : ''
+                      className={`grid grid-cols-12 gap-4 px-4 py-3 transition-colors ${
+                        neon
+                          ? isFrozen
+                            ? 'bg-slate-800/50 opacity-70 hover:bg-cyan-500/5'
+                            : 'hover:bg-cyan-500/5'
+                          : isFrozen
+                            ? 'bg-slate-50 opacity-70'
+                            : `hover:${highlightBg}`
                       }`}
                     >
                       {/* Client Info */}
                       <div className="col-span-3 flex items-center">
                         <div className="relative">
                           <Avatar className={`h-10 w-10 mr-3 ${isFrozen ? 'grayscale' : ''}`}>
-                            <AvatarFallback className={`${isFrozen ? 'bg-gray-400' : 'bg-gradient-to-r from-blue-500 to-indigo-600'} text-white font-bold`}>
+                            <AvatarFallback className={`${
+                              isFrozen
+                                ? neon ? 'bg-slate-600' : 'bg-gray-400'
+                                : neon
+                                  ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-600 shadow-[0_0_8px_rgba(0,255,255,0.2)]'
+                                  : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                            } text-white font-bold`}>
                               {getInitials(client.name)}
                             </AvatarFallback>
                           </Avatar>
                           <div className="absolute -bottom-1 -right-1 flex">
                             {isFrozen && (
-                              <div className="bg-slate-500 rounded-full p-0.5" title="Frozen">
+                              <div className={`rounded-full p-0.5 ${
+                                neon ? 'bg-slate-500' : 'bg-slate-500'
+                              }`} title="Frozen">
                                 <Snowflake className="h-2.5 w-2.5 text-white" />
                               </div>
                             )}
@@ -574,43 +676,60 @@ export default function ClientsTab({
                           </div>
                         </div>
                         <div>
-                          <div className="font-medium flex items-center">
+                          <div className={`font-medium flex items-center ${
+                            neon ? 'text-slate-200' : ''
+                          }`}>
                             {client.name}
                             {isFrozen && (
-                              <Badge className="ml-2 text-xs bg-slate-200 text-slate-600">
+                              <Badge className={`ml-2 text-xs ${
+                                neon ? 'bg-slate-700 text-slate-400 border border-slate-600' : 'bg-slate-200 text-slate-600'
+                              }`}>
                                 Frozen
                               </Badge>
                             )}
                             {client.riskProfile && !isFrozen && (
-                              <Badge className={`
-                                ml-2 text-xs px-1.5 py-0.5
-                                ${client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' : 
-                                  client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' : 
-                                  'bg-amber-100 text-amber-800'}
-                              `}>
+                              <Badge className={`ml-2 text-xs px-1.5 py-0.5 ${
+                                client.riskProfile === 'conservative'
+                                  ? neon ? 'bg-blue-500/10 text-blue-400 border border-blue-500/30' : 'bg-blue-100 text-blue-800'
+                                  : client.riskProfile === 'moderate'
+                                  ? neon ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-green-100 text-green-800'
+                                  : neon ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-amber-100 text-amber-800'
+                              }`}>
                                 {client.riskProfile.charAt(0)}
                               </Badge>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500 flex items-center mt-1">
-                            <Mail className="h-3 w-3 mr-1" />
+                          <div className={`text-sm flex items-center mt-1 ${
+                            neon ? 'text-slate-400' : 'text-gray-500'
+                          }`}>
+                            <Mail className={`h-3 w-3 mr-1 ${neon ? 'text-cyan-400/60' : ''}`} />
                             {client.email || 'No email'}
                           </div>
                           {client.phone && (
-                            <div className="text-sm text-gray-500 flex items-center mt-1">
-                              <Phone className="h-3 w-3 mr-1" />
+                            <div className={`text-sm flex items-center mt-1 ${
+                              neon ? 'text-slate-400' : 'text-gray-500'
+                            }`}>
+                              <Phone className={`h-3 w-3 mr-1 ${neon ? 'text-cyan-400/60' : ''}`} />
                               {client.phone}
                             </div>
                           )}
                           {client.can && (
                             <div className="flex items-center gap-1 mt-1">
-                              <span className="text-xs font-medium text-gray-500">CAN:</span>
-                              <div className="flex items-center gap-1 bg-gray-100 rounded px-1.5 py-0.5">
-                                <span className="font-mono text-xs">{client.can}</span>
+                              <span className={`text-xs font-medium ${
+                                neon ? 'text-slate-500' : 'text-gray-500'
+                              }`}>CAN:</span>
+                              <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 ${
+                                neon ? 'bg-cyan-500/5 border border-cyan-500/20' : 'bg-gray-100'
+                              }`}>
+                                <span className={`font-mono text-xs ${
+                                  neon ? 'text-cyan-300' : ''
+                                }`}>{client.can}</span>
                                 <Button 
                                   size="sm" 
                                   variant="ghost" 
-                                  className="h-5 w-5 p-0 text-gray-600 hover:bg-gray-200"
+                                  className={`h-5 w-5 p-0 ${
+                                    neon ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' : 'text-gray-600 hover:bg-gray-200'
+                                  }`}
                                   onClick={() => handleCopyCAN(client.can!)}
                                 >
                                   <Copy className="h-2.5 w-2.5" />
@@ -619,7 +738,11 @@ export default function ClientsTab({
                             </div>
                           )}
                           {isFrozen && client.freezeReason && (
-                            <div className="mt-1 p-1 bg-slate-100 rounded text-xs text-slate-600 italic">
+                            <div className={`mt-1 p-1 rounded text-xs italic ${
+                              neon
+                                ? 'bg-cyan-500/5 border border-cyan-500/10 text-slate-400'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}>
                               <span className="font-medium">Reason:</span> {client.freezeReason}
                             </div>
                           )}
@@ -630,12 +753,20 @@ export default function ClientsTab({
                       <div className="col-span-2 flex items-center">
                         <div className="flex flex-wrap gap-1">
                           {getProductBadges(client).slice(0, 2).map((product, index) => (
-                            <Badge key={index} variant="secondary" className={`text-xs ${isFrozen ? 'bg-slate-100 text-slate-600' : ''}`}>
+                            <Badge key={index} variant="secondary" className={`text-xs ${
+                              isFrozen
+                                ? neon ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-600'
+                                : neon ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' : ''
+                            }`}>
                               {product}
                             </Badge>
                           ))}
                           {getProductBadges(client).length > 2 && (
-                            <Badge variant="secondary" className={`text-xs ${isFrozen ? 'bg-slate-100 text-slate-600' : ''}`}>
+                            <Badge variant="secondary" className={`text-xs ${
+                              isFrozen
+                                ? neon ? 'bg-slate-700 text-slate-400' : 'bg-slate-100 text-slate-600'
+                                : neon ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' : ''
+                            }`}>
                               +{getProductBadges(client).length - 2}
                             </Badge>
                           )}
@@ -646,13 +777,17 @@ export default function ClientsTab({
                       <div className="col-span-2 flex items-center">
                         <div>
                           {hasSIP && !isFrozen && (
-                            <div className="text-sm">
-                              <span className="text-gray-500">SIP: </span>
+                            <div className={`text-sm ${
+                              neon ? 'text-slate-300' : ''
+                            }`}>
+                              <span className={neon ? 'text-slate-400' : 'text-gray-500'}>SIP: </span>
                               <span className="font-medium">{formatCurrency(sipAmount)}</span>
                             </div>
                           )}
-                          <div className="text-sm">
-                            <span className="text-gray-500">Total: </span>
+                          <div className={`text-sm ${
+                            neon ? 'text-slate-300' : ''
+                          }`}>
+                            <span className={neon ? 'text-slate-400' : 'text-gray-500'}>Total: </span>
                             <span className="font-medium">{formatCurrency(totalInvestment)}</span>
                           </div>
                         </div>
@@ -660,8 +795,12 @@ export default function ClientsTab({
                       
                       {/* Created Date */}
                       <div className="col-span-2 flex items-center">
-                        <div className="flex items-center text-sm">
-                          <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                        <div className={`flex items-center text-sm ${
+                          neon ? 'text-slate-400' : ''
+                        }`}>
+                          <Calendar className={`h-4 w-4 mr-2 ${
+                            neon ? 'text-cyan-400/60' : 'text-gray-500'
+                          }`} />
                           {formatDate(client.createdAt)}
                         </div>
                       </div>
@@ -673,7 +812,11 @@ export default function ClientsTab({
                           size="sm"
                           onClick={() => setEditingClient(client)}
                           title="Edit Client"
-                          className="h-8 px-2"
+                          className={`h-8 px-2 rounded-lg transition-all duration-200 ${
+                            neon
+                              ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:text-cyan-300'
+                              : ''
+                          }`}
                           disabled={isFrozen}
                         >
                           <Edit className="h-4 w-4" />
@@ -690,7 +833,11 @@ export default function ClientsTab({
                             });
                           }}
                           title="Send Email"
-                          className="h-8 px-2"
+                          className={`h-8 px-2 rounded-lg transition-all duration-200 ${
+                            neon
+                              ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:text-cyan-300'
+                              : ''
+                          }`}
                           disabled={isFrozen}
                         >
                           <MailIcon className="h-4 w-4" />
@@ -708,7 +855,11 @@ export default function ClientsTab({
                             );
                           }}
                           title="Send WhatsApp Message"
-                          className="h-8 px-2"
+                          className={`h-8 px-2 rounded-lg transition-all duration-200 ${
+                            neon
+                              ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:text-cyan-300'
+                              : ''
+                          }`}
                           disabled={isFrozen}
                         >
                           <MessageSquare className="h-4 w-4" />
@@ -719,7 +870,11 @@ export default function ClientsTab({
                           size="sm"
                           onClick={() => setActiveTab('sip')}
                           title="View SIP Details"
-                          className="h-8 px-2"
+                          className={`h-8 px-2 rounded-lg transition-all duration-200 ${
+                            neon
+                              ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400 hover:text-cyan-300'
+                              : ''
+                          }`}
                           disabled={isFrozen}
                         >
                           <CreditCard className="h-4 w-4" />
@@ -729,7 +884,11 @@ export default function ClientsTab({
                           variant="outline" 
                           size="sm"
                           onClick={() => handleDeleteClick(client.id, client.name || '')}
-                          className="h-8 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                          className={`h-8 px-2 rounded-lg transition-all duration-200 ${
+                            neon
+                              ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 hover:text-red-300 hover:shadow-[0_0_10px_rgba(255,0,0,0.1)]'
+                              : 'text-red-500 hover:text-red-700 hover:bg-red-50'
+                          }`}
                           title="Delete Client"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -763,22 +922,32 @@ export default function ClientsTab({
           />
         )}
 
-        {/* Delete Confirmation Dialog */}
+        {/* ── Delete Confirmation Dialog ── */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className="sm:max-w-md bg-white">
+          <DialogContent className={`sm:max-w-md ${
+            neon
+              ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_30px_rgba(0,255,255,0.1)]'
+              : 'bg-white'
+          }`}>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className={`flex items-center gap-2 ${
+                neon ? 'text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.3)]' : ''
+              }`}>
                 <Trash2 className="h-5 w-5 text-red-500" />
                 Delete Client
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className={
+                neon ? 'text-red-400/60' : ''
+              }>
                 This action cannot be undone. Please confirm by entering the password.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="delete-password" className="text-right">
+                  <Label htmlFor="delete-password" className={
+                    neon ? 'text-red-300/80' : ''
+                  }>
                     Password
                   </Label>
                   <Input
@@ -786,7 +955,11 @@ export default function ClientsTab({
                     type="password"
                     value={deletePassword}
                     onChange={(e) => setDeletePassword(e.target.value)}
-                    className="mt-1"
+                    className={`mt-1 ${
+                      neon
+                        ? 'bg-slate-800 border-red-500/30 text-slate-300 placeholder:text-red-600/40 focus:border-red-400 focus:ring-red-500/20'
+                        : ''
+                    }`}
                     placeholder="Enter password to confirm"
                     onKeyDown={handleKeyDown}
                   />
@@ -794,8 +967,14 @@ export default function ClientsTab({
                     <p className="text-sm text-red-500 mt-1">{deleteError}</p>
                   )}
                 </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                  <p className="text-sm text-red-700">
+                <div className={`rounded-lg p-3 ${
+                  neon
+                    ? 'bg-red-500/5 border border-red-500/20'
+                    : 'bg-red-50 border border-red-200'
+                }`}>
+                  <p className={`text-sm ${
+                    neon ? 'text-red-300/80' : 'text-red-700'
+                  }`}>
                     <span className="font-medium">Warning:</span> Deleting this client will permanently remove all associated data including SIP reminders and investment records.
                   </p>
                 </div>
@@ -805,14 +984,20 @@ export default function ClientsTab({
               <Button
                 variant="outline"
                 onClick={() => setIsDeleteDialogOpen(false)}
-                className="px-4"
+                className={`px-4 rounded-lg transition-all duration-200 ${
+                  neon ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400' : ''
+                }`}
               >
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleDeleteConfirm}
-                className="px-4 bg-red-600 hover:bg-red-700"
+                className={`px-4 rounded-lg transition-all duration-200 ${
+                  neon
+                    ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.3)]'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Confirm Delete
