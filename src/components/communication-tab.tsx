@@ -494,7 +494,7 @@ export default function CommunicationTab({
 
           {/* Submit Button */}
           <Button 
-            className={`w-full mt-4 ${getButtonClasses(theme)}`}
+            className={`w-full mt-4 ${getButtonClasses(theme)} rounded-full`}
             onClick={handleCreateCommunication}
             disabled={!selectedClientId || !newCommunication.subject || !newCommunication.content}
           >
