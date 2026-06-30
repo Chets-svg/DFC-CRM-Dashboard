@@ -334,7 +334,7 @@ export default function ClientsTab({
   type="search"
   name="no-autofill-search-938472"
   autoComplete="new-password"
-  value={searchTerm}
+  
   onChange={(e) => setSearchTerm(e.target.value)}
 />
             </div>
