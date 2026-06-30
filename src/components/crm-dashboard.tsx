@@ -711,6 +711,10 @@ const [amountInput, setAmountInput] = useState('');
 const [themeLoading, setThemeLoading] = useState(true);
 const [tabLoading, setTabLoading] = useState(true);
 const [searchTerm, setSearchTerm] = useState('');
+useEffect(() => {
+  console.log("searchTerm changed:", searchTerm);
+  console.trace("Changed by:");
+}, [searchTerm]);
 const [investments, setInvestments] = useState<any[]>([]);
 const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -831,6 +835,8 @@ const sortClients = (clients: Client[]) => {
 };
 
 const sortedLeads = [...leads].sort((a, b) => 
+
+
   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 );
 
