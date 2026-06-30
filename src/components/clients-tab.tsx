@@ -227,14 +227,6 @@ export default function ClientsTab({
       
       return clientSortDirection === 'asc' ? comparison : -comparison;
     });
-    console.log("========== RENDER ==========", {
-  searchTerm,
-  activeClientTab,
-  mutualFundClients: mutualFundClients.length,
-  otherClients: otherClients.length,
-  frozenClients: frozenClients.length,
-  filteredClients: filteredClients.length,
-});
 
   const getProductBadges = (client: Client) => {
     const badges = [];

@@ -710,18 +710,7 @@ const handleLogout = useCallback(async () => {
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
 const [tabLoading, setTabLoading] = useState(true);
-const [searchTerm, _setSearchTerm] = useState('');
-
-const setSearchTerm = (value: string) => {
-  console.log("setSearchTerm CALLED WITH:", value);
-  console.trace("Called from:");
-  _setSearchTerm(value);
-};
-
-useEffect(() => {
-  console.log("searchTerm changed:", searchTerm);
-  console.trace("Changed by:");
-}, [searchTerm]);
+const [searchTerm, setSearchTerm] = useState('');
 const [investments, setInvestments] = useState<any[]>([]);
 const [editingClient, setEditingClient] = useState<Client | null>(null);
 
@@ -842,8 +831,6 @@ const sortClients = (clients: Client[]) => {
 };
 
 const sortedLeads = [...leads].sort((a, b) => 
-
-
   new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 );
 

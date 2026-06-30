@@ -13,6 +13,7 @@ import {
   Phone,
   Copy,
   User,
+  ChevronRight,
   Home,
   Plus,
   Trash2,
@@ -74,7 +75,6 @@ export function ClientCard({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
-  const [deleteLoading, setDeleteLoading] = useState(false);
   
   const [isFreezeDialogOpen, setIsFreezeDialogOpen] = useState(false);
   const [freezeReason, setFreezeReason] = useState('');
@@ -133,29 +133,18 @@ export function ClientCard({
     setDeleteError('');
   };
 
-  // ─── KEY FIX: Close dialog FIRST, then delete from Firebase only ───
-  // Let onSnapshot update local state — don't manually filter clients
   const handleDeleteConfirm = async () => {
     if (deletePassword === 'Rosh@1309') {
-      setDeleteLoading(true);
       try {
-        // Close dialog BEFORE the parent re-renders and unmounts this component
+        await deleteDoc(doc(db, 'clients', client.id));
+        onDelete(client.id);
         setIsDeleteDialogOpen(false);
         setDeletePassword('');
         setDeleteError('');
-        
-        // Only delete from Firebase — onSnapshot will update local state
-        await deleteDoc(doc(db, 'clients', client.id));
-        
-        // Notify parent for any additional cleanup (toast, etc.)
-        onDelete(client.id);
-        
         toast.success('Client deleted successfully');
       } catch (error) {
         console.error('Error deleting client:', error);
-        toast.error('Error deleting client. Please try again.');
-      } finally {
-        setDeleteLoading(false);
+        setDeleteError('Error deleting client. Please try again.');
       }
     } else {
       setDeleteError('Incorrect password. Please try again.');
@@ -210,14 +199,16 @@ export function ClientCard({
 
   // ── Neon helper classes ──
   const neonCardOuter = neon
-    ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)] hover:shadow-[0_0_30px_rgba(0,255,255,0.12)] hover:border-cyan-400/30'
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)] hover:shadow-[0_0_30px_rgba(0,255,255,0.12)] hover:border-cyan-400/30'
     : `bg-white ${currentTheme.borderColor}`;
 
   const neonHeaderBg = neon
-    ? 'bg-slate-800 border-b border-cyan-500/20'
+    ? 'bg-gradient-to-r from-cyan-900/80 to-fuchsia-900/60'
     : theme === 'dark'
-      ? 'bg-gray-700'
-      : `${currentTheme.buttonBg}`;
+      ? currentTheme.darkBgColor
+        ? `bg-gradient-to-r ${currentTheme.darkButtonBg} ${currentTheme.darkButtonHover}`
+        : 'bg-gradient-to-r from-gray-700 to-gray-600'
+      : `bg-gradient-to-r ${currentTheme.buttonBg} ${currentTheme.buttonHover}`;
 
   const neonAvatarBg = isFrozen
     ? 'from-slate-400 to-slate-500'
@@ -228,21 +219,32 @@ export function ClientCard({
   const neonAvatarBorder = isFrozen
     ? 'border-slate-400'
     : neon
-      ? 'border-cyan-400 shadow-[0_0_8px_rgba(0,255,255,0.3)]'
+      ? 'border-cyan-400'
       : 'border-blue-300';
 
   const neonInputCls = neon
-    ? 'bg-slate-900 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-600/50 focus:border-cyan-400 focus:ring-cyan-500/20'
+    ? 'bg-cyan-950/30 border-cyan-500/30 text-cyan-100 placeholder:text-cyan-600/50 focus:border-cyan-400 focus:ring-cyan-500/20'
     : '';
 
-  const neonMutedText = neon ? 'text-cyan-400/60' : currentTheme.mutedText;
+  const neonLabelCls = neon ? 'text-cyan-300/80' : '';
+
+  const neonMutedText = neon ? 'text-cyan-500/60' : currentTheme.mutedText;
 
   const neonSectionTitle = neon
-    ? 'text-cyan-400 font-semibold tracking-wide uppercase text-xs drop-shadow-[0_0_4px_rgba(0,255,255,0.15)]'
+    ? 'text-cyan-400 font-semibold tracking-wide uppercase text-xs'
     : 'font-medium';
 
-  const neonHighlightBg = neon ? 'bg-cyan-500/5' : currentTheme.highlightBg;
+  const neonHighlightBg = neon ? 'bg-cyan-950/30' : currentTheme.highlightBg;
 
+  // Action button base classes
+  const actionBtn = (color: string, neonColor: string) => {
+    if (neon) {
+      return `h-8 p-1 text-${neonColor}-400 border-${neonColor}-500/30 bg-${neonColor}-950/30 hover:bg-${neonColor}-500/10 hover:border-${neonColor}-400 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]`;
+    }
+    return `h-8 p-1 text-${color}-600 border-${color}-200 bg-${color}-50 hover:bg-${color}-100`;
+  };
+
+  // Product badge neon colors
   const productBadgeCls = (key: string) => {
     if (isFrozen) return 'text-slate-600 bg-slate-100 border border-slate-200';
     if (!neon) {
@@ -251,27 +253,28 @@ export function ClientCard({
         key === 'lumpsum' ? 'text-green-600 bg-green-50 border border-green-100' :
         'text-blue-600 bg-blue-50 border border-blue-100';
     }
-    return key === 'sip' ? 'text-cyan-300 bg-cyan-500/10 border border-cyan-500/30' :
-      key === 'mutualFund' ? 'text-fuchsia-300 bg-fuchsia-500/10 border border-fuchsia-500/30' :
-      key === 'lumpsum' ? 'text-green-300 bg-green-500/10 border border-green-500/30' :
-      key === 'healthInsurance' ? 'text-teal-300 bg-teal-500/10 border border-teal-500/30' :
-      key === 'lifeInsurance' ? 'text-indigo-300 bg-indigo-500/10 border border-indigo-500/30' :
-      key === 'taxation' ? 'text-amber-300 bg-amber-500/10 border border-amber-500/30' :
-      key === 'nps' ? 'text-pink-300 bg-pink-500/10 border border-pink-500/30' :
-      'text-cyan-300 bg-cyan-500/10 border border-cyan-500/30';
+    return key === 'sip' ? 'text-cyan-300 bg-cyan-950/40 border border-cyan-500/30' :
+      key === 'mutualFund' ? 'text-fuchsia-300 bg-fuchsia-950/40 border border-fuchsia-500/30' :
+      key === 'lumpsum' ? 'text-green-300 bg-green-950/40 border border-green-500/30' :
+      key === 'healthInsurance' ? 'text-teal-300 bg-teal-950/40 border border-teal-500/30' :
+      key === 'lifeInsurance' ? 'text-indigo-300 bg-indigo-950/40 border border-indigo-500/30' :
+      key === 'taxation' ? 'text-amber-300 bg-amber-950/40 border border-amber-500/30' :
+      key === 'nps' ? 'text-pink-300 bg-pink-950/40 border border-pink-500/30' :
+      'text-cyan-300 bg-cyan-950/40 border border-cyan-500/30';
   };
 
+  // Product detail badge in modal
   const productDetailBadgeCls = (key: string) => {
     if (isFrozen) return 'bg-slate-100 text-slate-600';
     if (neon) {
-      return key === 'sip' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20' :
-        key === 'mutualFund' ? 'bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20' :
-        key === 'lumpsum' ? 'bg-green-500/10 text-green-300 border border-green-500/20' :
-        key === 'healthInsurance' ? 'bg-teal-500/10 text-teal-300 border border-teal-500/20' :
-        key === 'lifeInsurance' ? 'bg-indigo-500/10 text-indigo-300 border border-indigo-500/20' :
-        key === 'taxation' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/20' :
-        key === 'nps' ? 'bg-pink-500/10 text-pink-300 border border-pink-500/20' :
-        'bg-cyan-500/10 text-cyan-300 border border-cyan-500/20';
+      return key === 'sip' ? 'bg-cyan-950/50 text-cyan-300' :
+        key === 'mutualFund' ? 'bg-fuchsia-950/50 text-fuchsia-300' :
+        key === 'lumpsum' ? 'bg-green-950/50 text-green-300' :
+        key === 'healthInsurance' ? 'bg-teal-950/50 text-teal-300' :
+        key === 'lifeInsurance' ? 'bg-indigo-950/50 text-indigo-300' :
+        key === 'taxation' ? 'bg-amber-950/50 text-amber-300' :
+        key === 'nps' ? 'bg-pink-950/50 text-pink-300' :
+        'bg-gray-800 text-gray-300';
     }
     return key === 'sip' ? 'bg-blue-100 text-blue-800' :
       key === 'mutualFund' ? 'bg-purple-100 text-purple-800' :
@@ -283,54 +286,54 @@ export function ClientCard({
       'bg-gray-100 text-gray-800';
   };
 
+  // Risk profile badge
   const riskBadgeCls = () => {
     if (neon) {
-      return client.riskProfile === 'conservative' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30' :
-        client.riskProfile === 'moderate' ? 'bg-green-500/10 text-green-300 border border-green-500/30' :
-        'bg-amber-500/10 text-amber-300 border border-amber-500/30';
+      return client.riskProfile === 'conservative' ? 'bg-cyan-950/50 text-cyan-300 border border-cyan-500/30' :
+        client.riskProfile === 'moderate' ? 'bg-green-950/50 text-green-300 border border-green-500/30' :
+        'bg-amber-950/50 text-amber-300 border border-amber-500/30';
     }
     return client.riskProfile === 'conservative' ? 'bg-blue-100 text-blue-800' :
       client.riskProfile === 'moderate' ? 'bg-green-100 text-green-800' :
       'bg-amber-100 text-amber-800';
   };
 
+  // SIP status badge
   const sipStatusBadgeCls = (status: string) => {
     if (neon) {
-      return status === 'active' ? 'bg-green-500/10 text-green-300 border border-green-500/30' :
-        status === 'paused' ? 'bg-amber-500/10 text-amber-300 border border-amber-500/30' :
-        'bg-slate-800 text-slate-400 border border-slate-600';
+      return status === 'active' ? 'bg-green-950/50 text-green-300 border border-green-500/30' :
+        status === 'paused' ? 'bg-amber-950/50 text-amber-300 border border-amber-500/30' :
+        'bg-gray-800 text-gray-400 border border-gray-600';
     }
     return status === 'active' ? 'bg-green-100 text-green-800' :
       status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
       'bg-gray-100 text-gray-800';
   };
 
+  // Dialog content classes
   const dialogCls = neon
-    ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
     : `${currentTheme.cardBg} ${currentTheme.borderColor} border`;
 
   const dangerDialogCls = neon
-    ? 'bg-slate-900 border-red-500/20 shadow-[0_0_40px_rgba(255,0,0,0.06)]'
+    ? 'bg-gray-950 border-red-500/20 shadow-[0_0_40px_rgba(255,0,0,0.06)]'
     : 'bg-white';
 
   const freezeDialogCls = neon
-    ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
+    ? 'bg-gray-950 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
     : 'bg-white';
-
-  return (    
-    <div className={`rounded-xl shadow-sm border overflow-hidden transition-all duration-200 ${neonCardOuter}`}>
+      return (    
+    <div className={`rounded-xl shadow-sm border overflow-hidden transition-shadow ${neonCardOuter}`}>
       {/* Header */}
       <div className={`px-3 py-2 flex justify-between items-center ${neonHeaderBg}`}>
         <div className="min-w-0">
-          <h2 className={`font-medium truncate flex items-center gap-2 ${
-            neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : 'text-white'
-          }`}>
+          <h2 className="text-white font-medium truncate flex items-center gap-2">
             {client.name}
             {isFrozen && (
-              <Snowflake className={`h-3.5 w-3.5 ${neon ? 'text-cyan-400' : 'text-blue-200'}`} />
+              <Snowflake className="h-3.5 w-3.5 text-blue-200" />
             )}
           </h2>
-          <p className={`text-xs ${neon ? 'text-cyan-200/70' : 'text-blue-100'}`}>
+          <p className={`${neon ? 'text-cyan-200/70' : 'text-blue-100'} text-xs`}>
             Added: {formatDate(client.createdAt)}
           </p>
         </div>
@@ -358,7 +361,7 @@ export function ClientCard({
         </div>
       </div>
 
-      <div className={`p-3 ${neon ? 'bg-slate-900' : ''}`}>
+      <div className={`p-3 ${neon ? 'bg-gray-950' : ''}`}>
         <div className="flex items-start gap-3">
           <div className="relative flex-shrink-0">
             <Avatar className={`h-10 w-10 border ${neonAvatarBorder}`}>
@@ -368,17 +371,17 @@ export function ClientCard({
             </Avatar>
             <div className="absolute -bottom-1 -right-1 flex">
               {isFrozen && (
-                <div className={`rounded-full p-0.5 ${neon ? 'bg-cyan-500/30 shadow-[0_0_6px_rgba(0,255,255,0.2)]' : 'bg-slate-500'}`} title="Frozen">
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-cyan-500/30' : 'bg-slate-500'}`} title="Frozen">
                   <Snowflake className={`h-2.5 w-2.5 ${neon ? 'text-cyan-300' : 'text-white'}`} />
                 </div>
               )}
               {isBirthdayThisMonth && !isFrozen && (
-                <div className={`rounded-full p-0.5 ${neon ? 'bg-fuchsia-500/30 shadow-[0_0_6px_rgba(232,121,249,0.2)]' : 'bg-pink-500'}`}>
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-fuchsia-500/30' : 'bg-pink-500'}`}>
                   <CalendarDays className={`h-2.5 w-2.5 ${neon ? 'text-fuchsia-300' : 'text-white'}`} />
                 </div>
               )}
               {isAnniversaryThisMonth && !isFrozen && (
-                <div className={`rounded-full p-0.5 ${neon ? 'bg-pink-500/30 shadow-[0_0_6px_rgba(236,72,153,0.2)]' : 'bg-purple-500'}`}>
+                <div className={`rounded-full p-0.5 ${neon ? 'bg-pink-500/30' : 'bg-purple-500'}`}>
                   <Heart className={`h-2.5 w-2.5 ${neon ? 'text-pink-300' : 'text-white'}`} />
                 </div>
               )}
@@ -387,25 +390,25 @@ export function ClientCard({
 
           <div className="flex-1 min-w-0">
             <div className="space-y-1.5">
-              <div className={`flex items-center gap-1.5 ${neon ? 'text-slate-300' : 'text-gray-600'}`}>
-                <Mail className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : 'text-blue-500'}`} />
+              <div className={`flex items-center gap-1.5 ${neon ? 'text-cyan-200/80' : 'text-gray-600'}`}>
+                <Mail className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                 <span className="text-sm truncate">{client.email || 'No email'}</span>
               </div>
-              <div className={`flex items-center gap-1.5 ${neon ? 'text-slate-300' : 'text-gray-600'}`}>
-                <Phone className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : 'text-blue-500'}`} />
+              <div className={`flex items-center gap-1.5 ${neon ? 'text-cyan-200/80' : 'text-gray-600'}`}>
+                <Phone className={`w-3.5 h-3.5 flex-shrink-0 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                 <span className="text-sm">{client.phone || 'No phone'}</span>
               </div>
               
               <div className="flex flex-wrap gap-2 text-xs mt-1">
                 {client.dob && (
-                  <div className={`flex items-center gap-1 ${neon ? 'text-cyan-400/70' : 'text-gray-500'}`}>
+                  <div className={`flex items-center gap-1 ${neon ? 'text-cyan-500/70' : 'text-gray-500'}`}>
                     <CalendarDays className={`w-3 h-3 ${neon ? 'text-cyan-400' : 'text-blue-500'}`} />
                     <span>DOB: {formatDate(client.dob)}</span>
                   </div>
                 )}
                 {client.marriageAnniversary && (
-                  <div className={`flex items-center gap-1 ${neon ? 'text-fuchsia-400/70' : 'text-gray-500'}`}>
-                    <Heart className={`w-3 h-3 ${neon ? 'text-fuchsia-400 drop-shadow-[0_0_4px_rgba(232,121,249,0.3)]' : 'text-pink-500'}`} />
+                  <div className={`flex items-center gap-1 ${neon ? 'text-pink-500/70' : 'text-gray-500'}`}>
+                    <Heart className={`w-3 h-3 ${neon ? 'text-pink-400' : 'text-pink-500'}`} />
                     <span>Anniv: {formatDate(client.marriageAnniversary)}</span>
                   </div>
                 )}
@@ -413,16 +416,16 @@ export function ClientCard({
 
               {client.can && (
                 <div className="flex items-center gap-1.5 pt-1">
-                  <span className={`text-xs font-medium ${neon ? 'text-cyan-400/60' : 'text-gray-500'}`}>CAN:</span>
+                  <span className={`text-xs font-medium ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>CAN:</span>
                   <div className={`flex items-center gap-1 rounded px-1.5 py-0.5 ${
-                    neon ? 'bg-cyan-500/5 border border-cyan-500/20' : 'bg-gray-100'
+                    neon ? 'bg-cyan-950/40 border border-cyan-500/20' : 'bg-gray-100'
                   }`}>
-                    <span className={`font-mono text-xs ${neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.2)]' : ''}`}>{client.can}</span>
+                    <span className={`font-mono text-xs ${neon ? 'text-cyan-300' : ''}`}>{client.can}</span>
                     <Button 
                       size="sm" 
                       variant="ghost" 
                       className={`h-5 w-5 p-0 ${
-                        neon ? 'text-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300' : 'text-gray-600 hover:bg-gray-200'
+                        neon ? 'text-cyan-400 hover:bg-cyan-500/10' : 'text-gray-600 hover:bg-gray-200'
                       }`}
                       onClick={handleCopyCAN}
                     >
@@ -434,7 +437,7 @@ export function ClientCard({
               
               {isFrozen && client.freezeReason && (
                 <div className={`mt-1 p-1.5 rounded text-xs italic ${
-                  neon ? 'bg-cyan-500/5 border border-cyan-500/10 text-cyan-400/70' : 'bg-slate-100 text-slate-600'
+                  neon ? 'bg-cyan-950/30 border border-cyan-500/15 text-cyan-400/70' : 'bg-slate-100 text-slate-600'
                 }`}>
                   <span className="font-medium">Reason:</span> {client.freezeReason}
                 </div>
@@ -446,7 +449,7 @@ export function ClientCard({
         <div className={`grid grid-cols-2 gap-2 mt-3 pt-2 border-t ${neon ? 'border-cyan-500/10' : 'border-gray-100'}`}>
           {client.products.sip && (
             <div className="space-y-0.5">
-              <p className={`text-xs flex items-center gap-1 ${neon ? 'text-cyan-400/60' : 'text-gray-500'}`}>
+              <p className={`text-xs flex items-center gap-1 ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>
                 <User className="w-2.5 h-2.5" /> SIP
               </p>
               <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>
@@ -457,7 +460,7 @@ export function ClientCard({
             </div>
           )}
           <div className="space-y-0.5">
-            <p className={`text-xs ${neon ? 'text-cyan-400/60' : 'text-gray-500'}`}>Investment</p>
+            <p className={`text-xs ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>Investment</p>
             <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>
               {totalInvestment > 0 
                 ? `₹${totalInvestment.toLocaleString()}` 
@@ -486,13 +489,13 @@ export function ClientCard({
             <Button 
               size="sm" 
               variant="outline" 
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 isFrozen
                   ? neon
-                    ? 'text-green-400 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 hover:border-green-400 hover:shadow-[0_0_10px_rgba(74,222,128,0.15)]'
+                    ? 'text-green-400 border-green-500/30 bg-green-950/30 hover:bg-green-500/10 hover:border-green-400 hover:shadow-[0_0_10px_rgba(74,222,128,0.15)]'
                     : 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
                   : neon
-                    ? 'text-cyan-400 border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]'
+                    ? 'text-cyan-400 border-cyan-500/30 bg-cyan-950/30 hover:bg-cyan-500/10 hover:border-cyan-400 hover:shadow-[0_0_10px_rgba(0,255,255,0.15)]'
                     : 'text-cyan-600 border-cyan-200 bg-cyan-50 hover:bg-cyan-100'
               }`}
               onClick={handleFreezeClick}
@@ -508,9 +511,9 @@ export function ClientCard({
             <Button 
               size="sm" 
               variant="outline" 
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 neon
-                  ? 'text-fuchsia-400 border-fuchsia-500/30 bg-fuchsia-500/5 hover:bg-fuchsia-500/10 hover:border-fuchsia-400 hover:shadow-[0_0_10px_rgba(232,121,249,0.15)]'
+                  ? 'text-fuchsia-400 border-fuchsia-500/30 bg-fuchsia-950/30 hover:bg-fuchsia-500/10 hover:border-fuchsia-400'
                   : 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
               } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={onEmail}
@@ -522,9 +525,9 @@ export function ClientCard({
             <Button 
               size="sm" 
               variant="outline" 
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 neon
-                  ? 'text-green-400 border-green-500/30 bg-green-500/5 hover:bg-green-500/10 hover:border-green-400 hover:shadow-[0_0_10px_rgba(74,222,128,0.15)]'
+                  ? 'text-green-400 border-green-500/30 bg-green-950/30 hover:bg-green-500/10 hover:border-green-400'
                   : 'text-green-600 border-green-200 bg-green-50 hover:bg-green-100'
               } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={onWhatsApp}
@@ -537,9 +540,9 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={onEdit}
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 neon
-                  ? 'text-amber-400 border-amber-500/30 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-400 hover:shadow-[0_0_10px_rgba(251,191,36,0.15)]'
+                  ? 'text-amber-400 border-amber-500/30 bg-amber-950/30 hover:bg-amber-500/10 hover:border-amber-400'
                   : 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
               } ${isFrozen ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={isFrozen}
@@ -551,9 +554,9 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={handleViewDetails}
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 neon
-                  ? 'text-indigo-400 border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 hover:border-indigo-400 hover:shadow-[0_0_10px_rgba(129,140,248,0.15)]'
+                  ? 'text-indigo-400 border-indigo-500/30 bg-indigo-950/30 hover:bg-indigo-500/10 hover:border-indigo-400'
                   : 'text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100'
               }`}
             >
@@ -564,9 +567,9 @@ export function ClientCard({
               variant="outline" 
               size="sm" 
               onClick={handleDeleteClick}
-              className={`rounded-lg transition-all duration-200 ${
+              className={`rounded-lg ${
                 neon
-                  ? 'text-red-400 border-red-500/30 bg-red-500/5 hover:bg-red-500/10 hover:border-red-400 hover:shadow-[0_0_10px_rgba(255,0,0,0.15)]'
+                  ? 'text-red-400 border-red-500/30 bg-red-950/30 hover:bg-red-500/10 hover:border-red-400 hover:shadow-[0_0_10px_rgba(255,0,0,0.15)]'
                   : 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100'
               }`}
             >
@@ -575,7 +578,8 @@ export function ClientCard({
           </div>
         </div>
       </div>
-                  {/* ── View Details Modal ── */}
+
+      {/* ── View Details Modal ── */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
         <DialogContent className={`${dialogCls} max-w-md p-0`}>
           <div className="relative">
@@ -585,7 +589,7 @@ export function ClientCard({
                   isFrozen
                     ? 'bg-gradient-to-r from-slate-400 to-slate-500'
                     : neon
-                      ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-600 shadow-[0_0_15px_rgba(0,255,255,0.25)]'
+                      ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-600'
                       : 'bg-blue-500'
                 }`}>
                   <span className="text-white font-bold text-lg">
@@ -593,9 +597,7 @@ export function ClientCard({
                   </span>
                 </div>
                 <div>
-                  <CardTitle className={`text-xl flex items-center gap-2 ${
-                    neon ? 'text-cyan-300 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]' : ''
-                  }`}>
+                  <CardTitle className={`text-xl flex items-center gap-2 ${neon ? 'text-cyan-200' : ''}`}>
                     {client.name}
                     {isFrozen && (
                       <Badge className={`text-xs flex items-center gap-1 ${
@@ -616,10 +618,10 @@ export function ClientCard({
             <CardContent className="p-4 grid grid-cols-1 gap-4">
               {isFrozen && (
                 <div className={`p-3 rounded-lg border ${
-                  neon ? 'bg-cyan-500/5 border-cyan-500/20' : 'bg-slate-100 border-slate-200'
+                  neon ? 'bg-cyan-950/30 border-cyan-500/20' : 'bg-slate-100 border-slate-200'
                 }`}>
                   <div className={`flex items-center gap-2 ${neon ? 'text-cyan-300' : 'text-slate-700'}`}>
-                    <Snowflake className={`h-4 w-4 ${neon ? 'drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}`} />
+                    <Snowflake className="h-4 w-4" />
                     <span className="font-medium">Client Frozen</span>
                   </div>
                   {client.freezeReason && (
@@ -628,26 +630,26 @@ export function ClientCard({
                     </p>
                   )}
                   {client.frozenAt && (
-                    <p className={`text-xs mt-1 ${neon ? 'text-cyan-400/50' : 'text-slate-500'}`}>
+                    <p className={`text-xs mt-1 ${neon ? 'text-cyan-500/50' : 'text-slate-500'}`}>
                       Frozen on: {formatDate(client.frozenAt)}
                     </p>
                   )}
                 </div>
               )}
               
-              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-cyan-500/5 border border-cyan-500/10' : ''}`}>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-cyan-950/20 border border-cyan-500/10' : ''}`}>
                 <h3 className={neonSectionTitle}>Contact Information</h3>
                 <div className="space-y-2">
-                  <div className={`flex items-center gap-2 ${neon ? 'text-slate-300' : ''}`}>
-                    <Mail className={`h-4 w-4 ${neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}`} />
+                  <div className={`flex items-center gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
+                    <Mail className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                     <span>{client.email}</span>
                   </div>
-                  <div className={`flex items-center gap-2 ${neon ? 'text-slate-300' : ''}`}>
-                    <Phone className={`h-4 w-4 ${neon ? 'text-cyan-400 drop-shadow-[0_0_4px_rgba(0,255,255,0.3)]' : ''}`} />
+                  <div className={`flex items-center gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
+                    <Phone className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                     <span>{client.phone}</span>
                   </div>
                   {client.address && (
-                    <div className={`flex items-start gap-2 ${neon ? 'text-slate-300' : ''}`}>
+                    <div className={`flex items-start gap-2 ${neon ? 'text-cyan-200/80' : ''}`}>
                       <span className="mt-0.5">
                         <Home className={`h-4 w-4 ${neon ? 'text-cyan-400' : ''}`} />
                       </span>
@@ -657,32 +659,32 @@ export function ClientCard({
                 </div>
               </div>
               
-              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-fuchsia-500/5 border border-fuchsia-500/10' : ''}`}>
-                <h3 className={neon ? 'text-fuchsia-400 font-semibold tracking-wide uppercase text-xs drop-shadow-[0_0_4px_rgba(232,121,249,0.15)]' : neonSectionTitle}>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-fuchsia-950/20 border border-fuchsia-500/10' : ''}`}>
+                <h3 className={neon ? 'text-fuchsia-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
                   Personal Dates
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                   {client.dob && (
                     <div>
-                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-400/60' : 'text-gray-500'}`}>Birthday</p>
-                      <p className={`text-sm ${neon ? 'text-slate-300' : ''}`}>{formatDate(client.dob)}</p>
+                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-500/60' : 'text-gray-500'}`}>Birthday</p>
+                      <p className={`text-sm ${neon ? 'text-cyan-200' : ''}`}>{formatDate(client.dob)}</p>
                     </div>
                   )}
                   {client.marriageAnniversary && (
                     <div>
-                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-400/60' : 'text-gray-500'}`}>Anniversary</p>
-                      <p className={`text-sm ${neon ? 'text-slate-300' : ''}`}>{formatDate(client.marriageAnniversary)}</p>
+                      <p className={`text-xs font-medium ${neon ? 'text-fuchsia-500/60' : 'text-gray-500'}`}>Anniversary</p>
+                      <p className={`text-sm ${neon ? 'text-cyan-200' : ''}`}>{formatDate(client.marriageAnniversary)}</p>
                     </div>
                   )}
                 </div>
               </div>
               
-              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-green-500/5 border border-green-500/10' : ''}`}>
-                <h3 className={neon ? 'text-green-400 font-semibold tracking-wide uppercase text-xs drop-shadow-[0_0_4px_rgba(74,222,128,0.15)]' : neonSectionTitle}>
+              <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-green-950/20 border border-green-500/10' : ''}`}>
+                <h3 className={neon ? 'text-green-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
                   Investment Profile
                 </h3>
                 <div className="space-y-2">
-                  <p className={neon ? 'text-slate-300' : ''}>
+                  <p className={neon ? 'text-cyan-200/80' : ''}>
                     <span className="font-medium">Risk:</span> 
                     <span className={`capitalize ml-2 px-2 py-1 rounded-full text-xs ${riskBadgeCls()}`}>
                       {client.riskProfile}
@@ -690,7 +692,7 @@ export function ClientCard({
                   </p>
                   
                   <div className="mt-2">
-                    <h4 className={`font-medium text-sm mb-2 ${neon ? 'text-cyan-300 drop-shadow-[0_0_4px_rgba(0,255,255,0.15)]' : ''}`}>Products:</h4>
+                    <h4 className={`font-medium text-sm mb-2 ${neon ? 'text-cyan-300' : ''}`}>Products:</h4>
                     <div className="flex flex-wrap gap-2">
                       {Object.entries(client.products)
                         .filter(([_, isSelected]) => isSelected)
@@ -708,8 +710,8 @@ export function ClientCard({
               </div>
               
               {client.products.sip && !isFrozen && (
-                <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-amber-500/5 border border-amber-500/10' : ''}`}>
-                  <h3 className={neon ? 'text-amber-400 font-semibold tracking-wide uppercase text-xs drop-shadow-[0_0_4px_rgba(251,191,36,0.15)]' : neonSectionTitle}>
+                <div className={`space-y-3 p-3 rounded-xl ${neon ? 'bg-amber-950/20 border border-amber-500/10' : ''}`}>
+                  <h3 className={neon ? 'text-amber-400 font-semibold tracking-wide uppercase text-xs' : neonSectionTitle}>
                     SIP Details
                   </h3>
                   {upcomingSIPs.length > 0 ? (
@@ -721,8 +723,8 @@ export function ClientCard({
                         >
                           <div className="flex justify-between">
                             <div>
-                              <p className={`font-medium ${neon ? 'text-slate-200' : ''}`}>{formatCurrency(sip.amount)}</p>
-                              <p className={`text-sm ${neon ? 'text-cyan-400/60' : 'text-gray-500'}`}>
+                              <p className={`font-medium ${neon ? 'text-cyan-200' : ''}`}>{formatCurrency(sip.amount)}</p>
+                              <p className={`text-sm ${neon ? 'text-cyan-500/60' : 'text-gray-500'}`}>
                                 {sip.frequency} • Next: {formatDate(sip.nextDate)}
                               </p>
                             </div>
@@ -735,7 +737,7 @@ export function ClientCard({
                     </div>
                   ) : (
                     <div className={`p-2 rounded ${neonHighlightBg}`}>
-                      <p className={`text-sm ${neon ? 'text-cyan-400/60' : ''}`}>No active SIPs found</p>
+                      <p className={`text-sm ${neon ? 'text-cyan-500/60' : ''}`}>No active SIPs found</p>
                     </div>
                   )}
                   <Button 
@@ -745,9 +747,9 @@ export function ClientCard({
                       setIsViewDetailsOpen(false);
                       onNavigateToSIP();
                     }}
-                    className={`mt-2 h-8 rounded-lg transition-all duration-200 ${
+                    className={`mt-2 h-8 rounded-lg ${
                       neon
-                        ? 'border-amber-500/30 text-amber-400 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-400 hover:shadow-[0_0_10px_rgba(251,191,36,0.15)]'
+                        ? 'border-amber-500/30 text-amber-400 bg-amber-950/30 hover:bg-amber-500/10 hover:border-amber-400'
                         : ''
                     }`}
                   >
@@ -759,7 +761,7 @@ export function ClientCard({
               <div>
                 <h3 className={`mb-2 ${neonSectionTitle}`}>Notes</h3>
                 <div className={`p-2 rounded ${neonHighlightBg}`}>
-                  <span className={neon ? 'text-slate-300' : ''}>
+                  <span className={neon ? 'text-cyan-200/80' : ''}>
                     {client.notes || "No notes available."}
                   </span>
                 </div>
@@ -771,7 +773,7 @@ export function ClientCard({
                 variant="outline" 
                 size="sm"
                 onClick={() => setIsViewDetailsOpen(false)}
-                className={`h-8 rounded-lg transition-all duration-200 ${
+                className={`h-8 rounded-lg ${
                   neon ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' : ''
                 }`}
               >
@@ -783,7 +785,7 @@ export function ClientCard({
                   setIsViewDetailsOpen(false);
                   onEdit();
                 }}
-                className={`h-8 rounded-lg transition-all duration-200 ${
+                className={`h-8 rounded-lg ${
                   neon
                     ? 'bg-cyan-600 hover:bg-cyan-500 text-gray-950 font-semibold shadow-[0_0_15px_rgba(0,255,255,0.25)]'
                     : ''
@@ -801,7 +803,7 @@ export function ClientCard({
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className={`sm:max-w-md ${dangerDialogCls}`}>
           <DialogHeader>
-            <DialogTitle className={`flex items-center gap-2 ${neon ? 'text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.3)]' : ''}`}>
+            <DialogTitle className={`flex items-center gap-2 ${neon ? 'text-red-400' : ''}`}>
               <Trash2 className="h-5 w-5 text-red-500" />
               Delete Client
             </DialogTitle>
@@ -821,7 +823,6 @@ export function ClientCard({
                   className={`mt-1 ${neonInputCls}`}
                   placeholder="Enter password to confirm"
                   onKeyDown={(e) => e.key === 'Enter' && handleDeleteConfirm()}
-                  disabled={deleteLoading}
                 />
                 {deleteError && (
                   <p className="text-sm text-red-500 mt-1">{deleteError}</p>
@@ -829,7 +830,7 @@ export function ClientCard({
               </div>
               <div className={`rounded-lg p-3 ${
                 neon
-                  ? 'bg-red-500/5 border border-red-500/20'
+                  ? 'bg-red-950/30 border border-red-500/20'
                   : 'bg-red-50 border border-red-200'
               }`}>
                 <p className={`text-sm ${neon ? 'text-red-300/80' : 'text-red-700'}`}>
@@ -842,8 +843,7 @@ export function ClientCard({
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
-              disabled={deleteLoading}
-              className={`px-4 rounded-lg transition-all duration-200 ${
+              className={`px-4 rounded-lg ${
                 neon ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400' : ''
               }`}
             >
@@ -852,24 +852,14 @@ export function ClientCard({
             <Button
               variant="destructive"
               onClick={handleDeleteConfirm}
-              disabled={deleteLoading}
-              className={`px-4 rounded-lg transition-all duration-200 ${
+              className={`px-4 rounded-lg ${
                 neon
                   ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.3)]'
                   : 'bg-red-600 hover:bg-red-700'
               }`}
             >
-              {deleteLoading ? (
-                <div className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                  Deleting...
-                </div>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Confirm Delete
-                </>
-              )}
+              <Trash2 className="mr-2 h-4 w-4" />
+              Confirm Delete
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -879,13 +869,7 @@ export function ClientCard({
       <Dialog open={isFreezeDialogOpen} onOpenChange={setIsFreezeDialogOpen}>
         <DialogContent className={`sm:max-w-md ${freezeDialogCls}`}>
           <DialogHeader>
-            <DialogTitle className={`flex items-center gap-2 ${
-              neon 
-                ? (isFrozen 
-                    ? 'text-green-400 drop-shadow-[0_0_6px_rgba(74,222,128,0.3)]' 
-                    : 'text-cyan-400 drop-shadow-[0_0_6px_rgba(0,255,255,0.3)]') 
-                : ''
-            }`}>
+            <DialogTitle className={`flex items-center gap-2 ${neon ? (isFrozen ? 'text-green-400' : 'text-cyan-400') : ''}`}>
               {isFrozen ? (
                 <>
                   <Unlock className="h-5 w-5 text-green-500" />
@@ -898,7 +882,7 @@ export function ClientCard({
                 </>
               )}
             </DialogTitle>
-            <DialogDescription className={neon ? 'text-cyan-400/60' : ''}>
+            <DialogDescription className={neon ? 'text-cyan-500/60' : ''}>
               {isFrozen
                 ? `You are about to unfreeze "${client.name}". This will restore the client to active status.`
                 : `You are about to freeze "${client.name}". This client will be marked as inactive.`
@@ -926,10 +910,10 @@ export function ClientCard({
               <div className={`rounded-lg p-3 ${
                 isFrozen
                   ? neon
-                    ? 'bg-green-500/5 border border-green-500/20'
+                    ? 'bg-green-950/30 border border-green-500/20'
                     : 'bg-green-50 border border-green-200'
                   : neon
-                    ? 'bg-cyan-500/5 border border-cyan-500/20'
+                    ? 'bg-cyan-950/30 border border-cyan-500/20'
                     : 'bg-cyan-50 border border-cyan-200'
               }`}>
                 <p className={`text-sm ${
@@ -954,7 +938,7 @@ export function ClientCard({
             <Button
               variant="outline"
               onClick={() => setIsFreezeDialogOpen(false)}
-              className={`px-4 rounded-lg transition-all duration-200 ${
+              className={`px-4 rounded-lg ${
                 neon ? 'border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/10 hover:border-cyan-400' : ''
               }`}
               disabled={freezeLoading}
@@ -964,7 +948,7 @@ export function ClientCard({
             <Button
               onClick={handleFreezeConfirm}
               disabled={freezeLoading}
-              className={`px-4 rounded-lg transition-all duration-200 ${
+              className={`px-4 rounded-lg ${
                 isFrozen
                   ? neon
                     ? 'bg-green-600 hover:bg-green-500 text-white shadow-[0_0_15px_rgba(74,222,128,0.3)]'
