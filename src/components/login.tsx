@@ -83,19 +83,14 @@ export default function Login() {
                     <Mail className="h-5 w-5 text-gray-400" />
                   </div>
                   <Input
-  id="delete-confirmation"
-  name="delete-confirmation"
-  type="password"
-  autoComplete="new-password"
-  data-lpignore="true"
-  data-form-type="other"
-  value={deletePassword}
-  onChange={(e) => setDeletePassword(e.target.value)}
-  className={`mt-1 ${neonInputCls}`}
-  placeholder="Enter password to confirm"
-  onKeyDown={(e) => e.key === "Enter" && handleDeleteConfirm()}
-  disabled={deleteLoading}
-/>
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="pl-10"
+                    placeholder="your@email.com"
+                  />
                 </div>
               </div>
 
