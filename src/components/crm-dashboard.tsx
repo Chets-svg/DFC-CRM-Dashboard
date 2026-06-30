@@ -623,15 +623,27 @@ function TimeoutWarningModal({ theme }: TimeoutWarningModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className={`timeout-modal p-6 rounded-lg ${currentTheme.cardBg} ${currentTheme.borderColor} max-w-md w-full ${isNeon(theme) ? 'shadow-[0_0_40px_rgba(0,255,255,0.3)] border-cyan-500/30' : ''}`}>
-  <h3 className={`text-xl font-bold mb-4 ${isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''}`}>Session Timeout Warning</h3>
-  <div className={`text-2xl font-bold ${isNeon(theme) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-yellow-600 dark:text-yellow-400'}`}>
-    {minutes}:{seconds.toString().padStart(2, '0')}
-  </div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className={`${currentTheme.cardBg} ${currentTheme.borderColor} border rounded-lg p-6 max-w-md w-full shadow-xl ${
+        isNeon(theme) ? 'shadow-[0_0_40px_rgba(0,255,255,0.3)] border-cyan-500/30' : ''
+      }`}>
+        <h3 className={`text-xl font-bold mb-4 ${
+          isNeon(theme) ? 'text-cyan-300 drop-shadow-[0_0_8px_rgba(0,255,255,0.4)]' : ''
+        }`}>
+          Session Timeout Warning
+        </h3>
+        
+        <p className={`mb-4 ${currentTheme.mutedText}`}>
+          Your session is about to expire due to inactivity.
+        </p>
+        
+        <div className={`text-3xl font-bold text-center mb-6 ${
+          isNeon(theme) ? 'text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'text-yellow-600 dark:text-yellow-400'
+        }`}>
+          {minutes}:{seconds.toString().padStart(2, '0')}
         </div>
         
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-3">
           <Button 
             onClick={handleContinue}
             className={getButtonClasses(theme)}
@@ -641,15 +653,16 @@ function TimeoutWarningModal({ theme }: TimeoutWarningModalProps) {
           <Button 
             onClick={handleLogout}
             variant="outline"
-            className={`rounded-full ${getButtonClasses(theme, 'outline')}`}
+            className={getButtonClasses(theme, 'outline')}
           >
             Log Out Now
           </Button>
         </div>
       </div>
-    
+    </div>
   );
 }
+
 export default function CRMDashboard() {
   const [theme, setTheme] = useState<ThemeName>('blue-smoke'); // Default to blue-smoke
   const [previousLightTheme, setPreviousLightTheme] = useState<ThemeName>('blue-smoke');
