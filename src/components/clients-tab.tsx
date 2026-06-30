@@ -110,9 +110,6 @@ export default function ClientsTab({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeClientTab, setActiveClientTab] = useState<ClientTab>('mutual-funds');
   const [deleteConfirmation, setDeleteConfirmation] = useState<{clientId: string | null, clientName: string}>({clientId: null, clientName: ''});
-  const [deletePassword, setDeletePassword] = useState('');
-  const [deleteError, setDeleteError] = useState('');
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const currentTheme = themes[theme] || themes['blue-smoke'];
   const neon = isNeon(theme);
@@ -295,34 +292,6 @@ export default function ClientsTab({
     }
   };
 
-  const handleDeleteClick = (clientId: string, clientName: string) => {
-    setDeleteConfirmation({ clientId, clientName });
-    setDeletePassword('');
-    setDeleteError('');
-    setIsDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (deletePassword === 'Rosh@1309') {
-      if (deleteConfirmation.clientId) {
-        try {
-          await deleteDoc(doc(db, 'clients', deleteConfirmation.clientId));
-          
-          setIsDeleteDialogOpen(false);
-          setDeleteConfirmation({ clientId: null, clientName: '' });
-          setDeletePassword('');
-          setDeleteError('');
-          
-          showAlert('Client deleted successfully');
-        } catch (error) {
-          console.error('Error deleting client:', error);
-          showAlert('Error deleting client. Please try again.');
-        }
-      }
-    } else {
-      setDeleteError('Incorrect password');
-    }
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -920,88 +889,7 @@ export default function ClientsTab({
         )}
 
         {/* ── Delete Confirmation Dialog ── */}
-        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-          <DialogContent className={`sm:max-w-md ${
-            neon
-              ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_30px_rgba(0,255,255,0.1)]'
-              : 'bg-white'
-          }`}>
-            <DialogHeader>
-              <DialogTitle className={`flex items-center gap-2 ${
-                neon ? 'text-red-400 drop-shadow-[0_0_6px_rgba(255,0,0,0.3)]' : ''
-              }`}>
-                <Trash2 className="h-5 w-5 text-red-500" />
-                Delete Client
-              </DialogTitle>
-              <DialogDescription className={
-                neon ? 'text-red-400/60' : ''
-              }>
-                This action cannot be undone. Please confirm by entering the password.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="delete-password" className={
-                    neon ? 'text-red-300/80' : ''
-                  }>
-                    Password
-                  </Label>
-                  <Input
-                    id="delete-password"
-                    type="password"
-                    value={deletePassword}
-                    onChange={(e) => setDeletePassword(e.target.value)}
-                    className={`mt-1 ${
-                      neon
-                        ? 'bg-slate-800 border-red-500/30 text-slate-300 placeholder:text-red-600/40 focus:border-red-400 focus:ring-red-500/20'
-                        : ''
-                    }`}
-                    placeholder="Enter password to confirm"
-                    onKeyDown={handleKeyDown}
-                  />
-                  {deleteError && (
-                    <p className="text-sm text-red-500 mt-1">{deleteError}</p>
-                  )}
-                </div>
-                <div className={`rounded-lg p-3 ${
-                  neon
-                    ? 'bg-red-500/5 border border-red-500/20'
-                    : 'bg-red-50 border border-red-200'
-                }`}>
-                  <p className={`text-sm ${
-                    neon ? 'text-red-300/80' : 'text-red-700'
-                  }`}>
-                    <span className="font-medium">Warning:</span> Deleting this client will permanently remove all associated data including SIP reminders and investment records.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <DialogFooter className="gap-2 sm:justify-end">
-              <Button
-                variant="outline"
-                onClick={() => setIsDeleteDialogOpen(false)}
-                className={`px-4 rounded-lg transition-all duration-200 ${
-                  neon ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400' : ''
-                }`}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDeleteConfirm}
-                className={`px-4 rounded-lg transition-all duration-200 ${
-                  neon
-                    ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.3)]'
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Confirm Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        
       </CardContent>
     </Card>
   );

@@ -1224,7 +1224,9 @@ const handleDeleteClient = async (id: string) => {
   try {
     // First delete from Firebase
     await deleteDocument(CLIENTS_COLLECTION, id);
-
+    
+    // Then update local state
+    setClients(clients.filter(client => client.id !== id));
     
     // Show success message
     showAlert('Client deleted successfully');
