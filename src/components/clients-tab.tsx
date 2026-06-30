@@ -330,19 +330,12 @@ export default function ClientsTab({
           
           <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
             <div className="relative w-full md:w-64">
-              <Input
-                placeholder="Search clients..."
+              <input
+  type="search"
+  name="no-autofill-search-938472"
+  autoComplete="new-password"
   value={searchTerm}
-  name="client-search-random"
-  id="client-search-random"
-  autoComplete="off"
-  autoCorrect="off"
-  autoCapitalize="off"
-  spellCheck={false}
-  onChange={(e) => {
-    console.log("Input changed:", e.target.value);
-    setSearchTerm(e.target.value);
-  }}
+  onChange={(e) => setSearchTerm(e.target.value)}
 />
             </div>
 
