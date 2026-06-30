@@ -53,9 +53,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { toast } from 'react-hot-toast';
-import { doc, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getDoc, setDoc, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type ClientSortField = 'createdAt' | 'name' | 'products';
@@ -109,7 +108,8 @@ export default function ClientsTab({
 }: ClientsTabProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [activeClientTab, setActiveClientTab] = useState<ClientTab>('mutual-funds');
-  const [deleteConfirmation, setDeleteConfirmation] = useState<{clientId: string | null, clientName: string}>({clientId: null, clientName: ''});
+  
+  
   const [loading, setLoading] = useState(true);
   const currentTheme = themes[theme] || themes['blue-smoke'];
   const neon = isNeon(theme);
@@ -292,13 +292,7 @@ export default function ClientsTab({
     }
   };
 
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleDeleteConfirm();
-    }
-  };
-
+  
   const handleFreezeUpdate = () => {
     if (onRefreshClients) {
       onRefreshClients();
@@ -550,7 +544,7 @@ export default function ClientsTab({
                   onViewDetails={() => {
                     console.log("View details for:", client.name);
                   }}
-                  onDelete={() => handleDeleteClick(client.id, client.name || '')}
+                  onDelete={() => onDeleteClient(client.id)}
                   onFreeze={handleFreezeUpdate}
                   sipReminders={sipReminders.filter(r => r.clientId === client.id)}
                   investments={investments.filter(i => i.clientId === client.id)}
@@ -849,7 +843,7 @@ export default function ClientsTab({
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => handleDeleteClick(client.id, client.name || '')}
+                          onClick={() => onDeleteClient(client.id)}
                           className={`h-8 px-2 rounded-lg transition-all duration-200 ${
                             neon
                               ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400 hover:text-red-300 hover:shadow-[0_0_10px_rgba(255,0,0,0.1)]'
