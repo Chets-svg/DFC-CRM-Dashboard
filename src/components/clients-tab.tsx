@@ -54,7 +54,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from 'react-hot-toast';
-import { getDoc, setDoc, } from 'firebase/firestore';
+import { doc, getDoc, setDoc, } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 type ClientSortField = 'createdAt' | 'name' | 'products';
@@ -117,42 +117,43 @@ export default function ClientsTab({
 
   // Load user preferences on component mount
   useEffect(() => {
-    const loadUserPreferences = async () => {
-      if (!userId) return;
-      
-      try {
-        const docRef = doc(db, 'userPreferences', userId);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.clientViewMode && (data.clientViewMode === 'grid' || data.clientViewMode === 'list')) {
-            setViewMode(data.clientViewMode);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading user preferences:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadUserPreferences();
-  }, [userId]);
-
-  // Save view mode preference when it changes
-  const updateViewMode = async (newViewMode: ViewMode) => {
-    setViewMode(newViewMode);
-    
+  const loadUserPreferences = async () => {
     if (!userId) return;
     
     try {
+      // Use the imported "doc" function from firebase/firestore
       const docRef = doc(db, 'userPreferences', userId);
-      await setDoc(docRef, { clientViewMode: newViewMode }, { merge: true });
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.clientViewMode && (data.clientViewMode === 'grid' || data.clientViewMode === 'list')) {
+          setViewMode(data.clientViewMode);
+        }
+      }
     } catch (error) {
-      console.error('Error saving view mode preference:', error);
+      console.error('Error loading user preferences:', error);
+    } finally {
+      setLoading(false);
     }
   };
+
+  loadUserPreferences();
+}, [userId]);
+
+  // Save view mode preference when it changes
+  const updateViewMode = async (newViewMode: ViewMode) => {
+  setViewMode(newViewMode);
+  
+  if (!userId) return;
+  
+  try {
+    const docRef = doc(db, 'userPreferences', userId);
+    await setDoc(docRef, { clientViewMode: newViewMode }, { merge: true });
+  } catch (error) {
+    console.error('Error saving view mode preference:', error);
+  }
+};
 
   const getClientPrimaryProduct = (client: Client) => {
     if (client.products.mutualFund || client.products.sip || client.products.lumpsum) {

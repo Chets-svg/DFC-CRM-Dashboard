@@ -74,6 +74,7 @@ export function ClientCard({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
   
   const [isFreezeDialogOpen, setIsFreezeDialogOpen] = useState(false);
   const [freezeReason, setFreezeReason] = useState('');
@@ -132,18 +133,29 @@ export function ClientCard({
     setDeleteError('');
   };
 
+  // ─── KEY FIX: Close dialog FIRST, then delete from Firebase only ───
+  // Let onSnapshot update local state — don't manually filter clients
   const handleDeleteConfirm = async () => {
     if (deletePassword === 'Rosh@1309') {
+      setDeleteLoading(true);
       try {
-        await deleteDoc(doc(db, 'clients', client.id));
-        onDelete(client.id);
+        // Close dialog BEFORE the parent re-renders and unmounts this component
         setIsDeleteDialogOpen(false);
         setDeletePassword('');
         setDeleteError('');
         
+        // Only delete from Firebase — onSnapshot will update local state
+        await deleteDoc(doc(db, 'clients', client.id));
+        
+        // Notify parent for any additional cleanup (toast, etc.)
+        onDelete(client.id);
+        
+        toast.success('Client deleted successfully');
       } catch (error) {
         console.error('Error deleting client:', error);
-        setDeleteError('Error deleting client. Please try again.');
+        toast.error('Error deleting client. Please try again.');
+      } finally {
+        setDeleteLoading(false);
       }
     } else {
       setDeleteError('Incorrect password. Please try again.');
@@ -196,7 +208,7 @@ export function ClientCard({
     }
   };
 
-  // ── Neon helper classes aligned with dashboard ──
+  // ── Neon helper classes ──
   const neonCardOuter = neon
     ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_20px_rgba(0,255,255,0.06)] hover:shadow-[0_0_30px_rgba(0,255,255,0.12)] hover:border-cyan-400/30'
     : `bg-white ${currentTheme.borderColor}`;
@@ -231,7 +243,6 @@ export function ClientCard({
 
   const neonHighlightBg = neon ? 'bg-cyan-500/5' : currentTheme.highlightBg;
 
-  // Product badge neon colors — aligned with dashboard
   const productBadgeCls = (key: string) => {
     if (isFrozen) return 'text-slate-600 bg-slate-100 border border-slate-200';
     if (!neon) {
@@ -250,7 +261,6 @@ export function ClientCard({
       'text-cyan-300 bg-cyan-500/10 border border-cyan-500/30';
   };
 
-  // Product detail badge in modal
   const productDetailBadgeCls = (key: string) => {
     if (isFrozen) return 'bg-slate-100 text-slate-600';
     if (neon) {
@@ -273,7 +283,6 @@ export function ClientCard({
       'bg-gray-100 text-gray-800';
   };
 
-  // Risk profile badge
   const riskBadgeCls = () => {
     if (neon) {
       return client.riskProfile === 'conservative' ? 'bg-cyan-500/10 text-cyan-300 border border-cyan-500/30' :
@@ -285,7 +294,6 @@ export function ClientCard({
       'bg-amber-100 text-amber-800';
   };
 
-  // SIP status badge
   const sipStatusBadgeCls = (status: string) => {
     if (neon) {
       return status === 'active' ? 'bg-green-500/10 text-green-300 border border-green-500/30' :
@@ -297,7 +305,6 @@ export function ClientCard({
       'bg-gray-100 text-gray-800';
   };
 
-  // Dialog content classes — aligned with dashboard
   const dialogCls = neon
     ? 'bg-slate-900 border-cyan-500/20 shadow-[0_0_40px_rgba(0,255,255,0.08)]'
     : `${currentTheme.cardBg} ${currentTheme.borderColor} border`;
@@ -568,7 +575,7 @@ export function ClientCard({
           </div>
         </div>
       </div>
-            {/* ── View Details Modal ── */}
+                  {/* ── View Details Modal ── */}
       <Dialog open={isViewDetailsOpen} onOpenChange={setIsViewDetailsOpen}>
         <DialogContent className={`${dialogCls} max-w-md p-0`}>
           <div className="relative">
@@ -814,6 +821,7 @@ export function ClientCard({
                   className={`mt-1 ${neonInputCls}`}
                   placeholder="Enter password to confirm"
                   onKeyDown={(e) => e.key === 'Enter' && handleDeleteConfirm()}
+                  disabled={deleteLoading}
                 />
                 {deleteError && (
                   <p className="text-sm text-red-500 mt-1">{deleteError}</p>
@@ -834,6 +842,7 @@ export function ClientCard({
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={deleteLoading}
               className={`px-4 rounded-lg transition-all duration-200 ${
                 neon ? 'border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-400' : ''
               }`}
@@ -843,14 +852,24 @@ export function ClientCard({
             <Button
               variant="destructive"
               onClick={handleDeleteConfirm}
+              disabled={deleteLoading}
               className={`px-4 rounded-lg transition-all duration-200 ${
                 neon
                   ? 'bg-red-600 hover:bg-red-500 text-white shadow-[0_0_15px_rgba(255,0,0,0.3)]'
                   : 'bg-red-600 hover:bg-red-700'
               }`}
             >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Confirm Delete
+              {deleteLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                  Deleting...
+                </div>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Confirm Delete
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

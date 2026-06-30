@@ -1222,17 +1222,19 @@ const handleEditClient = (client: Client) => {
 };
 const handleDeleteClient = async (id: string) => {
   try {
-    // First delete from Firebase
+    // Only delete from Firebase — onSnapshot will update local state
     await deleteDocument(CLIENTS_COLLECTION, id);
     
-    // Then update local state
-    setClients(clients.filter(client => client.id !== id));
+    // DO NOT do this — it causes the flash:
+    // setClients(clients.filter(client => client.id !== id));
     
-    // Show success message
+    // The onSnapshot listener in your useEffect will automatically
+    // fire and update the clients state when the document is removed.
+    
     showAlert('Client deleted successfully');
   } catch (error) {
-    console.error('Error deleting client:', error);
     showAlert('Error deleting client');
+    console.error(error);
   }
 };
 
