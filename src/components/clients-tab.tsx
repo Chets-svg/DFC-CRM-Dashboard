@@ -308,9 +308,6 @@ export default function ClientsTab({
         try {
           await deleteDoc(doc(db, 'clients', deleteConfirmation.clientId));
           
-          const updatedClients = clients.filter(client => client.id !== deleteConfirmation.clientId);
-          setClients(updatedClients);
-          
           setIsDeleteDialogOpen(false);
           setDeleteConfirmation({ clientId: null, clientName: '' });
           setDeletePassword('');
