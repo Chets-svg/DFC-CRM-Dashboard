@@ -332,17 +332,18 @@ export default function ClientsTab({
             <div className="relative w-full md:w-64">
               <Input
                 placeholder="Search clients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className={`pl-8 rounded-full ${
-                  neon
-                    ? 'bg-slate-900 border-cyan-500/30 text-slate-300 placeholder:text-cyan-600/50 focus:border-cyan-400 focus:ring-cyan-500/20'
-                    : `${inputBg} ${borderColor}`
-                }`}
-              />
-              <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 ${
-                neon ? 'text-cyan-400/60' : 'text-muted-foreground'
-              }`} />
+  value={searchTerm}
+  name="client-search-random"
+  id="client-search-random"
+  autoComplete="off"
+  autoCorrect="off"
+  autoCapitalize="off"
+  spellCheck={false}
+  onChange={(e) => {
+    console.log("Input changed:", e.target.value);
+    setSearchTerm(e.target.value);
+  }}
+/>
             </div>
 
             <div className="flex gap-2">
