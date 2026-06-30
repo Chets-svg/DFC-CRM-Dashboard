@@ -538,6 +538,7 @@ export default function CommunicationTab({
               </SelectContent>
             </Select>
           </div>
+          
 
           {/* Related Product Select */}
           <div>
