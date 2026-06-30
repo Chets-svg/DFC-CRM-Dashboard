@@ -710,7 +710,14 @@ const handleLogout = useCallback(async () => {
 const [amountInput, setAmountInput] = useState(''); 
 const [themeLoading, setThemeLoading] = useState(true);
 const [tabLoading, setTabLoading] = useState(true);
-const [searchTerm, setSearchTerm] = useState('');
+const [searchTerm, _setSearchTerm] = useState('');
+
+const setSearchTerm = (value: string) => {
+  console.log("setSearchTerm CALLED WITH:", value);
+  console.trace("Called from:");
+  _setSearchTerm(value);
+};
+
 useEffect(() => {
   console.log("searchTerm changed:", searchTerm);
   console.trace("Changed by:");
